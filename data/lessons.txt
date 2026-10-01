@@ -1,0 +1,8 @@
+# Slingshot Tools lessons (updated 2026-10-01)
+
+- Solve one daily annoyance per app, never a dashboard of features.
+- Every app must work offline forever after first open: no CDN, no network calls.
+- Keep a working light mode toggle on every app; dark red is the brand.
+- Show a real empty state that tells the first-time user exactly what to do.
+- Always offer export and import of user data as JSON.
+- Prefer localStorage; never require an account.

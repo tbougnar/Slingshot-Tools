@@ -1,0 +1,41 @@
+name: Slingshot — learn and improve (Fri 07:00)
+
+on:
+  schedule:
+    - cron: "0 7 * * 5"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: slingshot-friday
+  cancel-in-progress: false
+
+jobs:
+  learn:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      GROQ_CHAT_MODEL: ${{ secrets.GROQ_CHAT_MODEL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: pip install --quiet requests
+
+      - name: Read the catalog and real signals, then write lessons
+        run: python learn.py
+
+      - name: Commit lessons for Monday
+        run: |
+          git config user.name "slingshot-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add -A
+          git commit -m "chore: coach lessons from this week [skip ci]" || echo "nothing to commit"
+          git push || echo "push failed"

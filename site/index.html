@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Slingshot Tools — tiny apps for everyday problems</title>
+<meta name="description" content="Slingshot Tools ships small, fast, free apps that solve one everyday problem properly. New app every Monday.">
+<link rel="icon" href="favicon.png">
+<link rel="apple-touch-icon" href="icon-512.png">
+<style>
+  :root{
+    --red:#C1272D; --red-dark:#8E1B20; --red-ink:#E23B41;
+    --bg:#14100F; --bg-2:#1C1615; --card:#221B1A; --line:#332826;
+    --fg:#F6EFEC; --muted:#B9A8A4; --shadow:0 10px 30px rgba(0,0,0,.45);
+  }
+  html[data-theme="light"]{
+    --bg:#FBF7F6; --bg-2:#FFFFFF; --card:#FFFFFF; --line:#EADEDC;
+    --fg:#1B1211; --muted:#6B5B58; --shadow:0 10px 26px rgba(140,30,36,.10);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--fg);
+    font:16px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Inter,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+  header{position:sticky;top:0;z-index:20;backdrop-filter:blur(10px);
+    background:color-mix(in srgb,var(--bg) 82%,transparent);border-bottom:1px solid var(--line)}
+  .bar{display:flex;align-items:center;gap:14px;padding:14px 0}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;font-weight:800;letter-spacing:-.02em}
+  .brand img{width:38px;height:38px;border-radius:11px;display:block}
+  .brand span b{color:var(--red-ink)}
+  .spacer{flex:1}
+  .btn{border:1px solid var(--line);background:var(--card);color:var(--fg);
+    padding:9px 15px;border-radius:11px;font:inherit;font-size:14px;cursor:pointer;
+    text-decoration:none;display:inline-flex;align-items:center;gap:8px;transition:.15s}
+  .btn:hover{border-color:var(--red-ink);transform:translateY(-1px)}
+  .btn.primary{background:linear-gradient(180deg,var(--red-ink),var(--red));color:#fff;border-color:transparent}
+  .hero{padding:72px 0 44px;text-align:center}
+  .hero img{width:104px;height:104px;border-radius:26px;box-shadow:var(--shadow)}
+  h1{font-size:clamp(34px,6vw,58px);line-height:1.05;margin:22px 0 12px;letter-spacing:-.035em}
+  h1 b{color:var(--red-ink)}
+  .sub{color:var(--muted);font-size:clamp(16px,2.2vw,19px);max-width:60ch;margin:0 auto}
+  .cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:28px}
+  .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));
+    padding:22px 0 60px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;
+    display:flex;flex-direction:column;gap:10px;transition:.18s;position:relative;overflow:hidden}
+  .card:before{content:"";position:absolute;inset:0 auto auto 0;width:100%;height:3px;
+    background:linear-gradient(90deg,var(--red-ink),transparent)}
+  .card:hover{transform:translateY(-3px);box-shadow:var(--shadow);border-color:var(--red-ink)}
+  .card h3{margin:0;font-size:18px;letter-spacing:-.02em}
+  .card p{margin:0;color:var(--muted);font-size:14.5px;flex:1}
+  .tags{display:flex;flex-wrap:wrap;gap:6px}
+  .tag{font-size:11.5px;padding:3px 9px;border-radius:999px;background:var(--bg-2);
+    border:1px solid var(--line);color:var(--muted)}
+  .row{display:flex;gap:9px;align-items:center;margin-top:4px}
+  .pill{font-size:11.5px;padding:3px 9px;border-radius:999px;background:var(--red);
+    color:#fff;font-weight:700;letter-spacing:.02em}
+  footer{border-top:1px solid var(--line);padding:30px 0 60px;color:var(--muted);font-size:14px}
+  footer .grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));padding:0}
+  .empty{grid-column:1/-1;text-align:center;padding:70px 20px;color:var(--muted);
+    border:1px dashed var(--line);border-radius:18px}
+  .filters{display:flex;gap:8px;flex-wrap:wrap;padding:0 0 6px}
+  .filters .btn.active{background:var(--red);color:#fff;border-color:transparent}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap bar">
+    <a class="brand" href="./">
+      <img src="logo.png" alt="Slingshot Tools logo">
+      <span>Slingshot <b>Tools</b></span>
+    </a>
+    <div class="spacer"></div>
+    <a class="btn" href="https://slingshot-tools.itch.io" target="_blank" rel="noopener">itch.io</a>
+    <button class="btn" id="themeBtn" aria-label="Toggle light and dark mode">Light mode</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <img src="logo.png" alt="">
+    <h1>Tiny apps for <b>everyday</b> problems</h1>
+    <p class="sub">Slingshot Tools builds small, fast, free software that solves one real
+      annoyance properly — a password manager, a unit converter, a habit tracker.
+      A new app ships every Monday.</p>
+    <div class="cta">
+      <a class="btn primary" href="#apps">Browse the apps</a>
+      <a class="btn" href="https://slingshot-tools.itch.io" target="_blank" rel="noopener">Play on itch.io</a>
+    </div>
+  </section>
+
+  <div class="filters" id="filters"></div>
+  <section class="grid" id="apps"></section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><strong>Slingshot Tools</strong> — built by AI, improved every week from real usage data.</p>
+    <p>Monday: a new app. Friday: learn from mistakes. Everything private, nothing tracked.</p>
+  </div>
+</footer>
+
+<script>
+const THEME_KEY = "slingshot-theme";
+const btn = document.getElementById("themeBtn");
+const root = document.documentElement;
+
+function paint(t){
+  root.dataset.theme = t;
+  btn.textContent = t === "dark" ? "Light mode" : "Dark mode";
+}
+let saved = null;
+try { saved = localStorage.getItem(THEME_KEY); } catch (e) {}
+if (!saved) saved = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+paint(saved);
+btn.onclick = () => {
+  const next = root.dataset.theme === "dark" ? "light" : "dark";
+  paint(next);
+  try { localStorage.setItem(THEME_KEY, next); } catch (e) {}
+};
+
+const appsEl = document.getElementById("apps");
+const filtersEl = document.getElementById("filters");
+let APPS = [];
+let active = "all";
+
+function esc(s){
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c =>
+    ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+function render(){
+  const list = active === "all" ? APPS : APPS.filter(a => a.tag === active);
+  if (!APPS.length){
+    appsEl.innerHTML = '<div class="empty"><strong>No apps yet.</strong><br>'
+      + 'The first Slingshot Tool ships on Monday — check back then.</div>';
+    return;
+  }
+  if (!list.length){
+    appsEl.innerHTML = '<div class="empty">Nothing in this category yet.</div>';
+    return;
+  }
+  appsEl.innerHTML = list.map(a => `
+    <article class="card">
+      ${a.badge ? '<span class="pill">' + esc(a.badge) + '</span>' : ''}
+      <h3>${esc(a.title)}</h3>
+      <p>${esc(a.blurb)}</p>
+      <div class="tags">${(a.tags || []).slice(0,4).map(t =>
+        '<span class="tag">' + esc(t) + '</span>').join("")}</div>
+      <div class="row">
+        ${a.url ? '<a class="btn primary" href="' + esc(a.url) +
+          '" target="_blank" rel="noopener">Open</a>' : ''}
+        ${a.download ? '<a class="btn" href="' + esc(a.download) + '">Installer</a>' : ''}
+      </div>
+    </article>`).join("");
+}
+
+function renderFilters(){
+  const tags = [];
+  APPS.forEach(a => { if (a.tag && !tags.includes(a.tag)) tags.push(a.tag); });
+  if (!tags.length){ filtersEl.innerHTML = ""; return; }
+  filtersEl.innerHTML = ['<button class="btn' + (active==="all"?" active":"") +
+    '" data-f="all">All</button>']
+    .concat(tags.map(t => '<button class="btn' + (active===t?" active":"") +
+      '" data-f="' + esc(t) + '">' + esc(t) + '</button>')).join("");
+  filtersEl.querySelectorAll("button").forEach(b => b.onclick = () => {
+    active = b.dataset.f; render(); renderFilters();
+  });
+}
+
+fetch("apps.json", {cache:"no-store"})
+  .then(r => r.json())
+  .then(d => { APPS = Array.isArray(d) ? d : (d.apps || []); render(); renderFilters(); })
+  .catch(() => {
+    APPS = [];
+    appsEl.innerHTML = '<div class="empty"><strong>Slingshot Tools</strong><br>'
+      + 'The catalog loads on first build — Monday, 07:00 UTC.</div>';
+  });
+</script>
+</body>
+</html>
