@@ -59,6 +59,13 @@
   .pill{font-size:11.5px;padding:3px 9px;border-radius:999px;background:var(--red);
     color:#fff;font-weight:700;letter-spacing:.02em}
   .pill.free{background:var(--red-ink)}
+  .pill.basic{background:var(--bg-2);color:var(--red-ink);border:1px solid var(--red-ink)}
+  .card.full{border-color:var(--red-ink)}
+  .card.full:before{background:linear-gradient(90deg,var(--red-ink),var(--red))}
+  .diffs{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:5px}
+  .diffs li{font-size:13px;color:var(--muted);padding-left:20px;position:relative;line-height:1.45}
+  .diffs li:before{content:"+";position:absolute;left:2px;top:-1px;color:var(--red-ink);
+    font-weight:800;font-size:14px}
   .price{margin-right:auto;font-weight:800;font-size:17px;letter-spacing:-.02em}
   footer{border-top:1px solid var(--line);padding:30px 0 60px;color:var(--muted);font-size:14px}
   footer .grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));padding:0}
@@ -147,23 +154,22 @@ function render(){
     return;
   }
   appsEl.innerHTML = list.map(a => {
-    let r;
-    let badge;
-    if (a.free) {
-      const left = Math.max(0, Math.ceil((new Date(a.trial_until + 'T00:00:00') - new Date()) / 864e5));
-      r = 'Free trial';
-      badge = '<span class="pill free">Free trial · ' + left + ' day' + (left === 1 ? '' : 's') + ' left</span>';
-    } else {
-      r = a.price != null ? '$' + Number(a.price).toFixed(2) : '';
-      badge = a.badge ? '<span class="pill">' + esc(a.badge) + '</span>' : '';
-    }
+    const r = a.free ? 'Free' : (a.price != null ? '$' + Number(a.price).toFixed(2) : '');
+    const tierBadge = a.tier === 'basic'
+      ? '<span class="pill basic">Basic · free</span>'
+      : (a.badge ? '<span class="pill">Full edition</span>' : '');
+    const diffs = (a.differences || []).length
+      ? '<ul class="diffs">' + a.differences.map(d =>
+          '<li>' + esc(String(d).replace(/^Full edition:\s*/i, '')) + '</li>').join('') + '</ul>'
+      : '';
     return `
-    <article class="card">
-      ${badge}
+    <article class="card ${a.tier === 'basic' ? 'basic' : 'full'}">
+      ${tierBadge}
       <h3>${esc(a.title)}</h3>
       <p>${esc(a.blurb)}</p>
       <div class="tags">${(a.tags || []).slice(0,4).map(t =>
         '<span class="tag">' + esc(t) + '</span>').join("")}</div>
+      ${diffs}
       <div class="row">
         <span class="price">${r}</span>
         <a class="btn primary" href="${esc(a.itch_url || ITCH)}" target="_blank" rel="noopener">Get it</a>

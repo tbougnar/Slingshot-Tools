@@ -182,48 +182,87 @@ def pick_concept():
     }
 
 
-APP_SPEC = """Build a COMPLETE single-file HTML app. This is the entire deliverable.
+APP_SPEC = """Build a COMPLETE single-file HTML app that ships in TWO editions from ONE file.
+This is the entire deliverable.
+
+TIER SYSTEM (critical - the file must contain this)
+Near the very top of the <script>, define:
+const TIER = "full";                 // "basic" or "full"
+const LIMITS = { maxItems: 0, export: true, themes: "all", bulk: true, history: true };
+Then read every limit from LIMITS instead of hardcoding numbers. When
+TIER === "basic": use the values in BASIC_LIMITS below; when TIER === "full":
+treat all limits as unlimited. The same code must work correctly in both editions.
+
+BASIC_LIMITS must be chosen by you for this app and must be genuinely limiting
+but still useful - e.g. { maxItems: 3, export: false, themes: "one", bulk: false, history: false }.
+Never make the basic edition useless; it must genuinely solve the problem for a
+few items so the user hits the wall and wants the full edition.
+
+Also return "differences": 4-6 short, concrete, plain sentences a customer would
+understand, each starting with "Full edition:", naming exactly what the paid
+version adds (unlimited items, export/import, extra themes, bulk actions,
+history, backups, no limits).
 
 HARD RULES
-- Output ONE file: valid HTML5 with inline CSS and inline JavaScript. No build step, no
-  external CDN, no external fonts, no network calls, no frameworks. It must work offline
-  forever after first open.
-- Everything is stored in localStorage so the user keeps their data.
-- Theme follows Slingshot Tools: dark mode is dark red (#14100F background, #C1272D red,
-  #F6EFEC text) and there is a working light mode toggle that switches instantly and is
-  remembered. Use CSS variables and a data-theme attribute on <html>.
-- Modern, clean, genuinely good looking: rounded cards, soft shadows, clear hierarchy,
-  generous spacing, a header with the app name, and a footer. It must look like a paid app.
+- ONE file: valid HTML5 with inline CSS and inline JavaScript. No build step, no
+  external CDN, no external fonts, no network calls, no frameworks.
+- Works offline forever after first open. Data in localStorage.
+- Theme follows Slingshot Tools: dark mode is dark red (#14100F background,
+  #C1272D red, #F6EFEC text) with a working light mode toggle, remembered.
+- Modern and genuinely good looking: rounded cards, soft shadows, clear hierarchy,
+  generous spacing, header with the app name, footer. Must look like a paid app.
 - Fully responsive on phone and desktop. Accessible: real labels, keyboard operable.
-- Useful for real: actually solve the problem, with sensible defaults, validation and
-  helpful empty states. No placeholder buttons, no "coming soon".
-- Add a small "export my data" and "import my data" control (JSON) so nothing is trapped.
+- Useful for real: sensible defaults, validation, helpful empty states. No
+  placeholder buttons, no "coming soon".
+- Never nag or guilt the user about upgrading. One calm line is enough.
+- Add "export my data" and "import my data" (JSON) controls in the full edition.
 - No analytics, no tracking, no network.
 
 CONTENT RULES
-- Invent a short, friendly brand name for the app (not "App 1").
-- Include one empty state that explains what to do first.
+- Invent a short, friendly brand name for the app.
+- Include one empty state explaining what to do first.
 
 OUTPUT
 Return JSON only, exactly this shape:
-{"filename":"index.html","html":"<the entire file as one string, starting with <!DOCTYPE html>"}
-The html value must be a single JSON string with all quotes escaped. Do not add commentary."""
+{"filename":"index.html","brand":"App Name","html":"<the entire file>","differences":["Full edition: ...","..."]}
+The html value must be a single JSON string with all quotes escaped. No commentary."""
 
 
 def build_html(concept, lessons):
     d = groq_json(
         "You are a senior front-end engineer shipping a polished, genuinely useful "
-        "single-file web app. You return JSON only.",
+        "single-file web app in a free basic edition and a paid full edition. "
+        "You return JSON only.",
         APP_SPEC + f"\n\nTHE APP: {json.dumps(concept, indent=2)}\n"
         f"\nLESSONS FROM REAL USERS (apply them):\n{lessons or '(none yet)'}",
-        max_tokens=8000, temperature=0.5,
+        max_tokens=9000, temperature=0.5,
     )
     html = d.get("html") or ""
     if "<!DOCTYPE" not in html or "</html>" not in html:
         raise RuntimeError("generated html looks incomplete")
     if len(html) < 1200:
         raise RuntimeError(f"generated html too small ({len(html)} bytes)")
-    return html
+    diffs = [str(x)[:120] for x in (d.get("differences") or [])][:6]
+    brand = str(d.get("brand") or concept["title"])
+    return html, brand, diffs
+
+
+def _set_tier(html, tier):
+    """Flip the edition in the generated file."""
+    out = html.replace('const TIER = "full";', f'const TIER = "{tier}";', 1)
+    if out == html:
+        out = re.sub(r'(const\s+TIER\s*=\s*")[^"]*(")', rf'\g<1>{tier}\g<2>', html, count=1)
+    return out
+
+
+def write_app(concept, html, tier="full"):
+    slug = concept["slug"] if tier == "full" else f"{concept['slug']}-basic"
+    out = APPS_DIR / slug
+    (out / "app").mkdir(parents=True, exist_ok=True)
+    (out / "app" / "index.html").write_text(_set_tier(html, tier), encoding="utf-8")
+    meta = {**concept, "slug": slug, "tier": tier, "base_slug": concept["slug"]}
+    (out / "concept.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
+    return out
 
 
 def html_looks_fine(html):
@@ -238,14 +277,6 @@ def html_looks_fine(html):
         if needle not in html:
             problems.append(f"missing {needle}")
     return problems
-
-
-def write_app(concept, html):
-    out = APPS_DIR / concept["slug"]
-    (out / "app").mkdir(parents=True, exist_ok=True)
-    (out / "app" / "index.html").write_text(html, encoding="utf-8")
-    (out / "concept.json").write_text(json.dumps(concept, indent=2), encoding="utf-8")
-    return out
 
 
 NSI = r"""
@@ -393,7 +424,7 @@ def push_to_itch(concept, app_dir):
     return True
 
 
-def publish(concept, app_dir, installer):
+def publish(concept, app_dir, installer, tier="full", brand="", differences=None):
     dest = SITE_APPS / concept["slug"]
     dest.mkdir(parents=True, exist_ok=True)
     shutil.copy2(app_dir / "app" / "index.html", dest / "index.html")
@@ -408,21 +439,26 @@ def publish(concept, app_dir, installer):
                 apps = apps.get("apps", [])
         except json.JSONDecodeError:
             apps = []
+    base = concept.get("base_slug", concept["slug"])
     entry = {
         "slug": concept["slug"],
-        "title": concept["title"],
+        "base_slug": base,
+        "title": (f"{brand or concept['title']}" if tier == "full"
+                  else f"{brand or concept['title']} (Basic)"),
+        "tier": tier,
         "tag": concept["tag"],
         "blurb": concept["blurb"],
         "tags": concept["tags"],
         "url": f"{SITE_URL.rstrip('/')}/apps/{concept['slug']}/",
         "itch_url": f"{ITCH_PAGE_URL.rstrip('/')}/",
         "download": "",
-        "price": max(PRICE_FLOOR, PRICE_START),
-        "free": False,
+        "price": 0.0 if tier == "basic" else max(PRICE_FLOOR, PRICE_START),
+        "free": tier == "basic",
+        "differences": differences or [],
         "badge": "New",
         "date": date.today().isoformat(),
     }
-    if installer and installer.exists():
+    if installer and installer.exists() and tier == "full":
         rel = "apps/" + concept["slug"] + "/" + installer.name
         shutil.copy2(installer, SITE_APPS / concept["slug"] / installer.name)
         entry["download"] = f"{SITE_URL.rstrip('/')}/{rel}"
@@ -441,22 +477,34 @@ def main():
     concept = pick_concept()
     log(f"concept: {concept['title']} ({concept['slug']})")
     for attempt in range(1, 3):
-        html = build_html(concept, lessons)
+        html, brand, diffs = build_html(concept, lessons)
         issues = html_looks_fine(html)
         if issues:
             log(f"attempt {attempt} rejected: {issues}")
             continue
-        log(f"attempt {attempt} ok ({len(html)} bytes)")
-        app_dir = write_app(concept, html)
-        installer = build_installer(app_dir, concept)
-        push_to_itch(concept, app_dir)
-        entry = publish(concept, app_dir, installer)
+        log(f"attempt {attempt} ok ({len(html)} bytes, brand={brand!r})")
+
+        full_meta = {**concept, "brand": brand}
+        full_dir = write_app(full_meta, html, tier="full")
+        installer = build_installer(full_dir, full_meta)
+        push_to_itch({**full_meta, "slug": concept["slug"]}, full_dir)
+        full_entry = publish({**full_meta, "base_slug": concept["slug"]}, full_dir,
+                             installer, tier="full", brand=brand, differences=diffs)
+
+        basic_meta = {**concept, "brand": brand,
+                      "slug": f"{concept['slug']}-basic"}
+        basic_dir = write_app(basic_meta, html, tier="basic")
+        push_to_itch(basic_meta, basic_dir)
+        basic_entry = publish({**basic_meta, "base_slug": concept["slug"]}, basic_dir,
+                              None, tier="basic", brand=brand, differences=diffs)
+
         built = load_built()
-        built.append({"slug": concept["slug"], "title": concept["title"],
+        built.append({"slug": concept["slug"], "title": brand,
                       "date": date.today().isoformat()})
         BANNED.parent.mkdir(parents=True, exist_ok=True)
         BANNED.write_text(json.dumps(built, indent=2), encoding="utf-8")
-        log(f"DONE: {entry['title']} -> {entry['url']}")
+        log(f"DONE full: {full_entry['title']} ${full_entry['price']:.2f} -> {full_entry['url']}")
+        log(f"DONE basic: {basic_entry['title']} free -> {basic_entry['url']}")
         return 0
     log("both attempts failed the quality gate")
     return 1

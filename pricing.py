@@ -128,28 +128,13 @@ def groq(system, user, max_tokens=900, temperature=0.4):
     return {}
 
 
-def assign_trial(apps, prices):
-    """No permanent free app. Each newly shipped app gets a 3-day free trial,
-    then it becomes a paid product. Returns the app slug that is on trial."""
-    TRIAL_DAYS = int(os.environ.get("TRIAL_DAYS", "3"))
-    on_trial = None
-    for a in apps:
-        slug = a["slug"]
-        entry = prices.setdefault(slug, {})
-        if "trial_until" not in entry:
-            entry.setdefault("price", START_PRICE)
-            entry["trial_until"] = (date.today() + timedelta(days=TRIAL_DAYS)).isoformat()
-            entry.setdefault("history", []).append(
-                {"date": date.today().isoformat(),
-                 "reason": f"3-day free trial from launch"})
-            log(f"trial started for {slug} until {entry['trial_until']}")
-        if date.fromisoformat(entry["trial_until"]) >= date.today():
-            on_trial = slug
-        elif not entry.get("needs_paid_conversion"):
-            entry["needs_paid_conversion"] = True
-            log(f"TRIAL OVER: {slug} must be switched to Paid on itch.io "
-                f"(it kept its ${entry.get('price', START_PRICE):.2f})")
-    return on_trial
+def assign_tiers(apps, prices):
+    """Every month ships a pair: a BASIC app that is always free but limited,
+    and the FULL version that is paid. The free one is never on a timer."""
+    basic = [a for a in apps if a.get("tier") == "basic"]
+    full = [a for a in apps if a.get("tier") in (None, "full")]
+    log(f"tiers: {len(basic)} basic (free, limited), {len(full)} full (paid)")
+    return basic, full
 
 
 def main():
@@ -162,20 +147,23 @@ def main():
     for a in apps:
         entry = prices.setdefault(a["slug"], {})
         entry.setdefault("price", START_PRICE)
+        entry.setdefault("tier", a.get("tier") or "full")
         s = sales.get(a["slug"]) or {}
         entry["sales"] = s.get("sales", entry.get("sales", 0))
         entry["views"] = s.get("views", entry.get("views", 0))
         if a.get("itch_url"):
             entry["itch_url"] = a["itch_url"]
 
-    on_trial = assign_trial(apps, prices)
+    basic, full = assign_tiers(apps, prices)
 
     moved = []
     for a in apps:
         slug = a["slug"]
         entry = prices[slug]
+        if entry.get("tier") == "basic":
+            entry["price"] = 0.0
+            continue
         cur = float(entry["price"])
-        s = sales.get(slug) or {}
         new, why = decide(int(entry.get("sales") or 0), int(entry.get("views") or 0), cur)
         new = charm(clamp(new))
         if abs(new - cur) >= 0.01:
@@ -191,11 +179,9 @@ def main():
 
     for a in apps:
         entry = prices.get(a["slug"], {})
-        trial_end = entry.get("trial_until")
-        is_trial = bool(trial_end) and date.fromisoformat(trial_end) >= date.today()
-        a["price"] = 0 if is_trial else entry.get("price", START_PRICE)
-        a["free"] = is_trial
-        a["trial_until"] = trial_end or ""
+        a["tier"] = entry.get("tier", "full")
+        a["free"] = a["tier"] == "basic"
+        a["price"] = 0 if a["free"] else entry.get("price", START_PRICE)
         a["itch_url"] = a.get("itch_url") or os.environ.get(
             "ITCH_PAGE_URL", "https://slingshot-tools.itch.io/")
 
@@ -204,15 +190,10 @@ def main():
     if apps:
         CATALOG.write_text(json.dumps(apps, indent=2), encoding="utf-8")
 
-    due = [s for s, e in prices.items()
-           if isinstance(e, dict) and e.get("needs_paid_conversion")
-           and not e.get("converted_on")]
-    log(f"wrote {len(apps)} app(s); {len(moved)} price move(s); on trial={on_trial}")
+    log(f"wrote {len(apps)} app(s); {len(moved)} price move(s)")
     for a in apps:
-        tag = "FREE TRIAL" if a.get("free") else "$%.2f" % a["price"]
+        tag = "BASIC free" if a.get("free") else "FULL $%.2f" % a["price"]
         log(f"   {a['slug']}: {tag}")
-    if due:
-        log("ACTION NEEDED on itch.io - switch these to Paid: " + ", ".join(due))
     return 0
 
 
