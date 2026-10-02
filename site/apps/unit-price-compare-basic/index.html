@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#14100F">
+<title>DealScope — Unit Price Compare</title>
+<style>
+:root{--bg:#14100F;--surface:#201716;--surface-2:#2A1E1C;--border:#3A2A28;--text:#F6EFEC;--muted:#C2B0AB;--red:#C1272D;--red-2:#E0454B;--good:#4FBF8A;--bad:#E0565C;--shadow:0 18px 40px -20px rgba(0,0,0,.7);--ring:rgba(193,39,45,.55)}
+html[data-theme="light"]{--bg:#F6EFEC;--surface:#FFFFFF;--surface-2:#F3E9E5;--border:#E4D6D1;--text:#241A18;--muted:#7C6B66;--red:#C1272D;--red-2:#A51E24;--good:#1E8A5A;--bad:#C0392F;--shadow:0 16px 34px -22px rgba(80,20,20,.4);--ring:rgba(193,39,45,.35)}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);line-height:1.5;-webkit-font-smoothing:antialiased;min-height:100vh}
+body::before{content:"";position:fixed;inset:0;z-index:-1;background:radial-gradient(1100px 460px at 82% -8%,rgba(193,39,45,.16),transparent 60%),radial-gradient(760px 420px at -6% 108%,rgba(193,39,45,.08),transparent 60%);pointer-events:none}
+.wrap{max-width:1120px;margin:0 auto;padding:0 16px}
+header.top{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
+.top-in{display:flex;align-items:center;gap:12px;padding:12px 0}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.mark{width:40px;height:40px;border-radius:12px;background:linear-gradient(150deg,var(--red-2),var(--red));display:grid;place-items:center;box-shadow:var(--shadow);flex:none}
+.mark svg{width:22px;height:22px;color:#fff}
+.brand-txt{min-width:0}
+.brand-txt h1{font-size:1.15rem;margin:0;letter-spacing:-.01em;white-space:nowrap}
+.brand-txt p{margin:0;font-size:.78rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top-actions{margin-left:auto;display:flex;align-items:center;gap:8px}
+.tier{display:inline-flex;align-items:center;gap:6px;font-size:.72rem;font-weight:700;letter-spacing:.02em;padding:6px 11px;border-radius:999px;border:1px solid var(--border);color:var(--muted)}
+.tier .dot{width:8px;height:8px;border-radius:50%;background:var(--red)}
+.tier.full .dot{background:var(--good)}
+.icon-btn{width:40px;height:40px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;display:grid;place-items:center;transition:transform .12s,border-color .15s,background .15s}
+.icon-btn:hover{border-color:var(--red);transform:translateY(-1px)}
+.icon-btn:active{transform:translateY(0)}
+.icon-btn svg{width:20px;height:20px}
+main{padding:24px 0 8px}
+.lede{max-width:60ch}
+.lede h2{font-size:clamp(1.45rem,3.4vw,2.05rem);margin:0 0 8px;letter-spacing:-.02em;line-height:1.15}
+.lede p{margin:0;color:var(--muted);font-size:.98rem}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);padding:20px;margin-top:20px}
+.panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.panel-head h3{margin:0;font-size:1.02rem;letter-spacing:-.01em}
+.panel-head .sub{color:var(--muted);font-size:.82rem}
+.btn{font:inherit;font-weight:600;font-size:.86rem;border-radius:11px;padding:10px 15px;cursor:pointer;border:1px solid var(--border);background:var(--surface-2);color:var(--text);transition:transform .12s,border-color .15s,background .15s,box-shadow .15s}
+.btn:hover{border-color:var(--red);transform:translateY(-1px)}
+.btn:active{transform:translateY(0)}
+.btn.primary{background:linear-gradient(150deg,var(--red-2),var(--red));color:#fff;border-color:transparent;box-shadow:var(--shadow)}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn.ghost{background:transparent}
+.btn.sm{padding:8px 12px;font-size:.8rem;border-radius:9px}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none;filter:none}
+.btn:focus-visible,.icon-btn:focus-visible,.field input:focus-visible,.field select:focus-visible,.seg button:focus-visible,.item:focus-visible,.badge:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.item{background:var(--surface-2);border:1px solid var(--border);border-radius:16px;padding:16px;transition:border-color .15s,box-shadow .15s,transform .15s}
+.item:hover{border-color:color-mix(in srgb,var(--red) 40%,var(--border))}
+.item.win{border-color:var(--good);box-shadow:0 0 0 1px var(--good),var(--shadow)}
+.item-top{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.item-name{flex:1;min-width:0;font-weight:600;font-size:.98rem}
+.item-name input{width:100%;font:inherit;font-weight:600;background:transparent;border:1px solid transparent;border-radius:8px;padding:6px 8px;color:var(--text)}
+.item-name input:hover{border-color:var(--border)}
+.item-name input:focus{border-color:var(--red);background:var(--surface);outline:none}
+.item-name input::placeholder{color:var(--muted);font-weight:500}
+.icon-btn.x{width:32px;height:32px;border-radius:9px}
+.icon-btn.x svg{width:16px;height:16px}
+.icon-btn.x:hover{color:var(--bad);border-color:var(--bad)}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:.72rem;color:var(--muted);font-weight:600;letter-spacing:.02em;text-transform:uppercase}
+.field .in{display:flex;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;transition:border-color .15s,box-shadow .15s}
+.field .in:focus-within{border-color:var(--red);box-shadow:0 0 0 3px var(--ring)}
+.field .in .aff{padding:0 10px;font-size:.9rem;color:var(--muted);font-weight:700}
+.field .in input{flex:1;min-width:0;border:0;background:transparent;color:var(--text);font:inherit;font-size:.95rem;padding:10px 10px 10px 0}
+.field .in input:focus{outline:none}
+.field .in select{flex:1;min-width:0;border:0;background:transparent;color:var(--text);font:inherit;font-size:.9rem;padding:10px}
+.field .in select option{color:#111;background:#fff}
+.item-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;flex-wrap:wrap}
+.up{display:flex;align-items:baseline;gap:6px}
+.up-num{font-size:1.15rem;font-weight:800;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.up-num.good{color:var(--good)}
+.up-num.bad{color:var(--bad)}
+.up-unit{font-size:.78rem;color:var(--muted)}
+.badge{font-size:.72rem;font-weight:800;letter-spacing:.03em;text-transform:uppercase;padding:5px 10px;border-radius:999px;border:1px solid transparent}
+.badge.best{background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--good);border-color:color-mix(in srgb,var(--good) 40%,transparent)}
+.badge.worst{background:color-mix(in srgb,var(--bad) 16%,transparent);color:var(--bad);border-color:color-mix(in srgb,var(--bad) 40%,transparent)}
+.badge.neutral{color:var(--muted);border-color:var(--border)}
+.add-row{margin-top:14px}
+.empty{display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;padding:40px 20px}
+.empty .em-ico{width:64px;height:64px;border-radius:18px;background:var(--surface-2);border:1px solid var(--border);display:grid;place-items:center;color:var(--red)}
+.empty .em-ico svg{width:30px;height:30px}
+.empty h3{margin:0;font-size:1.1rem}
+.empty p{margin:0;color:var(--muted);max-width:42ch;font-size:.92rem}
+.empty .btn{margin-top:6px}
+.verdict{margin-top:16px;background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);padding:20px}
+.verdict h3{margin:0 0 14px;font-size:1rem;letter-spacing:-.01em}
+.vgrid{display:grid;gap:12px}
+.vcard{display:flex;align-items:center;gap:14px;padding:14px;border:1px solid var(--border);border-radius:14px;background:var(--surface-2);cursor:pointer;transition:transform .12s,border-color .15s,box-shadow .15s;text-align:left;font:inherit;color:var(--text)}
+.vcard:hover{transform:translateY(-1px);border-color:var(--red)}
+.vcard:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+.vcard.best{border-color:var(--good);box-shadow:0 0 0 1px var(--good)}
+.vcard.worst{border-color:var(--bad)}
+.vrank{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-weight:800;font-size:.9rem;background:var(--surface);border:1px solid var(--border);flex:none;font-variant-numeric:tabular-nums}
+.vcard.best .vrank{background:color-mix(in srgb,var(--good) 20%,transparent);color:var(--good);border-color:color-mix(in srgb,var(--good) 40%,transparent)}
+.vcard.worst .vrank{background:color-mix(in srgb,var(--bad) 18%,transparent);color:var(--bad);border-color:color-mix(in srgb,var(--bad) 40%,transparent)}
+.vmain{flex:1;min-width:0}
+.vname{font-weight:700;font-size:.98rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vmeta{font-size:.8rem;color:var(--muted);margin-top:2px}
+.vprice{font-weight:800;font-size:1.15rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+.vprice .u{font-size:.72rem;color:var(--muted);font-weight:600}
+.vtag{font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.03em;padding:4px 8px;border-radius:999px}
+.vtag.best{background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--good)}
+.vtag.worst{background:color-mix(in srgb,var(--bad) 16%,transparent);color:var(--bad)}
+.vtag.same{background:var(--surface);color:var(--muted);border:1px solid var(--border)}
+.vtag.na{background:transparent;color:var(--muted)}
+.vsave{margin-top:14px;padding-top:14px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.vsave .pill{background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--good);font-weight:800;padding:8px 14px;border-radius:999px;font-size:.95rem;font-variant-numeric:tabular-nums}
+.vsave .lbl{color:var(--muted);font-size:.85rem}
+.vsave .lbl b{color:var(--text)}
+.vsave .hint{margin-left:auto;font-size:.78rem;color:var(--muted)}
+.vsave .hint b{color:var(--good)}
+.vnote{margin-top:12px;color:var(--muted);font-size:.85rem}
+.vnote b{color:var(--text)}
+.hint{margin-top:14px;color:var(--muted);font-size:.8rem}
+.hint b{color:var(--text)}
+.bulkbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
+.bulkbar label{font-size:.8rem;color:var(--muted);font-weight:600}
+.bulkbar input{width:120px;font:inherit;font-size:.9rem;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:9px 11px;color:var(--text)}
+.bulkbar input:focus{outline:none;border-color:var(--red);box-shadow:0 0 0 3px var(--ring)}
+.bulkbar .save{margin-left:auto;font-size:.85rem;color:var(--muted)}
+.bulkbar .save b{color:var(--good);font-variant-numeric:tabular-nums}
+.history{margin-top:20px}
+.hist-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.hist-head h3{margin:0;font-size:1.02rem}
+.hist-head .sub{color:var(--muted);font-size:.82rem}
+.hist-head .acts{display:flex;gap:8px;flex-wrap:wrap}
+.hist-empty{color:var(--muted);font-size:.88rem;padding:18px;border:1px dashed var(--border);border-radius:12px;text-align:center}
+.hist-list{display:grid;gap:10px}
+.hist-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--surface-2)}
+.hist-item .hi-ico{color:var(--red);flex:none;display:grid;place-items:center}
+.hist-item .hi-ico svg{width:18px;height:18px}
+.hist-item .hi-main{flex:1;min-width:0}
+.hist-item .hi-title{font-weight:600;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hist-item .hi-meta{font-size:.76rem;color:var(--muted);margin-top:2px}
+.hist-item .hi-acts{display:flex;gap:6px}
+footer{padding:28px 0 40px;color:var(--muted);font-size:.8rem;text-align:center}
+footer .upline{margin-bottom:6px}
+footer .upline b{color:var(--text)}
+footer .fine{opacity:.8}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--surface);border:1px solid var(--border);color:var(--text);padding:12px 18px;border-radius:12px;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:50;max-width:90vw;text-align:center;font-size:.88rem}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.err{border-color:var(--bad)}
+@media (max-width:520px){.brand-txt p{display:none}.vsave .hint{margin-left:0;width:100%}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap top-in">
+    <div class="brand">
+      <span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v18"/><path d="M8 8h5a2.5 2.5 0 0 1 0 5H8"/></svg></span>
+      <div class="brand-txt"><h1>DealScope</h1><p>See the real price per unit at a glance</p></div>
+    </div>
+    <div class="top-actions">
+      <span id="tier" class="tier"></span>
+      <button id="theme" class="icon-btn" type="button" aria-label="Switch to light theme"><span id="themeIco"></span></button>
+    </div>
+  </div>
+</header>
+<main class="wrap">
+  <section class="lede">
+    <h2>Which one is actually the better deal?</h2>
+    <p>Enter the shelf price and the size of two or more products. DealScope turns each into a price-per-unit so the cheapest option jumps out — no mental math, no surprises at checkout.</p>
+  </section>
+  <section class="panel" id="compare" aria-labelledby="cmpTitle">
+    <div class="panel-head">
+      <div><h3 id="cmpTitle">Compare products</h3><div class="sub">Add as many as you like, then watch the ranking update live.</div></div>
+      <button id="add" class="btn primary" type="button">+ Add product</button>
+    </div>
+    <div id="list" class="grid"></div>
+    <div id="empty" class="empty" hidden></div>
+    <div id="bulk" class="bulkbar" hidden>
+      <label for="bulkQty">Buy</label>
+      <input id="bulkQty" type="number" min="1" step="1" inputmode="numeric" value="1" aria-label="Quantity to buy">
+      <span class="save">Best deal saves <b id="bulkSave">—</b></span>
+    </div>
+  </section>
+  <section class="verdict" id="verdict" aria-live="polite" aria-labelledby="vTitle"></section>
+  <section class="history" id="history" hidden aria-labelledby="hTitle">
+    <div class="hist-head">
+      <div><h3 id="hTitle">Recent comparisons</h3><div class="sub" id="hSub"></div></div>
+      <div class="acts">
+        <button id="export" class="btn" type="button">Export my data</button>
+        <button id="import" class="btn" type="button">Import my data</button>
+        <button id="clearHist" class="btn ghost" type="button">Clear</button>
+      </div>
+    </div>
+    <div id="histList" class="hist-list"></div>
+  </section>
+</main>
+<footer class="wrap">
+  <div class="upline" id="upline"></div>
+  <div class="fine">DealScope works offline and keeps everything on this device — no account, no network, no tracking.</div>
+</footer>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script>
+(function(){
+"use strict";
+const TIER = "basic";                 // "basic" or "full"
+const BASIC_LIMITS = { maxItems: 3, export: false, themes: "one", bulk: false, history: false };
+const LIMITS = TIER === "full"
+  ? { maxItems: Infinity, export: true, themes: "all", bulk: true, history: true }
+  : Object.assign({}, BASIC_LIMITS);
+
+const UNITS = [
+  {id:"each",label:"each",sym:"ea",per:1},
+  {id:"g",label:"grams",sym:"g",per:1},
+  {id:"kg",label:"kilograms",sym:"kg",per:1000},
+  {id:"oz",label:"ounces",sym:"oz",per:28.3495},
+  {id:"lb",label:"pounds",sym:"lb",per:453.592},
+  {id:"ml",label:"millilitres",sym:"ml",per:1},
+  {id:"l",label:"litres",sym:"L",per:1000},
+  {id:"flOz",label:"fl oz",sym:"fl oz",per:29.5735},
+  {id:"gal",label:"gallons",sym:"gal",per:3785.41},
+  {id:"ft",label:"feet",sym:"ft",per:1},
+  {id:"yd",label:"yards",sym:"yd",per:3},
+  {id:"m",label:"metres",sym:"m",per:1},
+  {id:"sqft",label:"sq ft",sym:"sq ft",per:1},
+  {id:"sqm",label:"sq m",sym:"sq m",per:10.7639}
+];
+const UNIT = Object.fromEntries(UNITS.map(u=>[u.id,u]));
+const FAMILY = {
+  g:["g","kg","oz","lb"],
+  v:["ml","l","flOz","gal"],
+  len:["ft","yd","m"],
+  area:["sqft","sqm"],
+  each:["each"]
+};
+const FAMILY_OF = {};
+for(const k in FAMILY) FAMILY[k].forEach(u=>FAMILY_OF[u]=k);
+
+const ICON = {
+  sun:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+  moon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>',
+  x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/></svg>',
+  cart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/><path d="M2 3h3l2.4 12.4a1 1 0 0 0 1 .8h9.2a1 1 0 0 0 1-.8L21 7H6"/></svg>'
+};
+
+const $ = s=>document.querySelector(s);
+const el = (t,c)=>{const e=document.createElement(t);if(c)e.className=c;return e;};
+const uid = ()=> (crypto.randomUUID ? crypto.randomUUID() : "id-"+Date.now()+"-"+Math.random().toString(36).slice(2));
+const esc = s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const num = v=>{const n=parseFloat(v);return isFinite(n)?n:NaN;};
+const money = n=>"$"+n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+const unitLabel = id=>(UNIT[id]?UNIT[id].label:id);
+const unitSym = id=>(UNIT[id]?UNIT[id].sym:id);
+function upFmt(n){
+  if(!isFinite(n)) return "—";
+  if(n>=100) return "$"+n.toFixed(2);
+  if(n>=1) return "$"+n.toFixed(3);
+  return "$"+n.toFixed(4);
+}
+
+const LS = { theme:"dealscope.theme", items:"dealscope.items", hist:"dealscope.hist" };
+const MAXHIST = 12;
+let items = [];
+let history = [];
+let theme = "dark";
+let toastTimer = null;
+
+function saveItems(){ try{ localStorage.setItem(LS.items, JSON.stringify(items)); }catch(e){} }
+function saveHist(){ try{ localStorage.setItem(LS.hist, JSON.stringify(history)); }catch(e){} }
+function loadItems(){
+  try{
+    const raw = localStorage.getItem(LS.items);
+    if(raw){
+      const arr = JSON.parse(raw);
+      if(Array.isArray(arr)) items = arr.filter(x=>x && x.id);
+    }
+  }catch(e){}
+  if(!items.length){ items = [newItem(""), newItem("")]; }
+  if(items.length > LIMITS.maxItems) items = items.slice(0, LIMITS.maxItems);
+}
+function loadHist(){
+  try{
+    const raw = localStorage.getItem(LS.hist);
+    if(raw){ const arr = JSON.parse(raw); if(Array.isArray(arr)) history = arr; }
+  }catch(e){ history = []; }
+  if(!LIMITS.history) history = [];
+}
+function newItem(name){ return { id: uid(), name: name||"", price: "", unit: "each", qty: "1" }; }
+
+function compute(){
+  const rows = items.map(it=>{
+    const p = num(it.price), q = num(it.qty), u = UNIT[it.unit] || UNIT.each;
+    const base = (q>0) ? p/q : NaN;
+    const perGram = (isFinite(base) && u.per) ? base/u.per : NaN;
+    return { id:it.id, name:it.name, price:p, qty:q, unit:it.unit, base, perGram, family:FAMILY_OF[it.unit]||"each", valid: isFinite(base) && base>0 };
+  });
+  const valid = rows.filter(r=>r.valid);
+  const fams = [...new Set(valid.map(r=>r.family))];
+  const groups = {};
+  fams.forEach(f=>{
+    const g = valid.filter(r=>r.family===f);
+    const best = g.reduce((a,b)=> b.perGram < a.perGram ? b : a);
+    const worst = g.reduce((a,b)=> b.perGram > a.perGram ? b : a);
+    groups[f] = { best: best.id, worst: worst.id, count: g.length, same: best.perGram===worst.perGram };
+  });
+  return { rows, valid, groups };
+}
+
+function render(){
+  renderItems();
+  renderVerdict();
+  renderHistory();
+  renderTier();
+  renderUpline();
+  renderThemeBtn();
+  const bulk = $("#bulk");
+  if(bulk) bulk.hidden = !(LIMITS.bulk && items.length>=2);
+}
+
+function renderItems(){
+  const list = $("#list"), empty = $("#empty");
+  list.innerHTML = "";
+  if(!items.length){
+    empty.hidden = false;
+    empty.innerHTML =
+      '<div class="em-ico">'+ICON.cart+'</div>'+
+      '<h3>Nothing to compare yet</h3>'+
+      '<p>Start by adding the first two products you are choosing between — the shelf price and the size of each. DealScope will tell you the winner instantly.</p>'+
+      '<button class="btn primary" type="button" data-act="add">+ Add your first product</button>';
+    empty.querySelector("[data-act=add]").addEventListener("click", addItem);
+    return;
+  }
+  empty.hidden = true;
+  const { groups } = compute();
+  items.forEach(it=>{
+    const r = { id:it.id, base:NaN, perGram:NaN, family:FAMILY_OF[it.unit]||"each", valid:false };
+    const g = groups[r.family];
+    if(g){ r.valid = true; r.base = num(it.price)/num(it.qty); const u=UNIT[it.unit]||UNIT.each; r.perGram = r.base/u.per; }
+    const card = el("div","item");
+    card.dataset.id = it.id;
+    let badge = '<span class="badge neutral">—</span>';
+    if(r.valid && g){
+      if(g.best===it.id && g.count>1) badge = '<span class="badge best">Best deal</span>';
+      else if(g.worst===it.id && g.count>1) badge = '<span class="badge worst">Priciest</span>';
+      else badge = '<span class="badge neutral">Tie</span>';
+    }
+    const up = (r.valid && r.base>0) ? upFmt(r.base) : "—";
+    const cls = (r.valid && r.base>0) ? (g.best===it.id ? "good" : (g.worst===it.id ? "bad" : "")) : "";
+    card.innerHTML =
+      '<div class="item-top">'+
+        '<div class="item-name"><input type="text" value="'+esc(it.name)+'" placeholder="Product name" aria-label="Product name"></div>'+
+        '<button class="icon-btn x" type="button" data-act="del" aria-label="Remove product">'+ICON.x+'</button>'+
+      '</div>'+
+      '<div class="fields">'+
+        '<div class="field"><label>Price</label><div class="in"><span class="aff">$</span><input type="number" step="0.01" min="0" inputmode="decimal" placeholder="0.00" value="'+esc(it.price)+'" aria-label="Price"></div></div>'+
+        '<div class="field"><label>Size</label><div class="in"><input type="number" step="any" min="0" inputmode="decimal" placeholder="1" value="'+esc(it.qty)+'" aria-label="Quantity"><select aria-label="Unit">'+unitOptions(it.unit)+'</select></div></div>'+
+      '</div>'+
+      '<div class="item-foot">'+
+        '<div class="up"><span class="up-num '+cls+'">'+up+'</span><span class="up-unit">/ '+unitSym(it.unit)+'</span></div>'+
+        badge+
+      '</div>';
+    const nameInp = card.querySelector(".item-name input");
+    const priceInp = card.querySelector(".field:nth-child(1) input");
+    const qtyInp = card.querySelector(".field:nth-child(2) input");
+    const unitSel = card.querySelector("select");
+    nameInp.addEventListener("input", e=>{ it.name = e.target.value; saveItems(); });
+    priceInp.addEventListener("input", e=>{ it.price = e.target.value; saveItems(); renderVerdict(); refreshCard(card,it); });
+    qtyInp.addEventListener("input", e=>{ it.qty = e.target.value; saveItems(); renderVerdict(); refreshCard(card,it); });
+    unitSel.addEventListener("change", e=>{ it.unit = e.target.value; saveItems(); renderVerdict(); refreshCard(card,it); });
+    card.querySelector("[data-act=del]").addEventListener("click", ()=>removeItem(it.id));
+    card.addEventListener("focusin", ()=>{ nameInp.focus(); nameInp.select(); });
+    list.appendChild(card);
+  });
+}
+function unitOptions(sel){ return UNITS.map(u=>'<option value="'+u.id+'"'+(u.id===sel?" selected":"")+">'+u.label+'</option>').join(""); }
+function refreshCard(card,it){
+  const { groups } = compute();
+  const r = { id:it.id, family:FAMILY_OF[it.unit]||"each" };
+  const g = groups[r.family];
+  const p = num(it.price), q = num(it.qty), u = UNIT[it.unit]||UNIT.each;
+  const base = (q>0) ? p/q : NaN;
+  const valid = isFinite(base) && base>0;
+  const upEl = card.querySelector(".up-num");
+  const upUnit = card.querySelector(".up-unit");
+  const badge = card.querySelector(".badge");
+  upUnit.textContent = "/ "+unitSym(it.unit);
+  if(valid){
+    upEl.textContent = upFmt(base);
+    upEl.className = "up-num " + (g.best===it.id ? "good" : (g.worst===it.id ? "bad" : ""));
+    card.classList.toggle("win", g.best===it.id && g.count>1);
+    if(g.best===it.id && g.count>1) badge.outerHTML = '<span class="badge best">Best deal</span>';
+    else if(g.worst===it.id && g.count>1) badge.outerHTML = '<span class="badge worst">Priciest</span>';
+    else badge.outerHTML = '<span class="badge neutral">Tie</span>';
+  } else {
+    upEl.textContent = "—"; upEl.className = "up-num"; card.classList.remove("win");
+    badge.outerHTML = '<span class="badge neutral">—</span>';
+  }
+  const bulk = $(
+</body>
+</html>

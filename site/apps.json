@@ -1,5 +1,51 @@
 [
   {
+    "slug": "unit-price-compare-basic",
+    "base_slug": "unit-price-compare",
+    "title": "Unit Price Compare (Basic)",
+    "tier": "basic",
+    "tag": "shopping",
+    "blurb": "Instantly see which grocery item is the better deal by comparing price per unit.",
+    "tags": [
+      "shopping",
+      "savings",
+      "calculator",
+      "finance"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/unit-price-compare-basic/",
+    "itch_url": "https://slingshot-tools.itch.io/unit-price-compare-basic",
+    "download": "",
+    "price": 0,
+    "free": true,
+    "differences": [],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-02"
+  },
+  {
+    "slug": "unit-price-compare",
+    "base_slug": "unit-price-compare",
+    "title": "Unit Price Compare",
+    "tier": "full",
+    "tag": "shopping",
+    "blurb": "Instantly see which grocery item is the better deal by comparing price per unit.",
+    "tags": [
+      "shopping",
+      "savings",
+      "calculator",
+      "finance"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/unit-price-compare/",
+    "itch_url": "https://slingshot-tools.itch.io/unit-price-compare",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-02"
+  },
+  {
     "slug": "invoice-maker-basic",
     "base_slug": "invoice-maker",
     "title": "Invoice Maker (Basic)",
