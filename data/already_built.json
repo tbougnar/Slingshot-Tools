@@ -3,5 +3,10 @@
     "slug": "expense-splitter",
     "title": "SplitBill",
     "date": "2026-10-02"
+  },
+  {
+    "slug": "recipe-scaler",
+    "title": "Recipe Scaler",
+    "date": "2026-10-02"
   }
 ]

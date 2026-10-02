@@ -1,5 +1,49 @@
 [
   {
+    "slug": "recipe-scaler-basic",
+    "base_slug": "recipe-scaler",
+    "title": "Recipe Scaler (Basic)",
+    "tier": "basic",
+    "tag": "cooking",
+    "blurb": "Scale any recipe up or down while keeping ingredient amounts as sensible, easy-to-measure fractions.",
+    "tags": [
+      "cooking",
+      "math",
+      "fractions",
+      "kitchen"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/recipe-scaler-basic/",
+    "itch_url": "https://slingshot-tools.itch.io/",
+    "download": "",
+    "price": 0,
+    "free": true,
+    "differences": [],
+    "badge": "New",
+    "date": "2026-10-02"
+  },
+  {
+    "slug": "recipe-scaler",
+    "base_slug": "recipe-scaler",
+    "title": "Recipe Scaler",
+    "tier": "full",
+    "tag": "cooking",
+    "blurb": "Scale any recipe up or down while keeping ingredient amounts as sensible, easy-to-measure fractions.",
+    "tags": [
+      "cooking",
+      "math",
+      "fractions",
+      "kitchen"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/recipe-scaler/",
+    "itch_url": "https://slingshot-tools.itch.io/",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [],
+    "badge": "New",
+    "date": "2026-10-02"
+  },
+  {
     "slug": "expense-splitter-basic",
     "base_slug": "expense-splitter",
     "title": "SplitBill (Basic)",
