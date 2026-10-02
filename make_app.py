@@ -506,25 +506,47 @@ def build_installer(app_dir: Path, concept):
 
 
 
-BUTLER_URLS = [
-    "https://broth.itch.zone/butler/linux-amd64/Latest/butler",
-    "https://broth.itch.zone/butler/linux-amd64/Latest/butler.zip",
-    "https://broth.itch.zone/butler/linux-amd64/stable/butler",
-    "https://broth.itch.zone/butler/linux-arm64/Latest/butler",
+BUTLER_FALLBACKS = [
+    "https://broth.itch.zone/butler/{arch}/Latest/butler",
 ]
 
 
+def _butler_candidates():
+    """Ask itch.io for butler's real URL, then fall back to known patterns."""
+    cands = []
+    for target in ("linux-amd64", "linux-x86_64", "linux-amd64.tar.gz"):
+        try:
+            r = requests.get(
+                "https://itch.io/api/1/x/wharf/latest",
+                params={"target": target, "channel": "stable"}, timeout=60)
+            if r.status_code == 200 and r.text.strip().startswith("{"):
+                data = r.json()
+                if data.get("url"):
+                    cands.append(data["url"])
+        except Exception:  # noqa: BLE001
+            pass
+    arch = "linux-arm64" if platform.machine().lower() in ("arm64", "aarch64") else "linux-amd64"
+    for pat in BUTLER_FALLBACKS:
+        cands.append(pat.format(arch=arch))
+    seen, out = set(), []
+    for c in cands:
+        if c not in seen:
+            seen.add(c)
+            out.append(c)
+    return out
+
+
 def install_butler():
-    """Fetch butler and verify it is a real executable before trusting it.
-    A 404 page saved as 'butler' produces 'Exec format error' at run time."""
+    """Fetch butler and verify it is a real, correctly-architecture ELF
+    binary. Saving a 404 page as 'butler' is what caused 'Exec format error'."""
     if shutil.which("butler"):
         return shutil.which("butler")
     dest = Path("/usr/local/bin/butler")
-    for url in BUTLER_URLS:
+    for url in _butler_candidates():
         try:
-            r = requests.get(url, timeout=120, stream=True)
+            r = requests.get(url, timeout=180)
             if r.status_code != 200 or len(r.content) < 100_000:
-                log(f"butler mirror rejected: {r.status_code} {url}")
+                log(f"butler source rejected: {r.status_code} {url}")
                 continue
             blob = r.content
             if blob[:2] == b"PK":
@@ -534,20 +556,23 @@ def install_butler():
                     name = next(n for n in z.namelist() if n.endswith("butler"))
                     blob = z.read(name)
             if blob[:4] != b"\x7fELF":
-                log(f"not an ELF binary, skipping: {url}")
+                log(f"not a Linux binary (probably a 404 page): {url}")
                 continue
             machine = platform.machine().lower()
             is_arm = blob[18] == 0xB7
             if ("arm" in machine or "aarch" in machine) != is_arm:
-                log(f"wrong architecture in {url}")
+                log(f"wrong CPU architecture: {url}")
                 continue
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_bytes(blob)
             dest.chmod(0o755)
-            log(f"butler installed from {url} ({len(blob)//1024} KB)")
+            chk = subprocess.run([str(dest), "version"], capture_output=True, timeout=60)
+            log(f"butler ready from {url} ({len(blob)//1024} KB, "
+                f"self-check rc={chk.returncode})")
             return str(dest)
         except Exception as e:  # noqa: BLE001
-            log(f"butler mirror failed: {str(e)[:90]}")
+            log(f"butler source failed: {str(e)[:90]}")
+    log("no usable butler source found")
     return None
 
 
