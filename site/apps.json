@@ -1,5 +1,51 @@
 [
   {
+    "slug": "invoice-maker-basic",
+    "base_slug": "invoice-maker",
+    "title": "Invoice Maker (Basic)",
+    "tier": "basic",
+    "tag": "business",
+    "blurb": "Create professional invoices in seconds and export clean PDF-ready HTML without ever leaving your browser.",
+    "tags": [
+      "invoicing",
+      "pdf",
+      "freelance",
+      "billing"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/invoice-maker-basic/",
+    "itch_url": "https://slingshot-tools.itch.io/invoice-maker-basic",
+    "download": "",
+    "price": 0,
+    "free": true,
+    "differences": [],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-02"
+  },
+  {
+    "slug": "invoice-maker",
+    "base_slug": "invoice-maker",
+    "title": "Invoice Maker",
+    "tier": "full",
+    "tag": "business",
+    "blurb": "Create professional invoices in seconds and export clean PDF-ready HTML without ever leaving your browser.",
+    "tags": [
+      "invoicing",
+      "pdf",
+      "freelance",
+      "billing"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/invoice-maker/",
+    "itch_url": "https://slingshot-tools.itch.io/invoice-maker",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-02"
+  },
+  {
     "slug": "recipe-scaler-basic",
     "base_slug": "recipe-scaler",
     "title": "Recipe Scaler (Basic)",
