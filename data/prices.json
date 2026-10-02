@@ -40,5 +40,19 @@
     "sales": 0,
     "views": 0,
     "itch_url": "https://slingshot-tools.itch.io/invoice-maker"
+  },
+  "unit-price-compare-basic": {
+    "price": 0.0,
+    "tier": "basic",
+    "sales": 0,
+    "views": 0,
+    "itch_url": "https://slingshot-tools.itch.io/unit-price-compare-basic"
+  },
+  "unit-price-compare": {
+    "price": 3.0,
+    "tier": "full",
+    "sales": 0,
+    "views": 0,
+    "itch_url": "https://slingshot-tools.itch.io/unit-price-compare"
   }
 }

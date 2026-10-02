@@ -13,5 +13,10 @@
     "slug": "invoice-maker",
     "title": "Invoice Maker",
     "date": "2026-10-02"
+  },
+  {
+    "slug": "unit-price-compare",
+    "title": "Unit Price Compare",
+    "date": "2026-10-02"
   }
 ]
