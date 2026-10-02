@@ -212,7 +212,7 @@ def groq_json(system, user, **kw):
     """JSON-mode with tolerance for truncated model output."""
     for use_json in (True, False):
         try:
-            raw = groq(system, user, json_mode=use_json, **kw)
+            raw = groq(system, user, **kw)
         except RuntimeError:
             continue
         if not raw:
