@@ -9,6 +9,7 @@ import base64
 import json
 import os
 import platform
+import requests
 import re
 import shutil
 import subprocess
@@ -506,57 +507,56 @@ def build_installer(app_dir: Path, concept):
 
 
 
-BUTLER_FALLBACKS = [
-    "https://broth.itch.zone/butler/{arch}/Latest/butler",
-]
+BUTLER_RELEASES = "https://api.github.com/repos/itchio/butler/releases"
+BUTLER_FALLBACK_VERSION = "v15.31.0"
 
 
-def _butler_candidates():
-    """Ask itch.io for butler's real URL, then fall back to known patterns."""
-    cands = []
-    for target in ("linux-amd64", "linux-x86_64", "linux-amd64.tar.gz"):
-        try:
-            r = requests.get(
-                "https://itch.io/api/1/x/wharf/latest",
-                params={"target": target, "channel": "stable"}, timeout=60)
-            if r.status_code == 200 and r.text.strip().startswith("{"):
-                data = r.json()
-                if data.get("url"):
-                    cands.append(data["url"])
-        except Exception:  # noqa: BLE001
-            pass
-    arch = "linux-arm64" if platform.machine().lower() in ("arm64", "aarch64") else "linux-amd64"
-    for pat in BUTLER_FALLBACKS:
-        cands.append(pat.format(arch=arch))
-    seen, out = set(), []
-    for c in cands:
-        if c not in seen:
-            seen.add(c)
-            out.append(c)
-    return out
+def _butler_asset_urls():
+    """butler ships official binaries on its GitHub releases. Ask the API for the
+    newest release so we never hardcode a dead version."""
+    machine = platform.machine().lower()
+    key = "butler-linux-arm64.zip" if ("arm" in machine or "aarch" in machine) \
+        else "butler-linux-amd64.zip"
+    version = BUTLER_FALLBACK_VERSION
+    try:
+        r = requests.get(BUTLER_RELEASES + "/latest",
+                         headers={"Accept": "application/vnd.github+json",
+                                  "User-Agent": "slingshot"},
+                         timeout=60)
+        if r.status_code == 200:
+            tag = r.json().get("tag_name")
+            if tag:
+                version = tag
+    except Exception as e:  # noqa: BLE001
+        log(f"release lookup failed, using pinned {version}: {str(e)[:70]}")
+    urls = [f"https://github.com/itchio/butler/releases/download/{version}/{key}"]
+    if version != BUTLER_FALLBACK_VERSION:
+        urls.append(
+            f"https://github.com/itchio/butler/releases/download/"
+            f"{BUTLER_FALLBACK_VERSION}/{key}")
+    return urls
 
 
 def install_butler():
-    """Fetch butler and verify it is a real, correctly-architecture ELF
-    binary. Saving a 404 page as 'butler' is what caused 'Exec format error'."""
+    """Fetch butler from its official GitHub release and verify it really is a
+    Linux binary for this CPU before we ever execute it."""
     if shutil.which("butler"):
         return shutil.which("butler")
     dest = Path("/usr/local/bin/butler")
-    for url in _butler_candidates():
+    for url in _butler_asset_urls():
         try:
-            r = requests.get(url, timeout=180)
+            r = requests.get(url, timeout=300)
             if r.status_code != 200 or len(r.content) < 100_000:
-                log(f"butler source rejected: {r.status_code} {url}")
+                log(f"butler release rejected: {r.status_code} {url}")
                 continue
-            blob = r.content
-            if blob[:2] == b"PK":
-                import io
-                import zipfile
-                with zipfile.ZipFile(io.BytesIO(blob)) as z:
-                    name = next(n for n in z.namelist() if n.endswith("butler"))
-                    blob = z.read(name)
+            import io
+            import zipfile
+            with zipfile.ZipFile(io.BytesIO(r.content)) as z:
+                name = next(n for n in z.namelist()
+                            if n.endswith("butler") and "source" not in n)
+                blob = z.read(name)
             if blob[:4] != b"\x7fELF":
-                log(f"not a Linux binary (probably a 404 page): {url}")
+                log(f"not an ELF binary: {url}")
                 continue
             machine = platform.machine().lower()
             is_arm = blob[18] == 0xB7
@@ -567,12 +567,12 @@ def install_butler():
             dest.write_bytes(blob)
             dest.chmod(0o755)
             chk = subprocess.run([str(dest), "version"], capture_output=True, timeout=60)
-            log(f"butler ready from {url} ({len(blob)//1024} KB, "
+            log(f"butler installed from {url} ({len(blob)//1024} KB, "
                 f"self-check rc={chk.returncode})")
             return str(dest)
         except Exception as e:  # noqa: BLE001
             log(f"butler source failed: {str(e)[:90]}")
-    log("no usable butler source found")
+    log("no usable butler release found")
     return None
 
 
