@@ -482,7 +482,7 @@ def build_installer(app_dir: Path, concept):
     if shutil.which("makensis") is None:
         log("makensis not installed - shipping portable folder only")
         return None
-    r = subprocess.run(["makensis", "/V3", nsi.name],
+    r = subprocess.run(["makensis", "-V3", nsi.name],
                        cwd=app_dir, capture_output=True, text=True, timeout=600)
     if r.returncode != 0 or not out.exists():
         log(f"installer build failed: {(r.stderr or r.stdout)[-400:]}")
