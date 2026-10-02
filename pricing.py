@@ -13,7 +13,7 @@ import os
 import re
 import time
 import urllib.request
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -128,44 +128,28 @@ def groq(system, user, max_tokens=900, temperature=0.4):
     return {}
 
 
-def pick_free_app(apps, prices, sales):
-    """The AI decides which app is the free one: usually the newest, so the
-    freebie keeps the storefront fresh and always gives a reason to return."""
-    if not apps:
-        return None, {}
-    if len(apps) == 1:
-        return apps[0]["slug"], {"reason": "only one app - it is the free sample"}
-
-    scored = []
+def assign_trial(apps, prices):
+    """No permanent free app. Each newly shipped app gets a 3-day free trial,
+    then it becomes a paid product. Returns the app slug that is on trial."""
+    TRIAL_DAYS = int(os.environ.get("TRIAL_DAYS", "3"))
+    on_trial = None
     for a in apps:
-        s = sales.get(a["slug"], {})
-        sales_n = s.get("sales", 0)
-        age = a.get("date", "")
-        fresh = 1.0 if age >= (date.today().isoformat()) else 0.0
-        paid_now = prices.get(a["slug"], {}).get("price", 0) or 0
-        # prefer a fresh app that is not the current best seller
-        score = fresh * 3 + (1.0 if sales_n <= 1 else 0.0) - sales_n * 0.1
-        scored.append((score, a))
-    scored.sort(key=lambda x: -x[0])
-    best = scored[0][1]
-    d = groq(
-        "You decide which Slingshot Tool should be the free download this week. "
-        "You are blunt about product value. Return JSON only.",
-        f"Apps: {json.dumps([{k: a.get(k) for k in ('slug','title','blurb','date')} for a in apps])}\n"
-        f"Sales so far: {json.dumps(sales)}\n"
-        f"Currently free: {json.dumps(prices.get('__free__', {}))}\n\n"
-        f"Pick one to be FREE this week (a free app should pull people in, not give "
-        f"away your best seller). Return JSON only: "
-        '{"slug":"...","why":"one sentence","marketing_hook":"one punchy sentence"}',
-        max_tokens=400, temperature=0.5,
-    )
-    slug = (d.get("slug") if isinstance(d, dict) else None) or best["slug"]
-    if slug not in {a["slug"] for a in apps}:
-        slug = best["slug"]
-    return slug, {"why": (d.get("why") if isinstance(d, dict) else None)
-                  or "newest app with no sales yet",
-                  "marketing_hook": (d.get("marketing_hook") if isinstance(d, dict) else None) or "",
-                  "score": round(scored[0][0], 2)}
+        slug = a["slug"]
+        entry = prices.setdefault(slug, {})
+        if "trial_until" not in entry:
+            entry.setdefault("price", START_PRICE)
+            entry["trial_until"] = (date.today() + timedelta(days=TRIAL_DAYS)).isoformat()
+            entry.setdefault("history", []).append(
+                {"date": date.today().isoformat(),
+                 "reason": f"3-day free trial from launch"})
+            log(f"trial started for {slug} until {entry['trial_until']}")
+        if date.fromisoformat(entry["trial_until"]) >= date.today():
+            on_trial = slug
+        elif not entry.get("needs_paid_conversion"):
+            entry["needs_paid_conversion"] = True
+            log(f"TRIAL OVER: {slug} must be switched to Paid on itch.io "
+                f"(it kept its ${entry.get('price', START_PRICE):.2f})")
+    return on_trial
 
 
 def main():
@@ -176,17 +160,15 @@ def main():
     sales = {a["slug"]: sales_from_itch(a["slug"]) or {} for a in apps} if apps else {}
 
     for a in apps:
-        slug = a["slug"]
-        entry = prices.setdefault(slug, {})
-        if "price" not in entry:
-            entry["price"] = START_PRICE
-            entry["history"] = [{"price": START_PRICE, "date": date.today().isoformat(),
-                                 "reason": "launch price"}]
-        s = sales.get(slug) or {}
+        entry = prices.setdefault(a["slug"], {})
+        entry.setdefault("price", START_PRICE)
+        s = sales.get(a["slug"]) or {}
         entry["sales"] = s.get("sales", entry.get("sales", 0))
         entry["views"] = s.get("views", entry.get("views", 0))
         if a.get("itch_url"):
             entry["itch_url"] = a["itch_url"]
+
+    on_trial = assign_trial(apps, prices)
 
     moved = []
     for a in apps:
@@ -207,26 +189,30 @@ def main():
         else:
             log(f"held {slug}: {why}")
 
-    free_slug, free_reason = pick_free_app(apps, prices, sales)
-    if free_slug:
-        prices["__free__"] = {"slug": free_slug, **free_reason,
-                              "date": date.today().isoformat()}
-        log(f"FREE this week: {free_slug} - {free_reason.get('why')}")
-
     for a in apps:
-        a["price"] = 0 if a["slug"] == free_slug else prices.get(a["slug"], {}).get("price", START_PRICE)
-        a["free"] = a["slug"] == free_slug
-        a["itch_url"] = a.get("itch_url") or os.environ.get("ITCH_PAGE_URL",
-                                                            "https://slingshot-tools.itch.io/")
+        entry = prices.get(a["slug"], {})
+        trial_end = entry.get("trial_until")
+        is_trial = bool(trial_end) and date.fromisoformat(trial_end) >= date.today()
+        a["price"] = 0 if is_trial else entry.get("price", START_PRICE)
+        a["free"] = is_trial
+        a["trial_until"] = trial_end or ""
+        a["itch_url"] = a.get("itch_url") or os.environ.get(
+            "ITCH_PAGE_URL", "https://slingshot-tools.itch.io/")
 
     PRICES.write_text(json.dumps(prices, indent=2), encoding="utf-8")
     LOG.write_text(json.dumps(history[-200:], indent=2), encoding="utf-8")
     if apps:
         CATALOG.write_text(json.dumps(apps, indent=2), encoding="utf-8")
 
-    log(f"wrote {len(apps)} app(s); {len(moved)} price move(s); free={free_slug}")
+    due = [s for s, e in prices.items()
+           if isinstance(e, dict) and e.get("needs_paid_conversion")
+           and not e.get("converted_on")]
+    log(f"wrote {len(apps)} app(s); {len(moved)} price move(s); on trial={on_trial}")
     for a in apps:
-        log(f"   {a['slug']}: {'FREE' if a.get('free') else '$%.2f' % a['price']}")
+        tag = "FREE TRIAL" if a.get("free") else "$%.2f" % a["price"]
+        log(f"   {a['slug']}: {tag}")
+    if due:
+        log("ACTION NEEDED on itch.io - switch these to Paid: " + ", ".join(due))
     return 0
 
 

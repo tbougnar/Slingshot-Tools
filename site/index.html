@@ -147,9 +147,16 @@ function render(){
     return;
   }
   appsEl.innerHTML = list.map(a => {
-    const r = a.free ? 'Free' : (a.price != null ? '$' + Number(a.price).toFixed(2) : '');
-    const badge = a.free ? '<span class="pill free">Free this week</span>'
-                         : (a.badge ? '<span class="pill">' + esc(a.badge) + '</span>' : '');
+    let r;
+    let badge;
+    if (a.free) {
+      const left = Math.max(0, Math.ceil((new Date(a.trial_until + 'T00:00:00') - new Date()) / 864e5));
+      r = 'Free trial';
+      badge = '<span class="pill free">Free trial · ' + left + ' day' + (left === 1 ? '' : 's') + ' left</span>';
+    } else {
+      r = a.price != null ? '$' + Number(a.price).toFixed(2) : '';
+      badge = a.badge ? '<span class="pill">' + esc(a.badge) + '</span>' : '';
+    }
     return `
     <article class="card">
       ${badge}
