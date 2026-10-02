@@ -27,15 +27,16 @@ LESSONS = ROOT / "data" / "lessons.txt"
 BANNED = ROOT / "data" / "already_built.json"
 
 GROQ_BASE = "https://api.groq.com/openai/v1"
-GROQ_KEY = os.environ.get("GROQ_API_KEY", "")
-CHAT_MODEL = os.environ.get("GROQ_CHAT_MODEL", "qwen/qwen3.8-27b")
-CHAT_FALLBACKS = ("openai/gpt-oss-120b", "openai/gpt-oss-20b")
-SITE_URL = os.environ.get("SITE_URL", "https://tbougnar.github.io/Slingshot-Tools")
-ITCH_PAGE = os.environ.get("ITCH_PAGE", "slingshot-tools")
-ITCH_API_KEY = os.environ.get("ITCH_API_KEY", "")
-ITCH_PAGE_URL = os.environ.get("ITCH_PAGE_URL", "https://slingshot-tools.itch.io/")
-PRICE_FLOOR = float(os.environ.get("PRICE_FLOOR", "1.00"))
-PRICE_START = float(os.environ.get("PRICE_START", "3.00"))
+GROQ_KEY = (os.environ.get("GROQ_API_KEY") or "").strip()
+CHAT_MODEL = (os.environ.get("GROQ_CHAT_MODEL") or "").strip() or "qwen/qwen3.8-27b"
+CHAT_FALLBACKS = ["openai/gpt-oss-120b", "openai/gpt-oss-20b",
+                     "qwen/qwen3.8-27b"]
+SITE_URL = (os.environ.get("SITE_URL") or "").strip() or "https://tbougnar.github.io/Slingshot-Tools"
+ITCH_PAGE = (os.environ.get("ITCH_PAGE") or "").strip() or "slingshot-tools"
+ITCH_API_KEY = (os.environ.get("ITCH_API_KEY") or "").strip()
+ITCH_PAGE_URL = (os.environ.get("ITCH_PAGE_URL") or "").strip() or "https://slingshot-tools.itch.io/"
+PRICE_FLOOR = float((os.environ.get("PRICE_FLOOR") or "").strip() or 1.00)
+PRICE_START = float((os.environ.get("PRICE_START") or "").strip() or 3.00)
 
 CATEGORIES = [
     ("password-manager", "offline password manager with vault encryption and a generator"),

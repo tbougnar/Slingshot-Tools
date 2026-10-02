@@ -18,9 +18,9 @@ LESSONS = ROOT / "data" / "lessons.txt"
 STATS = ROOT / "data" / "stats.json"
 
 GROQ_BASE = "https://api.groq.com/openai/v1"
-GROQ_KEY = os.environ.get("GROQ_API_KEY", "")
-CHAT_MODEL = os.environ.get("GROQ_CHAT_MODEL", "qwen/qwen3.8-27b")
-ITCH_PAGE = os.environ.get("ITCH_PAGE", "slingshot-tools")
+GROQ_KEY = (os.environ.get("GROQ_API_KEY") or "").strip()
+CHAT_MODEL = (os.environ.get("GROQ_CHAT_MODEL") or "").strip() or "qwen/qwen3.8-27b"
+ITCH_PAGE = (os.environ.get("ITCH_PAGE") or "").strip() or "slingshot-tools"
 
 
 def log(m):
@@ -66,7 +66,7 @@ def groq_json(system, user, max_tokens=1200, temperature=0.4):
 def itch_signals():
     """Public page hit counts if the itch.io API key is configured; otherwise
     an honest 'no data yet' so we never invent numbers."""
-    key = os.environ.get("ITCH_API_KEY", "")
+    key = (os.environ.get("ITCH_API_KEY") or "").strip() or ""
     if not key:
         return None
     try:

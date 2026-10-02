@@ -23,16 +23,16 @@ LOG = DATA / "price_log.json"
 CATALOG = ROOT / "site" / "apps.json"
 
 GROQ_BASE = "https://api.groq.com/openai/v1"
-GROQ_KEY = os.environ.get("GROQ_API_KEY", "")
-CHAT_MODEL = os.environ.get("GROQ_CHAT_MODEL", "qwen/qwen3.8-27b")
+GROQ_KEY = (os.environ.get("GROQ_API_KEY") or "").strip()
+CHAT_MODEL = (os.environ.get("GROQ_CHAT_MODEL") or "").strip() or "qwen/qwen3.8-27b"
 
-FLOOR = float(os.environ.get("PRICE_FLOOR", "1.00"))
-CEILING = float(os.environ.get("PRICE_CEILING", "9.00"))
-START_PRICE = float(os.environ.get("PRICE_START", "3.00"))
-MIN_SALES_BEFORE_MOVE = int(os.environ.get("PRICE_MIN_SAMPLES", "5"))
-STEP = float(os.environ.get("PRICE_STEP", "0.50"))
-ITCH_KEY = os.environ.get("ITCH_API_KEY", "")
-ITCH_USER = os.environ.get("ITCH_USER", "slingshot-tools")
+FLOOR = float((os.environ.get("PRICE_FLOOR") or "").strip() or "1.00")
+CEILING = float((os.environ.get("PRICE_CEILING") or "").strip() or "9.00")
+START_PRICE = float((os.environ.get("PRICE_START") or "").strip() or "3.00")
+MIN_SALES_BEFORE_MOVE = int((os.environ.get("PRICE_MIN_SAMPLES") or "").strip() or "5")
+STEP = float((os.environ.get("PRICE_STEP") or "").strip() or "0.50")
+ITCH_KEY = (os.environ.get("ITCH_API_KEY") or "").strip() or ""
+ITCH_USER = (os.environ.get("ITCH_USER") or "").strip() or "slingshot-tools"
 
 
 def log(m):
