@@ -24,7 +24,7 @@ CATALOG = ROOT / "site" / "apps.json"
 
 GROQ_BASE = "https://api.groq.com/openai/v1"
 GROQ_KEY = os.environ.get("GROQ_API_KEY", "")
-CHAT_MODEL = os.environ.get("GROQ_CHAT_MODEL", "llama-3.3-70b-versatile")
+CHAT_MODEL = os.environ.get("GROQ_CHAT_MODEL", "qwen/qwen3.8-27b")
 
 FLOOR = float(os.environ.get("PRICE_FLOOR", "1.00"))
 CEILING = float(os.environ.get("PRICE_CEILING", "9.00"))
@@ -110,7 +110,14 @@ def groq(system, user, max_tokens=900, temperature=0.4):
                      {"role": "user", "content": user}],
         "max_tokens": max_tokens, "temperature": temperature,
     }).encode()
-    headers = {"Authorization": f"Bearer {GROQ_KEY}", "Content-Type": "application/json"}
+    headers = {
+        "Authorization": f"Bearer {GROQ_KEY}",
+        "Content-Type": "application/json",
+        "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                       "AppleWebKit/537.36 (KHTML, like Gecko) "
+                       "Chrome/124.0.0.0 Safari/537.36"),
+        "Accept": "application/json",
+    }
     deadline = time.monotonic() + 600
     attempt = 0
     while attempt < 4 and time.monotonic() < deadline:

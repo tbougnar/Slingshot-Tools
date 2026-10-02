@@ -28,8 +28,9 @@ BANNED = ROOT / "data" / "already_built.json"
 
 GROQ_BASE = "https://api.groq.com/openai/v1"
 GROQ_KEY = os.environ.get("GROQ_API_KEY", "")
-CHAT_MODEL = os.environ.get("GROQ_CHAT_MODEL", "llama-3.3-70b-versatile")
-SITE_URL = os.environ.get("SITE_URL", "https://slingshot-tools.github.io")
+CHAT_MODEL = os.environ.get("GROQ_CHAT_MODEL", "qwen/qwen3.8-27b")
+CHAT_FALLBACKS = ("openai/gpt-oss-120b", "openai/gpt-oss-20b")
+SITE_URL = os.environ.get("SITE_URL", "https://tbougnar.github.io/Slingshot-Tools")
 ITCH_PAGE = os.environ.get("ITCH_PAGE", "slingshot-tools")
 ITCH_API_KEY = os.environ.get("ITCH_API_KEY", "")
 ITCH_PAGE_URL = os.environ.get("ITCH_PAGE_URL", "https://slingshot-tools.itch.io/")
@@ -100,7 +101,16 @@ def groq(system, user, max_tokens=4000, temperature=0.8, tries=6):
         "temperature": temperature,
     }
     data = json.dumps(body).encode()
-    headers = {"Authorization": f"Bearer {GROQ_KEY}", "Content-Type": "application/json"}
+    headers = {
+        "Authorization": f"Bearer {GROQ_KEY}",
+        "Content-Type": "application/json",
+        # Groq sits behind Cloudflare, which rejects urllib's default
+        # "Python-urllib" agent with error 1010. Send a browser UA.
+        "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                       "AppleWebKit/537.36 (KHTML, like Gecko) "
+                       "Chrome/124.0.0.0 Safari/537.36"),
+        "Accept": "application/json",
+    }
     last = "unknown"
     deadline = time.monotonic() + 1200
     attempt = 0
@@ -121,9 +131,14 @@ def groq(system, user, max_tokens=4000, temperature=0.8, tries=6):
                 time.sleep(20)
                 continue
             if e.code == 404:
-                CHAT_MODEL = "llama-3.1-8b-instant"
+                # rotate only to models this key actually has access to
+                if CHAT_FALLBACKS:
+                    CHAT_MODEL = CHAT_FALLBACKS.pop(0)
+                else:
+                    raise RuntimeError(f"model rejected and no fallback left: {last}")
                 body["model"] = CHAT_MODEL
                 data = json.dumps(body).encode()
+                time.sleep(2)
             time.sleep(5)
         except Exception as e:  # noqa: BLE001
             last = str(e)[:200]

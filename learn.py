@@ -19,7 +19,7 @@ STATS = ROOT / "data" / "stats.json"
 
 GROQ_BASE = "https://api.groq.com/openai/v1"
 GROQ_KEY = os.environ.get("GROQ_API_KEY", "")
-CHAT_MODEL = os.environ.get("GROQ_CHAT_MODEL", "llama-3.3-70b-versatile")
+CHAT_MODEL = os.environ.get("GROQ_CHAT_MODEL", "qwen/qwen3.8-27b")
 ITCH_PAGE = os.environ.get("ITCH_PAGE", "slingshot-tools")
 
 
@@ -35,7 +35,14 @@ def groq_json(system, user, max_tokens=1200, temperature=0.4):
         "max_tokens": max_tokens,
         "temperature": temperature,
     }).encode()
-    headers = {"Authorization": f"Bearer {GROQ_KEY}", "Content-Type": "application/json"}
+    headers = {
+        "Authorization": f"Bearer {GROQ_KEY}",
+        "Content-Type": "application/json",
+        "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                       "AppleWebKit/537.36 (KHTML, like Gecko) "
+                       "Chrome/124.0.0.0 Safari/537.36"),
+        "Accept": "application/json",
+    }
     deadline = time.monotonic() + 600
     attempt = 0
     last = "unknown"
