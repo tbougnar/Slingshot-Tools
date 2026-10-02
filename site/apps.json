@@ -1,1 +1,58 @@
-﻿[]
+[
+  {
+    "slug": "expense-splitter-basic",
+    "base_slug": "expense-splitter",
+    "title": "SplitBill (Basic)",
+    "tier": "basic",
+    "tag": "finance",
+    "blurb": "Split group bills instantly and settle up with clear IOUs.",
+    "tags": [
+      "bills",
+      "sharing",
+      "settlement",
+      "travel"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/expense-splitter-basic/",
+    "itch_url": "https://slingshot-tools.itch.io/",
+    "download": "",
+    "price": 0,
+    "free": true,
+    "differences": [
+      "Full edition: split any number of people, not just 3.",
+      "Full edition: export and import your data as JSON for backups and moving between devices.",
+      "Full edition: unlock all six themes instead of the single default.",
+      "Full edition: keep a history of your recent splits so you can revisit them.",
+      "Full edition: no limits, no nagging, and no feature walls."
+    ],
+    "badge": "New",
+    "date": "2026-10-02"
+  },
+  {
+    "slug": "expense-splitter",
+    "base_slug": "expense-splitter",
+    "title": "SplitBill",
+    "tier": "full",
+    "tag": "finance",
+    "blurb": "Split group bills instantly and settle up with clear IOUs.",
+    "tags": [
+      "bills",
+      "sharing",
+      "settlement",
+      "travel"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/expense-splitter/",
+    "itch_url": "https://slingshot-tools.itch.io/",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [
+      "Full edition: split any number of people, not just 3.",
+      "Full edition: export and import your data as JSON for backups and moving between devices.",
+      "Full edition: unlock all six themes instead of the single default.",
+      "Full edition: keep a history of your recent splits so you can revisit them.",
+      "Full edition: no limits, no nagging, and no feature walls."
+    ],
+    "badge": "New",
+    "date": "2026-10-02"
+  }
+]
