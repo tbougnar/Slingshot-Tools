@@ -1,56 +1,71 @@
 # Slingshot Tools
 
-Tiny, fast, free apps for everyday problems. One new app every Monday, improved
-every Friday from real signals.
+Small, fast, free apps for everyday problems — plus a fuller edition of each one
+for anyone who wants the unlimited version.
 
-## How it works
+## What you get
 
-| When | What runs | What it does |
-|------|-----------|--------------|
-| **Monday 07:00 UTC** | `monday-build.yml` | Groq picks an unused everyday problem → generates a polished single-file app → packages a real Windows installer → publishes to the site catalog |
-| **Friday 07:00 UTC** | `friday-learn.yml` | Reads the catalog and any available usage data → writes concrete lessons → Monday's build applies them |
-| **Every push** | `pages.yml` | Publishes `site/` to GitHub Pages |
+Every month we release one new tool in two editions:
 
-## No domain needed
+| | Basic | Full |
+|---|---|---|
+| Price | Free | Paid |
+| What it does | The whole job, with sensible limits | Nothing capped |
 
-- **Website:** GitHub Pages, free — `https://<user>.github.io/<repo>/`
-- **Apps:** the site serves each app directly, and the itch.io page is linked
-  from the header for the game-like catalogue feel.
+Same app, same look. The Full edition removes the caps and adds export/import,
+extra themes, bulk actions and history.
 
-## Repo layout
+## Getting the apps
+
+- The **free Basic** edition downloads free.
+- The **Full** edition is purchased on our itch.io page and paid files are delivered there — that is the only place they are hosted.
+- Windows users get a real installer with Start Menu and Desktop shortcuts.
+
+## For the curious
+
+The site is plain HTML, CSS and JavaScript. Each app is a single file that runs
+offline, stores everything in your own browser, and never sends your data
+anywhere. No accounts, no tracking, no network calls.
+
+## Repository layout
 
 ```
-make_app.py            the builder: research -> generate -> installer -> publish
-learn.py               the Friday coach
-site/                  what gets served (index.html, logo, catalog, built apps)
-apps/<slug>/app/       generated single-file app + installer script
-data/lessons.txt       lessons the coach rewrites each Friday
-data/already_built.json  slugs we never repeat
-.github/workflows/     monday-build, friday-learn, pages
+site/       the public website (what GitHub Pages serves)
+apps/       builds, one folder per app and edition
+dist/       Windows installers, built locally, never published
+data/       pricing state and the sales history used to tune prices
 ```
 
-## Setup (one time, on the GitHub repo)
+Everything that runs on a schedule lives in `.github/workflows/`:
 
-1. Create a **public** repo named `slingshot-tools` and push this folder.
-2. **Settings → Pages → Source: GitHub Actions** (no branch dropdown needed).
-3. Add secret `GROQ_API_KEY` (same key the video pipeline uses).
-4. Optional repository **Variables**: `SITE_URL` (your Pages URL) and
-   `ITCH_PAGE` (your itch.io subdomain).
-5. Optional secret `ITCH_API_KEY` if you want real download counts on Fridays.
+| When | Workflow | What it does |
+|------|----------|--------------|
+| Monthly, 1st 07:00 | `monday-build.yml` | picks a daily-life problem, builds the Basic and Full editions, sets prices |
+| Twice a month | `friday-learn.yml` | adjusts prices from real sales, reviews the catalogue |
 
-## Building one right now, without waiting for Monday
+## Repository setup
+
+1. **Settings → Pages → Build and deployment → Source: GitHub Actions**, then Save.
+2. **Settings → Secrets and variables → Actions**:
+   - *Secrets*: `GROQ_API_KEY`, `ITCH_API_KEY`
+   - *Variables*: `SITE_URL`, `ITCH_PAGE`, `ITCH_PAGE_URL`
+
+Nothing sensitive is stored in this repository. Credentials live only in GitHub
+Secrets, and anything matching a credential filename is ignored by git.
+
+## Running a build locally
 
 ```bash
-python make_app.py
+export GROQ_API_KEY=...
+export ITCH_API_KEY=...      # optional, enables upload
+python make_app.py           # build the next app
+python pricing.py            # recalculate prices from sales
 ```
 
-Requires `GROQ_API_KEY` in the environment. Output lands in `apps/` and
-`site/apps.json`.
+## Pricing rules
 
-## Design rules baked into the generator
-
-- Single HTML file, inline CSS/JS, no CDN, works offline forever
-- Dark red brand theme with a light mode toggle on every app
-- localStorage only, plus JSON export/import
-- No analytics, no tracking, no network calls
-- A real empty state on first run
+- Floor **$1.00** — below that, fees exceed the margin.
+- Ceiling **$9.00**.
+- Prices only move after **5 or more** real sales.
+- Weak conversion cuts the price; strong conversion raises it.
+- Every change is written to `data/price_log.json` with its reason, and can be undone.

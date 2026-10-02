@@ -459,9 +459,11 @@ def publish(concept, app_dir, installer, tier="full", brand="", differences=None
         "date": date.today().isoformat(),
     }
     if installer and installer.exists() and tier == "full":
-        rel = "apps/" + concept["slug"] + "/" + installer.name
-        shutil.copy2(installer, SITE_APPS / concept["slug"] / installer.name)
-        entry["download"] = f"{SITE_URL.rstrip('/')}/{rel}"
+        # The paid build is delivered through itch.io only. Never copy the
+        # installer or the full app into site/, which is public - that would
+        # hand the paid product to anyone who opens the catalog.
+        print(f"[publish] installer built but NOT published publicly "
+              f"({installer.name}); delivery happens via itch.io", flush=True)
     apps = [a for a in apps if a.get("slug") != concept["slug"]]
     apps.insert(0, entry)
     CATALOG.write_text(json.dumps(apps, indent=2), encoding="utf-8")

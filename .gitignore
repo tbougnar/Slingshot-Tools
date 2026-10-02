@@ -1,3 +1,28 @@
-﻿__pycache__/
-dist/
+﻿# secrets and credentials — never commit these
+.env
+.env.*
+*.env
+youtube_token.json
+client_secret.json
+jobs/meta_cookies.json
+*.key
+*.pem
+*_token.json
+*_secret*.json
+secrets/
+.github/workflows/*.local.yml
+
+# python
+__pycache__/
 *.pyc
+*.pyo
+.venv/
+venv/
+
+# build output
+dist/
+build/
+
+# NOTE: site/ is intentionally public (GitHub Pages). Only the product
+# front-ends belong there. The paid installer is delivered through itch.io
+# and must never be copied into site/.
