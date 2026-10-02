@@ -537,12 +537,40 @@ def _butler_asset_urls():
     return urls
 
 
+def _butler_usable(path):
+    """A file named butler is not proof it is butler: check it is an ELF for this
+    CPU and that it actually runs."""
+    try:
+        blob = Path(path).read_bytes()
+    except Exception:  # noqa: BLE001
+        return False
+    if blob[:4] != b"\x7fELF" or len(blob) < 1_000_000:
+        return False
+    machine = platform.machine().lower()
+    is_arm = blob[18] == 0xB7
+    if ("arm" in machine or "aarch" in machine) != is_arm:
+        return False
+    try:
+        r = subprocess.run([str(path), "version"], capture_output=True, timeout=60)
+        return r.returncode == 0
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def install_butler():
     """Fetch butler from its official GitHub release and verify it really is a
     Linux binary for this CPU before we ever execute it."""
-    if shutil.which("butler"):
-        return shutil.which("butler")
     dest = Path("/usr/local/bin/butler")
+    existing = shutil.which("butler")
+    if existing and _butler_usable(Path(existing)):
+        return existing
+    if existing:
+        # a previous step left a broken file (e.g. a saved 404 page) - remove it
+        log("existing butler is not a working binary - reinstalling")
+        try:
+            Path(existing).unlink()
+        except Exception:  # noqa: BLE001
+            pass
     for url in _butler_asset_urls():
         try:
             r = requests.get(url, timeout=300)
