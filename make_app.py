@@ -31,6 +31,10 @@ GROQ_KEY = os.environ.get("GROQ_API_KEY", "")
 CHAT_MODEL = os.environ.get("GROQ_CHAT_MODEL", "llama-3.3-70b-versatile")
 SITE_URL = os.environ.get("SITE_URL", "https://slingshot-tools.github.io")
 ITCH_PAGE = os.environ.get("ITCH_PAGE", "slingshot-tools")
+ITCH_API_KEY = os.environ.get("ITCH_API_KEY", "")
+ITCH_PAGE_URL = os.environ.get("ITCH_PAGE_URL", "https://slingshot-tools.itch.io/")
+PRICE_FLOOR = float(os.environ.get("PRICE_FLOOR", "1.00"))
+PRICE_START = float(os.environ.get("PRICE_START", "3.00"))
 
 CATEGORIES = [
     ("password-manager", "offline password manager with vault encryption and a generator"),
@@ -359,6 +363,36 @@ def build_installer(app_dir: Path, concept):
     return out
 
 
+def push_to_itch(concept, app_dir):
+    """Upload the finished build to itch.io with butler so the product page is
+    live without anyone touching a web form."""
+    if not (ITCH_API_KEY and shutil.which("butler")):
+        log("butler or ITCH_API_KEY missing - skipping itch upload")
+        return False
+    slug = concept["slug"]
+    upload_dir = app_dir / "upload"
+    if upload_dir.exists():
+        shutil.rmtree(upload_dir)
+    (upload_dir / app_dir.name).mkdir(parents=True, exist_ok=True)
+    shutil.copy2(app_dir / "app" / "index.html", upload_dir / "index.html")
+    shutil.copy2(ROOT / "site" / "icon-512.png", upload_dir / "icon.png")
+    readme = upload_dir / "README.txt"
+    readme.write_text(
+        f"{concept['title']}\n{concept['blurb']}\n\n"
+        "A single-file app: open index.html in any modern browser. "
+        "Your data is stored only in this browser (localStorage) and never sent anywhere.\n",
+        encoding="utf-8")
+    env = dict(os.environ, BUTLER_API_KEY=ITCH_API_KEY, BUTLER_CHANNEL=ITCH_PAGE)
+    r = subprocess.run(["butler", "push", str(upload_dir / app_dir.name),
+                        "--project", slug, "--yes"],
+                       capture_output=True, text=True, env=env, timeout=900)
+    if r.returncode != 0:
+        log(f"butler push failed: {(r.stderr or r.stdout)[-300:]}")
+        return False
+    log(f"pushed to itch.io as project '{slug}'")
+    return True
+
+
 def publish(concept, app_dir, installer):
     dest = SITE_APPS / concept["slug"]
     dest.mkdir(parents=True, exist_ok=True)
@@ -381,7 +415,10 @@ def publish(concept, app_dir, installer):
         "blurb": concept["blurb"],
         "tags": concept["tags"],
         "url": f"{SITE_URL.rstrip('/')}/apps/{concept['slug']}/",
+        "itch_url": f"{ITCH_PAGE_URL.rstrip('/')}/",
         "download": "",
+        "price": max(PRICE_FLOOR, PRICE_START),
+        "free": False,
         "badge": "New",
         "date": date.today().isoformat(),
     }
@@ -412,6 +449,7 @@ def main():
         log(f"attempt {attempt} ok ({len(html)} bytes)")
         app_dir = write_app(concept, html)
         installer = build_installer(app_dir, concept)
+        push_to_itch(concept, app_dir)
         entry = publish(concept, app_dir, installer)
         built = load_built()
         built.append({"slug": concept["slug"], "title": concept["title"],

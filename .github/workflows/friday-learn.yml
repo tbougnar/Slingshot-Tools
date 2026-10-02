@@ -19,6 +19,11 @@ jobs:
     env:
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
       GROQ_CHAT_MODEL: ${{ secrets.GROQ_CHAT_MODEL }}
+      ITCH_API_KEY: ${{ secrets.ITCH_API_KEY }}
+      ITCH_USER: ${{ vars.ITCH_PAGE }}
+      PRICE_FLOOR: "1.00"
+      PRICE_CEILING: "9.00"
+      PRICE_START: "3.00"
     steps:
       - uses: actions/checkout@v4
 
@@ -28,6 +33,9 @@ jobs:
 
       - name: Install deps
         run: pip install --quiet requests
+
+      - name: Adjust prices from real sales
+        run: python pricing.py
 
       - name: Read the catalog and real signals, then write lessons
         run: python learn.py

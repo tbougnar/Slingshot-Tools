@@ -21,6 +21,11 @@ jobs:
       GROQ_CHAT_MODEL: ${{ secrets.GROQ_CHAT_MODEL }}
       SITE_URL: ${{ vars.SITE_URL }}
       ITCH_PAGE: ${{ vars.ITCH_PAGE }}
+      ITCH_API_KEY: ${{ secrets.ITCH_API_KEY }}
+      ITCH_PAGE_URL: ${{ vars.ITCH_PAGE_URL }}
+      PRICE_FLOOR: "1.00"
+      PRICE_CEILING: "9.00"
+      PRICE_START: "3.00"
     steps:
       - uses: actions/checkout@v4
 
@@ -33,9 +38,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends nsis
           pip install --quiet pillow requests
+          curl -L -o /usr/local/bin/butler https://broth.itch.zone/butler/linux-amd64/Latest/butler
+          chmod +x /usr/local/bin/butler
+          butler --version || true
 
       - name: Research the next useful tool and build it
         run: python make_app.py
+
+      - name: Set this week's price and free app
+        run: python pricing.py
 
       - name: Sanity-check the catalog
         run: |

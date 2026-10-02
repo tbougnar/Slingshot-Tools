@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Slingshot Tools — tiny apps for everyday problems</title>
-<meta name="description" content="Slingshot Tools ships small, fast, free apps that solve one everyday problem properly. New app every Monday.">
+<title>Slingshot Tools — tiny apps for everyday use</title>
+<meta name="description" content="Slingshot Tools makes small, fast, free apps that solve one everyday problem properly. Download and run with nothing to sign up for.">
 <link rel="icon" href="favicon.png">
 <link rel="apple-touch-icon" href="icon-512.png">
 <style>
@@ -58,6 +58,8 @@
   .row{display:flex;gap:9px;align-items:center;margin-top:4px}
   .pill{font-size:11.5px;padding:3px 9px;border-radius:999px;background:var(--red);
     color:#fff;font-weight:700;letter-spacing:.02em}
+  .pill.free{background:var(--red-ink)}
+  .price{margin-right:auto;font-weight:800;font-size:17px;letter-spacing:-.02em}
   footer{border-top:1px solid var(--line);padding:30px 0 60px;color:var(--muted);font-size:14px}
   footer .grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));padding:0}
   .empty{grid-column:1/-1;text-align:center;padding:70px 20px;color:var(--muted);
@@ -83,9 +85,9 @@
   <section class="hero">
     <img src="logo.png" alt="">
     <h1>Tiny apps for <b>everyday</b> problems</h1>
-    <p class="sub">Slingshot Tools builds small, fast, free software that solves one real
-      annoyance properly — a password manager, a unit converter, a habit tracker.
-      A new app ships every Monday.</p>
+    <p class="sub">Small, fast, free software that solves one real annoyance properly —
+      a password manager, a unit converter, a habit tracker. Nothing to sign up for,
+      nothing to install if you don't want to, no accounts, no tracking.</p>
     <div class="cta">
       <a class="btn primary" href="#apps">Browse the apps</a>
       <a class="btn" href="https://slingshot-tools.itch.io" target="_blank" rel="noopener">Play on itch.io</a>
@@ -98,8 +100,8 @@
 
 <footer>
   <div class="wrap">
-    <p><strong>Slingshot Tools</strong> — built by AI, improved every week from real usage data.</p>
-    <p>Monday: a new app. Friday: learn from mistakes. Everything private, nothing tracked.</p>
+    <p><strong>Slingshot Tools</strong> — small apps that just work.</p>
+    <p>Free forever. Works offline. Your data stays on your device.</p>
   </div>
 </footer>
 
@@ -124,6 +126,7 @@ btn.onclick = () => {
 
 const appsEl = document.getElementById("apps");
 const filtersEl = document.getElementById("filters");
+const ITCH = "https://slingshot-tools.itch.io/";
 let APPS = [];
 let active = "all";
 
@@ -135,25 +138,28 @@ function esc(s){
 function render(){
   const list = active === "all" ? APPS : APPS.filter(a => a.tag === active);
   if (!APPS.length){
-    appsEl.innerHTML = '<div class="empty"><strong>No apps yet.</strong><br>'
-      + 'The first Slingshot Tool ships on Monday — check back then.</div>';
+    appsEl.innerHTML = '<div class="empty"><strong>Nothing here yet.</strong><br>'
+      + 'New tools land here soon.</div>';
     return;
   }
   if (!list.length){
     appsEl.innerHTML = '<div class="empty">Nothing in this category yet.</div>';
     return;
   }
-  appsEl.innerHTML = list.map(a => `
+  appsEl.innerHTML = list.map(a => {
+    const r = a.free ? 'Free' : (a.price != null ? '$' + Number(a.price).toFixed(2) : '');
+    const badge = a.free ? '<span class="pill free">Free this week</span>'
+                         : (a.badge ? '<span class="pill">' + esc(a.badge) + '</span>' : '');
+    return `
     <article class="card">
-      ${a.badge ? '<span class="pill">' + esc(a.badge) + '</span>' : ''}
+      ${badge}
       <h3>${esc(a.title)}</h3>
       <p>${esc(a.blurb)}</p>
       <div class="tags">${(a.tags || []).slice(0,4).map(t =>
         '<span class="tag">' + esc(t) + '</span>').join("")}</div>
       <div class="row">
-        ${a.url ? '<a class="btn primary" href="' + esc(a.url) +
-          '" target="_blank" rel="noopener">Open</a>' : ''}
-        ${a.download ? '<a class="btn" href="' + esc(a.download) + '">Installer</a>' : ''}
+        <span class="price">${r}</span>
+        <a class="btn primary" href="${esc(a.itch_url || ITCH)}" target="_blank" rel="noopener">Get it</a>
       </div>
     </article>`).join("");
 }
