@@ -148,13 +148,93 @@ def groq(system, user, max_tokens=4000, temperature=0.8, tries=6):
     raise RuntimeError(f"groq failed: {last}")
 
 
-def groq_json(system, user, **kw):
-    raw = groq(system, user, **kw)
-    m = re.search(r"\{[\s\S]*\}", raw or "")
+def _salvage_html(raw):
+    """The html value is what we actually need. Models truncate huge answers
+    mid-string, so grab everything after "html":" up to the end and clean it."""
+    if not raw:
+        return None
+    m = re.search(r'"html"\s*:\s*"(.*)$', raw, re.S)
     if not m:
-        raise RuntimeError("no JSON in reply")
-    return json.loads(m.group())
+        return None
+    body = m.group(1)
+    # a complete value ends with a closing quote; a truncated one does not
+    if body.endswith('"') and not body.endswith('\\"'):
+        body = body[:-1]
+    try:
+        return json.loads('"' + body + '"')
+    except json.JSONDecodeError:
+        pass
+    # cut back to the last complete escape so json can parse what is left
+    for cut in range(len(body), 0, -1):
+        if body[cut - 1] != "\\":
+            continue
+        try:
+            return json.loads('"' + body[: cut - 1] + '"')
+        except json.JSONDecodeError:
+            continue
+    return body.replace('\\"', '"')
 
+
+def _salvage_json(raw):
+    """Trim to the last balanced closing brace and retry."""
+    if not raw:
+        return None
+    depth = 0
+    last = None
+    instr = False
+    esc = False
+    for i, ch in enumerate(raw):
+        if instr:
+            if esc:
+                esc = False
+            elif ch == "\\":
+                esc = True
+            elif ch == '"':
+                instr = False
+            continue
+        if ch == '"':
+            instr = True
+        elif ch in "{[":
+            depth += 1
+        elif ch in "}]":
+            depth -= 1
+            if depth == 0:
+                last = i
+    if last is None:
+        return None
+    try:
+        return json.loads(raw[: last + 1])
+    except json.JSONDecodeError:
+        return None
+
+
+def groq_json(system, user, **kw):
+    """JSON-mode with tolerance for truncated model output."""
+    for use_json in (True, False):
+        try:
+            raw = groq(system, user, json_mode=use_json, **kw)
+        except RuntimeError:
+            continue
+        if not raw:
+            continue
+        try:
+            return json.loads(raw)
+        except json.JSONDecodeError:
+            pass
+        m = re.search(r"\{[\s\S]*\}", raw)
+        if m:
+            try:
+                return json.loads(m.group())
+            except json.JSONDecodeError:
+                pass
+        salvaged = _salvage_json(raw)
+        if salvaged:
+            return salvaged
+        html = _salvage_html(raw)
+        if html:
+            log("recovered html from truncated JSON")
+            return {"html": html}
+    raise RuntimeError("groq returned no usable JSON")
 
 def load_built():
     if BANNED.exists():
