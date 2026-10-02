@@ -1,0 +1,78 @@
+{
+  "date": "2026-10-02",
+  "revenue": 0.0,
+  "net_profit": 0.0,
+  "break_even": 0.32,
+  "products": [
+    {
+      "slug": "invoice-maker-basic",
+      "title": "Invoice Maker (Basic)",
+      "tier": "basic",
+      "sales": 0,
+      "views": 0,
+      "price": 0.0,
+      "revenue": 0.0,
+      "net": 0.0,
+      "per_sale": 0.0
+    },
+    {
+      "slug": "invoice-maker",
+      "title": "Invoice Maker",
+      "tier": "full",
+      "sales": 0,
+      "views": 0,
+      "price": 3.0,
+      "revenue": 0.0,
+      "net": 0.0,
+      "per_sale": 2.553
+    },
+    {
+      "slug": "recipe-scaler-basic",
+      "title": "Recipe Scaler (Basic)",
+      "tier": "basic",
+      "sales": 0,
+      "views": 0,
+      "price": 0.0,
+      "revenue": 0.0,
+      "net": 0.0,
+      "per_sale": 0.0
+    },
+    {
+      "slug": "recipe-scaler",
+      "title": "Recipe Scaler",
+      "tier": "full",
+      "sales": 0,
+      "views": 0,
+      "price": 3.0,
+      "revenue": 0.0,
+      "net": 0.0,
+      "per_sale": 2.553
+    },
+    {
+      "slug": "expense-splitter-basic",
+      "title": "SplitBill (Basic)",
+      "tier": "basic",
+      "sales": 0,
+      "views": 0,
+      "price": 0.0,
+      "revenue": 0.0,
+      "net": 0.0,
+      "per_sale": 0.0
+    },
+    {
+      "slug": "expense-splitter",
+      "title": "SplitBill",
+      "tier": "full",
+      "sales": 0,
+      "views": 0,
+      "price": 3.0,
+      "revenue": 0.0,
+      "net": 0.0,
+      "per_sale": 2.553
+    }
+  ],
+  "directives": [
+    "3 paid product(s) have zero sales: invoice-maker, recipe-scaler, expense-splitter. Either cut the price to the break-even floor ($0.32), change the pitch, or stop building in that niche and build what sells.",
+    "Nothing has netted positive yet. Do not build more apps: fix price and the itch.io page for what exists first."
+  ]
+}
