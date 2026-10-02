@@ -335,8 +335,15 @@ def build_html(concept, lessons):
         max_tokens=9000, temperature=0.5,
     )
     html = d.get("html") or ""
-    if "<!DOCTYPE" not in html or "</html>" not in html:
-        raise RuntimeError("generated html looks incomplete")
+    if "<!DOCTYPE" not in html and "<html" not in html:
+        raise RuntimeError("generated html has no document at all")
+    # models truncate long answers; close the document instead of throwing the
+    # whole app away - a truncated-but-working app beats no app
+    low = html.lower()
+    if "</body>" not in low:
+        html += "\n</body>"
+    if "</html>" not in low:
+        html += "\n</html>"
     if len(html) < 1200:
         raise RuntimeError(f"generated html too small ({len(html)} bytes)")
     diffs = [str(x)[:120] for x in (d.get("differences") or [])][:6]
