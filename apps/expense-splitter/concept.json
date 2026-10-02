@@ -1,0 +1,16 @@
+{
+  "slug": "expense-splitter",
+  "title": "Split Bill",
+  "tag": "finance",
+  "blurb": "Split group bills instantly and settle up with clear IOUs.",
+  "tags": [
+    "bills",
+    "sharing",
+    "settlement",
+    "travel"
+  ],
+  "problem": "Figuring out who owes whom after a group dinner or trip.",
+  "brand": "SplitBill",
+  "tier": "full",
+  "base_slug": "expense-splitter"
+}
