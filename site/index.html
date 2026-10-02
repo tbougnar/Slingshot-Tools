@@ -69,6 +69,29 @@
   .price{margin-right:auto;font-weight:800;font-size:17px;letter-spacing:-.02em}
   footer{border-top:1px solid var(--line);padding:30px 0 60px;color:var(--muted);font-size:14px}
   footer .grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));padding:0}
+  .dlg{position:fixed;inset:0;background:rgba(0,0,0,.66);display:none;
+    align-items:center;justify-content:center;padding:20px;z-index:60}
+  .dlg.open{display:flex}
+  .dlgBox{background:var(--card);border:1px solid var(--line);border-radius:20px;max-width:760px;
+    width:100%;padding:26px;position:relative;box-shadow:var(--shadow)}
+  .dlgX{position:absolute;top:12px;right:14px;background:none;border:0;color:var(--muted);
+    font-size:28px;cursor:pointer;line-height:1}
+  .dlgBox h3{margin:0 0 6px;font-size:22px}
+  .dlgBlurb{color:var(--muted);margin:0 0 18px}
+  .dlgOpts{display:grid;gap:12px;grid-template-columns:1fr 1fr}
+  @media(max-width:640px){.dlgOpts{grid-template-columns:1fr}}
+  .opt{text-align:left;background:var(--bg-2);border:1px solid var(--line);border-radius:14px;
+    padding:16px;cursor:pointer;display:flex;flex-direction:column;gap:6px;color:var(--fg);
+    font:inherit;transition:.15s}
+  .opt:hover{transform:translateY(-2px);border-color:var(--red-ink)}
+  .opt.full{border-color:var(--red-ink);background:color-mix(in srgb,var(--red) 8%,var(--bg-2))}
+  .optTier{font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--red-ink)}
+  .optTitle{font-weight:700;font-size:16px}
+  .optBlurb{color:var(--muted);font-size:13.5px;line-height:1.45}
+  .optPrice{font-size:20px;font-weight:800;letter-spacing:-.02em;margin-top:2px}
+  .optCta{font-size:13px;color:var(--red-ink);font-weight:700}
+  .dlgBox h4{margin:20px 0 8px;font-size:14px}
   .empty{grid-column:1/-1;text-align:center;padding:70px 20px;color:var(--muted);
     border:1px dashed var(--line);border-radius:18px}
   .filters{display:flex;gap:8px;flex-wrap:wrap;padding:0 0 6px}
@@ -104,6 +127,16 @@
   <div class="filters" id="filters"></div>
   <section class="grid" id="apps"></section>
 </main>
+
+<div class="dlg" id="dlg" onclick="if(event.target.id==='dlg')closeDialog()">
+  <div class="dlgBox">
+    <button class="dlgX" onclick="closeDialog()" aria-label="Close">&times;</button>
+    <h3 id="dlgTitle"></h3>
+    <p id="dlgBlurb" class="dlgBlurb"></p>
+    <div id="dlgOpts" class="dlgOpts"></div>
+    <div id="dlgDiff"></div>
+  </div>
+</div>
 
 <footer>
   <div class="wrap">
@@ -143,7 +176,9 @@ function esc(s){
 }
 
 function render(){
-  const list = active === "all" ? APPS : APPS.filter(a => a.tag === active);
+  const products = groupProducts(APPS);
+  const list = active === "all" ? products
+    : products.filter(p => (p.full.tag || "") === active);
   if (!APPS.length){
     appsEl.innerHTML = '<div class="empty"><strong>Nothing here yet.</strong><br>'
       + 'New tools land here soon.</div>';
@@ -153,28 +188,22 @@ function render(){
     appsEl.innerHTML = '<div class="empty">Nothing in this category yet.</div>';
     return;
   }
-  appsEl.innerHTML = list.map(a => {
-    const r = a.free ? 'Free' : (a.price != null ? '$' + Number(a.price).toFixed(2) : '');
-    const tierBadge = a.tier === 'basic'
-      ? '<span class="pill basic">Basic · free</span>'
-      : (a.badge ? '<span class="pill">Full edition</span>' : '');
-    const diffs = (a.differences || []).length
-      ? '<ul class="diffs">' + a.differences.map(d =>
-          '<li>' + esc(String(d).replace(/^Full edition:\s*/i, '')) + '</li>').join('') + '</ul>'
-      : '';
+  appsEl.innerHTML = list.map(item => {
+    const f = item.full;
+    const p = f.price != null ? '$' + Number(f.price).toFixed(2) : '';
     return `
-    <article class="card ${a.tier === 'basic' ? 'basic' : 'full'}">
-      ${tierBadge}
-      <h3>${esc(a.title)}</h3>
-      <p>${esc(a.blurb)}</p>
-      <div class="tags">${(a.tags || []).slice(0,4).map(t =>
-        '<span class="tag">' + esc(t) + '</span>').join("")}</div>
-      ${diffs}
+    <article class="card full">
+      <span class="pill">Full edition</span>
+      <h3>${esc(f.title)}</h3>
+      <p>${esc(f.blurb)}</p>
+      <div class="tags">${(f.tags||[]).slice(0,4).map(t =>
+        '<span class="tag">'+esc(t)+'</span>').join("")}</div>
       <div class="row">
-        <span class="price">${r}</span>
-        <a class="btn primary" href="${esc(a.itch_url || ITCH)}" target="_blank" rel="noopener">Get it</a>
+        <span class="price">${p}</span>
+        <button class="btn primary" onclick='openDialog(${JSON.stringify(item).replace(/'/g,"&#39;")})'>See options</button>
       </div>
-    </article>`}).join("");
+    </article>`;
+  }).join("");
 }
 
 function renderFilters(){
@@ -189,6 +218,48 @@ function renderFilters(){
     active = b.dataset.f; render(); renderFilters();
   });
 }
+
+function groupProducts(list){
+  const byBase = {};
+  list.forEach(a => {
+    if (a.published === false) return;            // not on itch.io yet -> hidden
+    const key = a.base_slug || a.slug;
+    (byBase[key] = byBase[key] || []).push(a);
+  });
+  return Object.values(byBase).map(pair => {
+    const full = pair.find(x => x.tier !== 'basic') || pair[0];
+    const basic = pair.find(x => x.tier === 'basic');
+    return {full, basic, key, diffs: full.differences || []};
+  });
+}
+
+function openDialog(item){
+  const opts = [];
+  if (item.basic) opts.push({
+    tier:'basic', title:item.basic.title, blurb:item.basic.blurb,
+    price:'Free', href:item.basic.itch_url});
+  if (item.full) opts.push({
+    tier:'full', title:item.full.title, blurb:item.full.blurb,
+    price:'$' + Number(item.full.price || 0).toFixed(2), href:item.full.itch_url});
+  const d = document.getElementById('dlg');
+  document.getElementById('dlgTitle').textContent = item.full.title;
+  document.getElementById('dlgBlurb').textContent = item.full.blurb || '';
+  document.getElementById('dlgOpts').innerHTML = opts.map(o => `
+    <button class="opt ${o.tier}" onclick="location.href='${esc(o.href)}'">
+      <span class="optTier">${o.tier === 'basic' ? 'Free basic' : 'Full edition'}</span>
+      <span class="optTitle">${esc(o.title)}</span>
+      <span class="optBlurb">${esc(o.blurb || '')}</span>
+      <span class="optPrice">${esc(o.price)}</span>
+      <span class="optCta">${o.tier === 'basic' ? 'Download free' : 'Get the full edition'}</span>
+    </button>`).join('');
+  document.getElementById('dlgDiff').innerHTML = item.diffs.length
+    ? '<h4>What the full edition adds</h4><ul class="diffs">' +
+      item.diffs.map(x => '<li>' + esc(String(x).replace(/^Full edition:\s*/i,'')) + '</li>').join('') +
+      '</ul>' : '';
+  d.classList.add('open');
+}
+
+function closeDialog(){ document.getElementById('dlg').classList.remove('open'); }
 
 fetch("apps.json", {cache:"no-store"})
   .then(r => r.json())

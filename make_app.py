@@ -245,7 +245,7 @@ def load_built():
     return []
 
 
-def pick_concept():
+def pick_concept(money=""):
     built = load_built()
     taken = {b["slug"] for b in built}
     pool = [c for c in CATEGORIES if c[0] not in taken]
@@ -259,7 +259,10 @@ def pick_concept():
         "You pick the next tiny web app to build. You return JSON only.",
         f"Already built (never repeat): {json.dumps(sorted(taken))}\n\n"
         f"Lessons learned from real users so far:\n{lessons or '(none yet)'}\n\n"
-        "Choose ONE concept from this list that is genuinely useful in daily life and "
+        f"MONEY SO FAR - the goal is to make the most profit:\n{money or '(no sales data yet)'}\n\n"
+        "Choose ONE concept from this list that is genuinely useful in daily life, "
+        "that we have not built, and that is most likely to actually SELL: "
+        "prefer niches where people already pay, avoid crowded free-only niches. "
         "that we have not built: " + json.dumps(pool) + "\n\n"
         'Return JSON only: {"slug":"kebab-case","title":"2-4 words",'
         '"tag":"one category word","blurb":"one sentence, concrete benefit",'
@@ -295,10 +298,13 @@ but still useful - e.g. { maxItems: 3, export: false, themes: "one", bulk: false
 Never make the basic edition useless; it must genuinely solve the problem for a
 few items so the user hits the wall and wants the full edition.
 
-Also return "differences": 4-6 short, concrete, plain sentences a customer would
-understand, each starting with "Full edition:", naming exactly what the paid
-version adds (unlimited items, export/import, extra themes, bulk actions,
-history, backups, no limits).
+Also return these, and they must NOT sound the same:
+- "free_blurb": what the FREE basic edition is honestly good for, in one short
+  sentence. Friendly, useful on its own, no apologising.
+- "paid_blurb": why someone should pay, in one punchy sentence. Lead with the
+  outcome they get (unlimited, no walls, exports, history) - never vague.
+- "differences": 4-6 short concrete sentences a customer would understand, each
+  starting with "Full edition:", naming exactly what the paid version adds.
 
 HARD RULES
 - ONE file: valid HTML5 with inline CSS and inline JavaScript. No build step, no
@@ -348,7 +354,7 @@ def build_html(concept, lessons):
         raise RuntimeError(f"generated html too small ({len(html)} bytes)")
     diffs = [str(x)[:120] for x in (d.get("differences") or [])][:6]
     brand = str(d.get("brand") or concept["title"])
-    return html, brand, diffs
+    return html, brand, diffs, str(d.get("free_blurb") or ""), str(d.get("paid_blurb") or "")
 
 
 def _set_tier(html, tier):
@@ -498,6 +504,52 @@ def build_installer(app_dir: Path, concept):
     return out
 
 
+
+BUTLER_URLS = [
+    "https://broth.itch.zone/butler/linux-amd64/Latest/butler",
+    "https://broth.itch.zone/butler/linux-amd64/Latest/butler.zip",
+    "https://broth.itch.zone/butler/linux-amd64/stable/butler",
+    "https://broth.itch.zone/butler/linux-arm64/Latest/butler",
+]
+
+
+def install_butler():
+    """Fetch butler and verify it is a real executable before trusting it.
+    A 404 page saved as 'butler' produces 'Exec format error' at run time."""
+    if shutil.which("butler"):
+        return shutil.which("butler")
+    dest = Path("/usr/local/bin/butler")
+    for url in BUTLER_URLS:
+        try:
+            r = requests.get(url, timeout=120, stream=True)
+            if r.status_code != 200 or len(r.content) < 100_000:
+                log(f"butler mirror rejected: {r.status_code} {url}")
+                continue
+            blob = r.content
+            if blob[:2] == b"PK":
+                import io
+                import zipfile
+                with zipfile.ZipFile(io.BytesIO(blob)) as z:
+                    name = next(n for n in z.namelist() if n.endswith("butler"))
+                    blob = z.read(name)
+            if blob[:4] != b"\x7fELF":
+                log(f"not an ELF binary, skipping: {url}")
+                continue
+            machine = platform.machine().lower()
+            is_arm = blob[18] == 0xB7
+            if ("arm" in machine or "aarch" in machine) != is_arm:
+                log(f"wrong architecture in {url}")
+                continue
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes(blob)
+            dest.chmod(0o755)
+            log(f"butler installed from {url} ({len(blob)//1024} KB)")
+            return str(dest)
+        except Exception as e:  # noqa: BLE001
+            log(f"butler mirror failed: {str(e)[:90]}")
+    return None
+
+
 def push_to_itch(concept, app_dir):
     """Best-effort upload to itch.io. Never fatal: a finished app matters far
     more than the upload, and butler/arch problems must not kill the build."""
@@ -506,9 +558,9 @@ def push_to_itch(concept, app_dir):
         if not ITCH_API_KEY:
             log("no itch key - skipping upload")
             return False
-        butler = shutil.which("butler")
+        butler = install_butler()
         if not butler:
-            log("butler not installed - skipping upload")
+            log("could not obtain butler - product stays unpublished")
             return False
         machine = platform.machine().lower()
         arch = "aarch64" if machine in ("arm64", "aarch64") else "amd64"
@@ -526,7 +578,7 @@ def push_to_itch(concept, app_dir):
             "stays in your browser and is never sent anywhere.\n",
             encoding="utf-8")
         env = dict(os.environ, BUTLER_API_KEY=ITCH_API_KEY, BUTLER_CHANNEL=ITCH_PAGE)
-        r = subprocess.run([butler, "push", str(payload), "--project", slug, "--yes"],
+        r = subprocess.run([butler, "push", str(payload), "--project", slug, "--create", "--yes"],
                            capture_output=True, text=True, env=env, timeout=900)
         if r.returncode != 0:
             log(f"itch upload did not succeed (non-fatal): "
@@ -539,7 +591,8 @@ def push_to_itch(concept, app_dir):
         return False
 
 
-def publish(concept, app_dir, installer, tier="full", brand="", differences=None):
+def publish(concept, app_dir, installer, tier="full", brand="", differences=None,
+             free_blurb="", paid_blurb="", published=False):
     dest = SITE_APPS / concept["slug"]
     dest.mkdir(parents=True, exist_ok=True)
     shutil.copy2(app_dir / "app" / "index.html", dest / "index.html")
@@ -562,14 +615,17 @@ def publish(concept, app_dir, installer, tier="full", brand="", differences=None
                   else f"{brand or concept['title']} (Basic)"),
         "tier": tier,
         "tag": concept["tag"],
-        "blurb": concept["blurb"],
+        "blurb": (free_blurb if tier == "basic" and free_blurb
+                  else paid_blurb if tier == "full" and paid_blurb
+                  else concept["blurb"]),
         "tags": concept["tags"],
         "url": f"{SITE_URL.rstrip('/')}/apps/{concept['slug']}/",
-        "itch_url": f"{ITCH_PAGE_URL.rstrip('/')}/",
+        "itch_url": f"{ITCH_PAGE_URL.rstrip('/')}/{concept['slug']}",
         "download": "",
         "price": 0.0 if tier == "basic" else max(PRICE_FLOOR, PRICE_START),
         "free": tier == "basic",
         "differences": differences or [],
+        "published": published,
         "badge": "New",
         "date": date.today().isoformat(),
     }
@@ -591,10 +647,14 @@ def main():
         log("no GROQ_API_KEY - nothing to do")
         return 0
     lessons = LESSONS.read_text(encoding="utf-8") if LESSONS.exists() else ""
-    concept = pick_concept()
+    money = ""
+    earn_file = DATA / "earnings.json"
+    if earn_file.exists():
+        money = earn_file.read_text(encoding="utf-8")[:2500]
+    concept = pick_concept(money)
     log(f"concept: {concept['title']} ({concept['slug']})")
     for attempt in range(1, 3):
-        html, brand, diffs = build_html(concept, lessons)
+        html, brand, diffs, free_blurb, paid_blurb = build_html(concept, lessons)
         issues = html_looks_fine(html)
         if issues:
             log(f"attempt {attempt} rejected: {issues}")
@@ -604,16 +664,20 @@ def main():
         full_meta = {**concept, "brand": brand}
         full_dir = write_app(full_meta, html, tier="full")
         installer = build_installer(full_dir, full_meta)
-        push_to_itch({**full_meta, "slug": concept["slug"]}, full_dir)
+        ok_full = push_to_itch({**full_meta, "slug": concept["slug"]}, full_dir)
         full_entry = publish({**full_meta, "base_slug": concept["slug"]}, full_dir,
-                             installer, tier="full", brand=brand, differences=diffs)
+                             installer, tier="full", brand=brand, differences=diffs,
+                             free_blurb=free_blurb, paid_blurb=paid_blurb,
+                             published=ok_full)
 
         basic_meta = {**concept, "brand": brand,
                       "slug": f"{concept['slug']}-basic"}
         basic_dir = write_app(basic_meta, html, tier="basic")
-        push_to_itch(basic_meta, basic_dir)
+        ok_basic = push_to_itch(basic_meta, basic_dir)
         basic_entry = publish({**basic_meta, "base_slug": concept["slug"]}, basic_dir,
-                              None, tier="basic", brand=brand, differences=diffs)
+                              None, tier="basic", brand=brand, differences=diffs,
+                              free_blurb=free_blurb, paid_blurb=paid_blurb,
+                              published=ok_basic)
 
         built = load_built()
         built.append({"slug": concept["slug"], "title": brand,

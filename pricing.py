@@ -101,6 +101,90 @@ def sales_from_itch(slug):
     return None
 
 
+# Fee model: itch.io takes its cut and PayPal takes a percentage plus a fixed
+# fee. Money below FLOOR is not revenue, it is a loss - so the floor is real.
+ITCH_CUT = float(os.environ.get("ITCH_CUT", "0.0"))        # 0 unless they opt in
+PAYPAL_PCT = float(os.environ.get("PAYPAL_PCT", "0.049"))
+PAYPAL_FIXED = float(os.environ.get("PAYPAL_FIXED", "0.30"))
+
+
+def profit_per_sale(price):
+    """What actually lands in the account after processing."""
+    return round(price - (price * PAYPAL_PCT + PAYPAL_FIXED) - price * ITCH_CUT, 4)
+
+
+def break_even_price():
+    """Lowest price where one sale still pays for itself."""
+    for p10 in [x / 100 for x in range(5, 3000)]:
+        if profit_per_sale(p10) > 0:
+            return round(p10, 2)
+    return FLOOR
+
+
+def summarise_earnings(apps, prices):
+    """Real money: revenue, net profit, and which product earns most."""
+    rows = []
+    for a in apps:
+        e = prices.get(a["slug"], {}) or {}
+        sales = int(e.get("sales") or 0)
+        price = 0.0 if e.get("tier") == "basic" else float(e.get("price") or 0)
+        net_each = profit_per_sale(price) if price else 0.0
+        revenue = round(sales * price, 2)
+        net = round(sales * net_each, 2)
+        rows.append({"slug": a["slug"], "title": a.get("title", a["slug"]),
+                     "tier": e.get("tier", "full"), "sales": sales,
+                     "views": int(e.get("views") or 0), "price": price,
+                     "revenue": revenue, "net": net,
+                     "per_sale": net_each})
+    total_rev = round(sum(r["revenue"] for r in rows), 2)
+    total_net = round(sum(r["net"] for r in rows), 2)
+    return rows, total_rev, total_net
+
+
+def profit_directives(apps, prices, rows, total_net):
+    """The coach's job: make the most money. Concrete, fee-aware decisions."""
+    tips = []
+    be = break_even_price()
+    if be > FLOOR:
+        tips.append(f"A sale at ${FLOOR:.2f} LOSES money after fees "
+                    f"(keep ${be:.2f}+ to actually profit).")
+
+    paid = [r for r in rows if r["price"] > 0]
+    if not paid:
+        tips.append("No paid product yet - the priority is getting the first "
+                    "full edition listed, then the free basic edition as the funnel.")
+        return tips
+
+    zero = [r for r in paid if r["sales"] == 0]
+    if zero:
+        tips.append(f"{len(zero)} paid product(s) have zero sales: "
+                    f"{', '.join(r['slug'] for r in zero[:4])}. Either cut the "
+                    f"price to the break-even floor (${be:.2f}), change the pitch, "
+                    f"or stop building in that niche and build what sells.")
+
+    star = max(paid, key=lambda r: (r["net"], r["sales"]))
+    if star["sales"] >= 3:
+        tips.append(f"'{star['slug']}' is the proven earner (${star['net']:.2f} "
+                    f"net). Raise its price and build the next app in the same "
+                    f"niche - buyers of one are buyers of the other.")
+
+    best_viewed = sorted(paid, key=lambda r: -r["views"])[:3]
+    for r in best_viewed:
+        if r["views"] >= 10 and r["sales"] == 0:
+            tips.append(f"'{r['slug']}' got {r['views']} views and 0 sales - it is "
+                        f"the price or the page, not the app. Try a bigger price "
+                        f"drop first, then a sharper title.")
+
+    if total_net > 0:
+        tips.append(f"Net so far: ${total_net:.2f}. The cheapest way to raise it "
+                    f"is a modest price rise on anything already selling - it "
+                    f"costs nothing and keeps the same buyers.")
+    else:
+        tips.append("Nothing has netted positive yet. Do not build more apps: fix "
+                    "price and the itch.io page for what exists first.")
+    return tips
+
+
 def groq(system, user, max_tokens=900, temperature=0.4):
     if not GROQ_KEY:
         return ""
@@ -196,6 +280,17 @@ def main():
     LOG.write_text(json.dumps(history[-200:], indent=2), encoding="utf-8")
     if apps:
         CATALOG.write_text(json.dumps(apps, indent=2), encoding="utf-8")
+
+    rows, total_rev, total_net = summarise_earnings(apps, prices)
+    tips = profit_directives(apps, prices, rows, total_net)
+    earnings = {"date": date.today().isoformat(), "revenue": total_rev,
+                "net_profit": total_net, "break_even": break_even_price(),
+                "products": rows, "directives": tips}
+    (DATA / "earnings.json").write_text(json.dumps(earnings, indent=2), encoding="utf-8")
+    log(f"EARNINGS revenue=${total_rev:.2f} net=${total_net:.2f} "
+        f"break_even=${break_even_price():.2f}")
+    for tip in tips:
+        log("  PROFIT: " + tip)
 
     log(f"wrote {len(apps)} app(s); {len(moved)} price move(s)")
     for a in apps:
