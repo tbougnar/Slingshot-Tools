@@ -8,6 +8,7 @@ from __future__ import annotations
 import base64
 import json
 import os
+import platform
 import re
 import shutil
 import subprocess
@@ -411,33 +412,44 @@ def build_installer(app_dir: Path, concept):
 
 
 def push_to_itch(concept, app_dir):
-    """Upload the finished build to itch.io with butler so the product page is
-    live without anyone touching a web form."""
-    if not (ITCH_API_KEY and shutil.which("butler")):
-        log("butler or ITCH_API_KEY missing - skipping itch upload")
-        return False
+    """Best-effort upload to itch.io. Never fatal: a finished app matters far
+    more than the upload, and butler/arch problems must not kill the build."""
     slug = concept["slug"]
-    upload_dir = app_dir / "upload"
-    if upload_dir.exists():
-        shutil.rmtree(upload_dir)
-    (upload_dir / app_dir.name).mkdir(parents=True, exist_ok=True)
-    shutil.copy2(app_dir / "app" / "index.html", upload_dir / "index.html")
-    shutil.copy2(ROOT / "site" / "icon-512.png", upload_dir / "icon.png")
-    readme = upload_dir / "README.txt"
-    readme.write_text(
-        f"{concept['title']}\n{concept['blurb']}\n\n"
-        "A single-file app: open index.html in any modern browser. "
-        "Your data is stored only in this browser (localStorage) and never sent anywhere.\n",
-        encoding="utf-8")
-    env = dict(os.environ, BUTLER_API_KEY=ITCH_API_KEY, BUTLER_CHANNEL=ITCH_PAGE)
-    r = subprocess.run(["butler", "push", str(upload_dir / app_dir.name),
-                        "--project", slug, "--yes"],
-                       capture_output=True, text=True, env=env, timeout=900)
-    if r.returncode != 0:
-        log(f"butler push failed: {(r.stderr or r.stdout)[-300:]}")
+    try:
+        if not ITCH_API_KEY:
+            log("no itch key - skipping upload")
+            return False
+        butler = shutil.which("butler")
+        if not butler:
+            log("butler not installed - skipping upload")
+            return False
+        machine = platform.machine().lower()
+        arch = "aarch64" if machine in ("arm64", "aarch64") else "amd64"
+        upload_dir = app_dir / "upload"
+        if upload_dir.exists():
+            shutil.rmtree(upload_dir)
+        payload = upload_dir / "itch"
+        payload.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(app_dir / "app" / "index.html", payload / "index.html")
+        if (ROOT / "site" / "icon-512.png").exists():
+            shutil.copy2(ROOT / "site" / "icon-512.png", payload / "icon.png")
+        (payload / "README.txt").write_text(
+            f"{concept.get('brand') or concept['title']}\n{concept['blurb']}\n\n"
+            "A single-file app: open index.html in any modern browser. Your data "
+            "stays in your browser and is never sent anywhere.\n",
+            encoding="utf-8")
+        env = dict(os.environ, BUTLER_API_KEY=ITCH_API_KEY, BUTLER_CHANNEL=ITCH_PAGE)
+        r = subprocess.run([butler, "push", str(payload), "--project", slug, "--yes"],
+                           capture_output=True, text=True, env=env, timeout=900)
+        if r.returncode != 0:
+            log(f"itch upload did not succeed (non-fatal): "
+                f"{(r.stderr or r.stdout)[-200:]}")
+            return False
+        log(f"uploaded to itch.io as '{slug}'")
+        return True
+    except Exception as e:  # noqa: BLE001
+        log(f"itch upload skipped, build continues: {str(e)[:160]}")
         return False
-    log(f"pushed to itch.io as project '{slug}'")
-    return True
 
 
 def publish(concept, app_dir, installer, tier="full", brand="", differences=None):
