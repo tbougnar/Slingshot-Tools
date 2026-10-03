@@ -69,3 +69,13 @@ python pricing.py            # recalculate prices from sales
 - Prices only move after **5 or more** real sales.
 - Weak conversion cuts the price; strong conversion raises it.
 - Every change is written to `data/price_log.json` with its reason, and can be undone.
+
+## Code signing policy
+
+Free code signing provided by SignPath.io, certificate by SignPath Foundation.
+See [CODE_SIGNING_POLICY.md](CODE_SIGNING_POLICY.md).
+
+## License
+
+MIT. See [LICENSE](LICENSE). Every Slingshot utility, including the free
+Basic edition, ships its full source in this repository.
