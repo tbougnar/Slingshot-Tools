@@ -1,9 +1,31 @@
 {
-  "date": "2026-10-02",
+  "date": "2026-10-03",
   "revenue": 0.0,
   "net_profit": 0.0,
   "break_even": 0.32,
   "products": [
+    {
+      "slug": "gst-calculator-basic",
+      "title": "Tax & Tip Calculator (Basic)",
+      "tier": "basic",
+      "sales": 0,
+      "views": 0,
+      "price": 0.0,
+      "revenue": 0.0,
+      "net": 0.0,
+      "per_sale": 0.0
+    },
+    {
+      "slug": "gst-calculator",
+      "title": "Tax & Tip Calculator",
+      "tier": "full",
+      "sales": 0,
+      "views": 0,
+      "price": 3.0,
+      "revenue": 0.0,
+      "net": 0.0,
+      "per_sale": 2.553
+    },
     {
       "slug": "unit-price-compare-basic",
       "title": "Unit Price Compare (Basic)",
@@ -94,7 +116,7 @@
     }
   ],
   "directives": [
-    "4 paid product(s) have zero sales: unit-price-compare, invoice-maker, recipe-scaler, expense-splitter. Either cut the price to the break-even floor ($0.32), change the pitch, or stop building in that niche and build what sells.",
+    "5 paid product(s) have zero sales: gst-calculator, unit-price-compare, invoice-maker, recipe-scaler. Either cut the price to the break-even floor ($0.32), change the pitch, or stop building in that niche and build what sells.",
     "Nothing has netted positive yet. Do not build more apps: fix price and the itch.io page for what exists first."
   ]
 }

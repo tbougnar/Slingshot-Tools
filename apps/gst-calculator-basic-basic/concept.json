@@ -1,0 +1,16 @@
+{
+  "slug": "gst-calculator-basic-basic",
+  "title": "Tax & Tip Calculator",
+  "tag": "finance",
+  "blurb": "Instantly split bills and calculate exact tax and tips without mental math.",
+  "tags": [
+    "bill-split",
+    "tax",
+    "tip",
+    "receipt"
+  ],
+  "problem": "Eliminates the awkwardness and errors of calculating tips and splitting restaurant or group bills in real-time.",
+  "brand": "Tax & Tip Calculator",
+  "tier": "basic",
+  "base_slug": "gst-calculator-basic"
+}
