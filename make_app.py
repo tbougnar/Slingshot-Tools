@@ -320,6 +320,7 @@ HARD RULES
 - Useful for real: sensible defaults, validation, helpful empty states. No
   placeholder buttons, no "coming soon".
 - Never nag or guilt the user about upgrading. One calm line is enough.
+- The full edition has no limits and shows no upgrade prompts at all.
 - Add "export my data" and "import my data" (JSON) controls in the full edition.
 - No analytics, no tracking, no network.
 
@@ -395,13 +396,14 @@ NSI = r"""
 ; Slingshot Tool installer - built by Slingshot Tools
 Unicode true
 !define APPNAME "__APPNAME__"
+!define BRAND "Slingshot Tools"
 !define SLUG "__SLUG__"
 !define VENDOR "Slingshot Tools"
 !define PUBLISHER_URL "https://{SITE}"
-Name "Slingshot Tool - {APPNAME}"
+Name "__APPNAME__"
 OutFile "__OUT__"
-InstallDir "$LOCALAPPDATA\Programs\Slingshot Tools\{SLUG}"
-InstallDirRegKey HKCU "Software\Slingshot Tools\{SLUG}" "InstallDir"
+InstallDir "$LOCALAPPDATA\Programs\Slingshot Tools\__SLUG__"
+InstallDirRegKey HKCU "Software\Slingshot Tools\__SLUG__" "InstallDir"
 RequestExecutionLevel user
 SetCompressor /SOLID lzma
 Unicode true
@@ -410,8 +412,8 @@ Unicode true
 !define MUI_ABORTWARNING
 !define MUI_ICON "__ICON__"
 !define MUI_UNICON "__ICON__"
-!define MUI_FINISHPAGE_RUN "$INSTDIR\Launch.cmd"
-!define MUI_FINISHPAGE_RUN_TEXT "Open {APPNAME} now"
+!define MUI_FINISHPAGE_RUN "$INSTDIR\Start App.cmd"
+!define MUI_FINISHPAGE_RUN_TEXT "Start __APPNAME__"
 
 Page directory
 Page instfiles
@@ -422,24 +424,25 @@ Section "Install" SecMain
   SetOutPath "$INSTDIR\app"
   File /r "app\*.*"
   SetOutPath "$INSTDIR"
-  File "Launch.cmd"
+  File "launcher.py"
+  File "app\app.json"
+  File "Start App.cmd"
 
-  WriteRegStr HKCU "Software\Slingshot Tools\{SLUG}" "InstallDir" "$INSTDIR"
+  WriteRegStr HKCU "Software\Slingshot Tools\__SLUG__" "InstallDir" "$INSTDIR"
 
   ; Start Menu + Desktop shortcuts launch the app in a chromeless app window
-  WriteRegStr   HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{SLUG}" "DisplayName" "Slingshot Tool - {APPNAME}"
-  WriteRegStr   HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{SLUG}" "Publisher" "$VENDOR"
-  WriteRegStr   HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{SLUG}" "DisplayVersion" "1.0.0"
-  WriteRegStr   HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{SLUG}" "InstallLocation" "$INSTDIR"
-  WriteRegStr   HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{SLUG}" "UninstallString" '"$INSTDIR\Uninstall.exe"'
-  WriteRegStr   HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{SLUG}" "DisplayIcon" "$INSTDIR\app\icon.png"
-  WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{SLUG}" "NoModify" 1
-  WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{SLUG}" "NoRepair" 1
+  WriteRegStr   HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\__SLUG__" "DisplayName" "__APPNAME__"
+  WriteRegStr   HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\__SLUG__" "Publisher" "$VENDOR"
+  WriteRegStr   HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\__SLUG__" "DisplayVersion" "1.0.0"
+  WriteRegStr   HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\__SLUG__" "InstallLocation" "$INSTDIR"
+  WriteRegStr   HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\__SLUG__" "UninstallString" '"$INSTDIR\Uninstall.exe"'
+  WriteRegStr   HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\__SLUG__" "DisplayIcon" "__ICON__"
+  WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\__SLUG__" "NoModify" 1
+  WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\__SLUG__" "NoRepair" 1
 
-  CreateDirectory "$SMPROGRAMS\Slingshot Tools"
-  CreateShortcut "$SMPROGRAMS\Slingshot Tools\{APPNAME}.lnk" "$INSTDIR\Launch.cmd"
-  CreateShortcut "$SMPROGRAMS\Slingshot Tools\Uninstall {APPNAME}.lnk" "$INSTDIR\Uninstall.exe"
-  CreateShortcut "$DESKTOP\{APPNAME}.lnk" "$INSTDIR\Launch.cmd"
+  CreateShortcut "$SMPROGRAMS\__APPNAME__.lnk" "$INSTDIR\Start App.cmd" "" "__ICON__" 0
+  CreateShortcut "$SMPROGRAMS\Uninstall __APPNAME__.lnk" "$INSTDIR\Uninstall.exe"
+  CreateShortcut "$DESKTOP\__APPNAME__.lnk" "$INSTDIR\Start App.cmd" "" "__ICON__" 0
 
   WriteUninstaller "$INSTDIR\Uninstall.exe"
 SectionEnd
@@ -447,17 +450,21 @@ SectionEnd
 Section "Uninstall"
   Delete "$INSTDIR\Uninstall.exe"
   RMDir /r "$INSTDIR\app"
-  Delete "$INSTDIR\Launch.cmd"
+  Delete "$INSTDIR\Start App.cmd"
+  Delete "$INSTDIR\launcher.py"
+  Delete "$INSTDIR\app\app.json"
   RMDir "$INSTDIR"
-  Delete "$DESKTOP\{APPNAME}.lnk"
-  RMDir "$SMPROGRAMS\Slingshot Tools"
-  DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{SLUG}"
-  DeleteRegKey HKCU "Software\Slingshot Tools\{SLUG}"
+  Delete "$DESKTOP\__APPNAME__.lnk"
+  DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\__SLUG__"
+  DeleteRegKey HKCU "Software\Slingshot Tools\__SLUG__"
 SectionEnd
 """
 
 LAUNCH_CMD = """@echo off
-rem Slingshot Tool launcher - opens the app in a chromeless window
+cd /d "%~dp0"
+where pythonw >nul 2>&1 && (start "" pythonw launcher.py & exit /b 0)
+where python  >nul 2>&1 && (start "" python  launcher.py & exit /b 0)
+rem Slingshot Tool launcher - opens the app in a real native window
 set "APPDIR=%~dp0app\\index.html"
 set "FILEURL=file:///%%APPDIR:\\=\\%%"
 if exist "%ProgramFiles(x86)%%\\Microsoft%%\\Edge%%\\Application%%\\msedge.exe" (
