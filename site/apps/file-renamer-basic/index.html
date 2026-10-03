@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>RenameRig — Batch Rename</title>
+<style>
+:root{--bg:#14100F;--surface:#221b18;--surface-2:#2c2320;--surface-3:#362a25;--border:#3b2f2a;--text:#F6EFEC;--muted:#b3a49d;--red:#C1272D;--red-soft:#e0414a;--accent:#C1272D;--accent-contrast:#fff;--success:#5fbf7f;--danger:#e0414a;--warn:#e0a24a;--shadow:0 12px 34px rgba(0,0,0,.45);--radius:16px;}
+[data-theme="light"]{--bg:#f5efe9;--surface:#fff;--surface-2:#f7f1ec;--surface-3:#efe6df;--border:#e5d9cf;--text:#241b18;--muted:#7c6c64;--red:#C1272D;--red-soft:#C1272D;--accent:#C1272D;--accent-contrast:#fff;--shadow:0 10px 26px rgba(120,70,60,.14);}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);line-height:1.5;transition:background .25s,color .25s;min-height:100vh;}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(1100px 560px at 88% -12%,rgba(193,39,45,.14),transparent 60%);}
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px;}
+.topbar{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 84%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);}
+.topbar-in{display:flex;align-items:center;gap:14px;padding:14px 0;}
+.brand{display:flex;align-items:center;gap:12px;min-width:0;}
+.mark{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,var(--red),#8f1a1f);display:grid;place-items:center;color:#fff;box-shadow:var(--shadow);flex:none;}
+.brand h1{font-size:1.15rem;margin:0;letter-spacing:.2px;}
+.brand .tag{font-size:.78rem;color:var(--muted);margin-top:1px;}
+.spacer{flex:1;}
+.badge{font-size:.72rem;font-weight:700;letter-spacing:.4px;padding:5px 11px;border-radius:999px;background:var(--surface-2);color:var(--muted);border:1px solid var(--border);white-space:nowrap;}
+.badge.full{background:color-mix(in srgb,var(--red) 20%,transparent);color:var(--red-soft);border-color:color-mix(in srgb,var(--red) 35%,transparent);}
+.iconbtn{width:42px;height:42px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;display:grid;place-items:center;transition:transform .12s,background .2s,border-color .2s;}
+.iconbtn:hover{background:var(--surface-2);border-color:var(--red);}
+.iconbtn:active{transform:scale(.94);}
+main{padding:26px 0 40px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;}
+.card + .card{margin-top:18px;}
+.card h2{margin:0 0 4px;font-size:1.02rem;letter-spacing:.2px;}
+.card .sub{margin:0 0 16px;color:var(--muted);font-size:.86rem;}
+.controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.btn{font:inherit;font-weight:600;border-radius:12px;padding:11px 16px;border:1px solid var(--border);background:var(--surface-2);color:var(--text);cursor:pointer;transition:transform .12s,background .2s,border-color .2s,box-shadow .2s;display:inline-flex;align-items:center;gap:8px;}
+.btn:hover{background:var(--surface-3);transform:translateY(-1px);}
+.btn:active{transform:translateY(0) scale(.99);}
+.btn.primary{background:var(--accent);color:var(--accent-contrast);border-color:transparent;box-shadow:0 8px 20px color-mix(in srgb,var(--accent) 35%,transparent);}
+.btn.primary:hover{filter:brightness(1.06);}
+.btn.ghost{background:transparent;}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none;}
+.btn.sm{padding:8px 12px;font-size:.85rem;}
+.field{display:flex;flex-direction:column;gap:6px;flex:1;min-width:180px;}
+label{font-size:.78rem;font-weight:600;color:var(--muted);letter-spacing:.3px;}
+input,select{font:inherit;color:var(--text);background:var(--surface-2);border:1px solid var(--border);border-radius:11px;padding:11px 12px;width:100%;transition:border-color .15s,box-shadow .15s;}
+input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent);}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;}
+.drop{border:2px dashed var(--border);border-radius:14px;padding:34px 20px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;background:var(--surface-2);}
+.drop:hover{border-color:var(--accent);background:var(--surface-3);}
+.drop:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}
+.drop.over{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,var(--surface-2));}
+.drop .big{font-size:1.05rem;font-weight:600;}
+.drop .hint{color:var(--muted);font-size:.85rem;margin-top:6px;}
+.drop .add{margin-top:14px;display:inline-flex;}
+.count{font-size:.8rem;color:var(--muted);margin-left:auto;}
+.list{display:flex;flex-direction:column;gap:8px;margin-top:16px;max-height:52vh;overflow:auto;padding-right:4px;}
+.item{display:grid;grid-template-columns:34px 1fr 1fr 30px;gap:12px;align-items:center;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:10px 12px;transition:border-color .15s,background .15s;}
+.item:hover{border-color:color-mix(in srgb,var(--accent) 40%,var(--border));}
+.item .idx{font-variant-numeric:tabular-nums;font-size:.78rem;color:var(--muted);text-align:center;font-weight:700;}
+.item .name{font-size:.9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.item .name.old{color:var(--muted);}
+.item .name.new{color:var(--text);font-weight:600;}
+.item .name.new.err{color:var(--danger);}
+.item .name.new.err::after{content:" ⚠";}
+.item .del{width:28px;height:28px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;display:grid;place-items:center;}
+.item .del:hover{color:var(--danger);border-color:var(--danger);background:color-mix(in srgb,var(--danger) 12%,transparent);}
+.empty{border:1px dashed var(--border);border-radius:14px;padding:34px 20px;text-align:center;color:var(--muted);}
+.empty .ico{font-size:1.6rem;margin-bottom:8px;}
+.empty b{color:var(--text);}
+.empty p{margin:6px 0 0;font-size:.9rem;}
+.preview{display:flex;flex-direction:column;gap:10px;margin-top:14px;}
+.pv{display:grid;grid-template-columns:1fr 24px 1fr;gap:10px;align-items:center;font-size:.85rem;}
+.pv .old{color:var(--muted);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pv .new{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pv .new.err{color:var(--danger);}
+.pv .arr{color:var(--muted);text-align:center;}
+.pv .num{font-size:.72rem;color:var(--muted);margin-right:6px;}
+.note{font-size:.78rem;color:var(--muted);margin-top:12px;}
+.note b{color:var(--text);}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:var(--surface-3);color:var(--text);border:1px solid var(--border);border-radius:12px;padding:12px 18px;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:50;max-width:90vw;text-align:center;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast.ok{border-color:color-mix(in srgb,var(--success) 50%,var(--border));}
+.toast.err{border-color:color-mix(in srgb,var(--danger) 50%,var(--border));}
+footer{border-top:1px solid var(--border);padding:22px 0 34px;color:var(--muted);font-size:.82rem;}
+footer .flink{background:none;border:none;color:var(--muted);font:inherit;cursor:pointer;text-decoration:underline;padding:0;}
+footer .flink:hover{color:var(--text);}
+.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);border:0;}
+@media (max-width:640px){
+.item{grid-template-columns:26px 1fr 1fr 26px;gap:8px;padding:9px 10px;}
+.item .name{font-size:.82rem;}
+.pv{grid-template-columns:1fr 18px 1fr;}
+.brand h1{font-size:1.05rem;}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="wrap topbar-in">
+    <div class="brand">
+      <div class="mark" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h7l9 9-7 7-9-9z"/><path d="M13 13l4 4"/><path d="M8 9l2 2"/></svg>
+      </div>
+      <div>
+        <h1>RenameRig</h1>
+        <div class="tag">Batch Rename</div>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <span class="badge" id="tierBadge">—</span>
+    <button class="iconbtn" id="themeBtn" aria-label="Toggle light or dark theme" title="Toggle theme">
+      <svg id="themeIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
+    </button>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="card" aria-labelledby="addH">
+    <h2 id="addH">1 · Add files</h2>
+    <p class="sub">Drop a folder of names, or type them in. Nothing leaves your device.</p>
+    <div class="drop" id="drop" role="button" tabindex="0" aria-label="Add files: click, press Enter, or drag and drop">
+      <div class="big">Drag &amp; drop files here</div>
+      <div class="hint">or</div>
+      <span class="btn primary sm add" id="browseBtn">Browse files</span>
+      <input type="file" id="fileInput" multiple hidden>
+      <div class="hint" id="countLine" style="margin-top:12px"></div>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <div class="field">
+        <label for="manual">Or paste / type names (one per line)</label>
+        <input id="manual" type="text" placeholder="IMG_0001.jpg&#10;IMG_0002.jpg" autocomplete="off">
+      </div>
+      <button class="btn" id="addManual">Add</button>
+    </div>
+    <div class="list" id="list" aria-live="polite"></div>
+    <div class="empty" id="empty" style="margin-top:14px">
+      <div class="ico" aria-hidden="true">📁</div>
+      <b>No files yet</b>
+      <p>Add a few names to get started — drop files above or paste them in the box. Then apply a rule and preview the new names.</p>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="ruleH">
+    <h2 id="ruleH">2 · Apply a rule</h2>
+    <p class="sub">Combine steps; they run top to bottom.</p>
+    <div class="row">
+      <div class="field">
+        <label for="find">Find</label>
+        <input id="find" type="text" placeholder="IMG_" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="replace">Replace with</label>
+        <input id="replace" type="text" placeholder="vacation-" autocomplete="off">
+      </div>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <div class="field" style="flex:0 0 auto;min-width:150px">
+        <label for="case">Case</label>
+        <select id="case">
+          <option value="none">Keep as is</option>
+          <option value="lower">Lowercase</option>
+          <option value="upper">UPPERCASE</option>
+          <option value="title">Title Case</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="prefix">Prefix</label>
+        <input id="prefix" type="text" placeholder="2026-" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="suffix">Suffix</label>
+        <input id="suffix" type="text" placeholder="-final" autocomplete="off">
+      </div>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <div class="field" style="flex:0 0 auto;min-width:150px">
+        <label for="pad">Number pad</label>
+        <select id="pad">
+          <option value="0">Off</option><option value="2">01</option><option value="3">001</option><option value="4">0001</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="start">Start at</label>
+        <input id="start" type="number" value="1" min="0" step="1">
+      </div>
+      <div class="field">
+        <label for="numPos">Number position</label>
+        <select id="numPos">
+          <option value="end">After name</option>
+          <option value="start">Before name</option>
+        </select>
+      </div>
+    </div>
+    <div class="note" id="ruleNote"></div>
+  </section>
+
+  <section class="card" aria-labelledby="pvH">
+    <h2 id="pvH">3 · Preview</h2>
+    <p class="sub">Old name → new name. Red means a name would collide.</p>
+    <div class="preview" id="preview"></div>
+    <div class="empty" id="pvEmpty" style="margin-top:6px">
+      <div class="ico" aria-hidden="true">👀</div>
+      <b>Nothing to preview</b>
+      <p>Add files above and your new names will appear here instantly.</p>
+    </div>
+  </section>
+
+  <section class="card" aria-label="Actions">
+    <div class="row" style="justify-content:space-between">
+      <div class="controls">
+        <button class="btn primary" id="applyBtn">Apply rule</button>
+        <button class="btn" id="bulkBtn">Rename all</button>
+        <button class="btn ghost" id="clearBtn">Clear list</button>
+      </div>
+      <div class="controls" id="dataTools">
+        <button class="btn ghost" id="exportBtn">Export data</button>
+        <button class="btn ghost" id="importBtn">Import data</button>
+        <input type="file" id="importInput" accept="application/json,.json" hidden>
+      </div>
+    </div>
+    <div class="note" id="limitNote" style="margin-top:14px"></div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span id="footLine">RenameRig · works offline, data stays on this device.</span>
+    <button class="flink" id="resetBtn" style="margin-left:10px">Reset</button>
+  </div>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+const TIER = "basic";                 // "basic" or "full"
+const BASIC_LIMITS = { maxItems: 8, export: false, themes: "one", bulk: false, history: false };
+const LIMITS = TIER === "full"
+  ? { maxItems: 0, export: true, themes: "all", bulk: true, history: true }
+  : Object.assign({}, BASIC_LIMITS);
+
+const $ = (s) => document.querySelector(s);
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+};
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+let items = store.get("rr_items", []);
+let theme = store.get("rr_theme", "dark");
+let toastTimer = null;
+
+const ICONS = {
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  moon: '<path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/>'
+};
+
+function toast(msg, type) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.className = "toast show" + (type ? " " + type : "");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.className = "toast", 2600);
+}
+
+function applyTheme() {
+  const t = (TIER === "basic" && LIMITS.themes === "one") ? "dark" : theme;
+  document.documentElement.setAttribute("data-theme", t);
+  store.set("rr_theme", t);
+  const icon = t === "dark" ? ICONS.sun : ICONS.moon;
+  $('#themeIcon').innerHTML = icon;
+  $('#themeBtn').setAttribute("aria-label", t === "dark" ? "Switch to light theme" : "Switch to dark theme");
+}
+
+function splitName(n) {
+  const i = n.lastIndexOf(".");
+  return i > 0 ? { base: n.slice(0, i), ext: n.slice(i) } : { base: n, ext: "" };
+}
+
+function titleCase(s) {
+  return s.toLowerCase().replace(/(^|\s|[_-])([a-z])/g, (m, p, c) => p + c.toUpperCase());
+}
+
+function computeNew(name, r) {
+  let { base, ext } = splitName(name);
+  if (r.find) base = base.split(r.find).join(r.replace);
+  if (r.case === "lower") base = base.toLowerCase();
+  else if (r.case === "upper") base = base.toUpperCase();
+  else if (r.case === "title") base = titleCase(base);
+  let num = "";
+  if (r.pad > 0) num = String(r.start).padStart(r.pad, "0");
+  if (r.numPos === "start") base = num + base;
+  else base = base + num;
+  base = r.prefix + base + r.suffix;
+  return base + ext;
+}
+
+function readRule() {
+  return {
+    find: $('#find').value,
+    replace: $('#replace').value,
+    case: $('#case').value,
+    prefix: $('#prefix').value,
+    suffix: $('#suffix').value,
+    pad: parseInt($('#pad').value, 10) || 0,
+    start: parseInt($('#start').value, 10) || 1,
+    numPos: $('#numPos').value
+  };
+}
+
+function saveItems() { store.set("rr_items", items); }
+
+function render() {
+  const list = $('#list');
+  const empty = $('#empty');
+  const pv = $('#preview');
+  const pvEmpty = $('#pvEmpty');
+  const countLine = $('#countLine');
+
+  if (items.length === 0) {
+    list.innerHTML = "";
+    empty.style.display = "";
+    pv.innerHTML = "";
+    pvEmpty.style.display = "";
+    countLine.textContent = "";
+  } else {
+    empty.style.display = "none";
+    pvEmpty.style.display = "none";
+    const r = readRule();
+    const seen = {};
+    const rows = [];
+    items.forEach((it, i) => {
+      const newName = computeNew(it.name, r);
+      const key = newName.toLowerCase();
+      const dup = seen[key] ? true : false;
+      seen[key] = true;
+      const err = dup || newName === "";
+      rows.push({ idx: i + 1, old: it.name, new: newName, err });
+    });
+
+    list.innerHTML = rows.map((row) =>
+      '<div class="item" data-idx="' + row.idx + '">'
+      + '<span class="idx">' + row.idx + '</span>'
+      + '<span class="name old" title="' + esc(row.old) + '">' + esc(row.old) + '</span>'
+      + '<span class="name new' + (row.err ? " err" : "") + '" title="' + esc(row.new) + '">' + esc(row.new) + '</span>'
+      + '<button class="del" data-del="' + row.idx + '" aria-label="Remove ' + esc(row.old) + '">✕</button>'
+      + '</div>'
+    ).join(";").replace(/;/g, "");
+
+    pv.innerHTML = rows.map((row) =>
+      '<div class="pv">'
+      + '<span class="old"><span class="num">' + row.idx + '</span>' + esc(row.old) + '</span>'
+      + '<span class="arr">→</span>'
+      + '<span class="new' + (row.err ? " err" : "") + '">' + esc(row.new) + '</span>'
+      + '</div>'
+    ).join("");
+
+    const cap = LIMITS.maxItems;
+    countLine.textContent = cap > 0
+      ? items.length + " / " + cap + " names"
+      : items.length + " names";
+  }
+
+  const anyActive = !!(r0().find || r0().prefix || r0().suffix || r0().pad > 0 || r0().case !== "none");
+  $('#ruleNote').innerHTML = anyActive
+    ? "Rule is active — hit <b>Apply rule</b> to lock in the new names."
+    : "Set a Find/Replace, case, prefix, suffix, or numbering above.";
+
+  const cap = LIMITS.maxItems;
+  const atCap = cap > 0 && items.length >= cap;
+  $('#addManual').disabled = atCap;
+  $('#browseBtn').disabled = atCap;
+  $('#drop').setAttribute("aria-disabled", atCap ? "true" : "false");
+  $('#limitNote').innerHTML = cap > 0
+    ? (atCap ? "You've reached the free limit of " + cap + " names. <b>Full edition</b> removes the cap and adds export, bulk rename, and history." : "Free edition: up to " + cap + " names at a time.")
+    : "";
+
+  $('#applyBtn').disabled = items.length === 0;
+  $('#bulkBtn').disabled = items.length === 0;
+  $('#clearBtn').disabled = items.length === 0;
+  saveItems();
+}
+function r0() { return readRule(); }
+
+function addNames(names) {
+  const cap = LIMITS.maxItems;
+  let added = 0;
+  for (const raw of names) {
+    const n = raw.trim();
+    if (!n) continue;
+    if (cap > 0 && items.length >= cap) { toast("Free limit reached (" + cap + ").", "err"); break; }
+    if (items.some((it) => it.name === n)) continue;
+    items.push({ name: n, new: n });
+    added++;
+  }
+  if (added) toast(added + " name" + (added > 1 ? "s" : "") + " added.", "ok");
+  render();
+}
+
+function applyRule() {
+  const r = readRule();
+  items.forEach((it) => { it.new = computeNew(it.name, r); });
+  render();
+  toast("Rule applied to " + items.length + " name" + (items.length > 1 ? "s" : ""), "ok");
+}
+
+function bulkRename() {
+  if (items.length === 0) return;
+  if (LIMITS.bulk === false) { toast("Bulk rename is a Full edition feature.", "err"); return; }
+  const r = readRule();
+  const seen = {};
+  let collisions = 0;
+  items.forEach((it) => {
+    const nm = computeNew(it.name, r);
+    const k = nm.toLowerCase();
+    if (seen[k]) collisions++;
+    seen[k] = true;
+    it.name = nm;
+    it.new = nm;
+  });
+  render();
+  if (collisions > 0) toast("Renamed, but " + collisions + " name" + (collisions > 1 ? "s" : "") + " would collide.", "err");
+  else toast("Renamed " + items.length + " name" + (items.length > 1 ? "s" : "") + ".", "ok");
+}
+
+function clearList() {
+  if (items.length === 0) return;
+  if (!confirm("Clear all " + items.length + " names?")) return;
+  items = [];
+  render();
+  toast("List cleared.", "ok");
+}
+
+function exportData() {
+  if (LIMITS.export === false) { toast("Export is a Full edition feature.", "err"); return; }
+  const payload = {
+    app: "RenameRig",
+    version: 1,
+    exported: new Date().toISOString(),
+    items: items.map((it) => ({ name: it.name, new: it.new })),
+    rule: readRule()
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "renamerig-data.json";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  toast("Data exported.", "ok");
+}
+
+function importData(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      const arr = Array.isArray(data) ? data : (data && Array.isArray(data.items) ? data.items : null);
+      if (!arr) throw new Error("bad");
+      const cap = LIMITS.maxItems;
+      let added = 0;
+      for (const it of arr) {
+        const n = typeof it === "string" ? it : (it && it.name);
+        if (!n) continue;
+        if (cap > 0 && items.length >= cap) { toast("Import stopped at free limit (" + cap + ").", "err"); break; }
+        if (items.some((x) => x.name === n)) continue;
+        items.push({ name: n, new: n });
+        added++;
+      }
+      render();
+      toast(added + " name" + (added === 1 ? "" : "s") + " imported.", "ok");
+    } catch (e) {
+      toast("Couldn't read that file.", "err");
+    }
+  };
+  reader.readAsText(file);
+}
+
+function wire() {
+  // theme
+  $('#themeBtn').addEventListener("click", () => {
+    if (TIER === "basic" && LIMITS.themes === "one") { toast("Light mode is a Full edition feature.", "err"); return; }
+    theme = theme === "dark" ? "light" : "dark";
+    applyTheme();
+  });
+
+  // file input + drop
+  const fi = $('#fileInput');
+  $('#browseBtn').addEventListener("click", (e) => { e.stopPropagation(); fi.click(); });
+  const drop = $('#drop');
+  drop.addEventListener("click", () => { if (!(LIMITS.maxItems > 0 && items.length >= LIMITS.maxItems)) fi.click(); });
+  drop.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); drop.click(); } });
+  fi.addEventListener("change", () => {
+    const names = Array.from(fi.files).map((f) => f.name);
+    addNames(names);
+    fi.value = "";
+  });
+  ["dragenter", "dragover"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("over"); }));
+  ["dragleave", "drop"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove("over"); }));
+  drop.addEventListener("drop", (e) => {
+    const files = Array.from(e.dataTransfer.files).map((f) => f.name);
+    addNames(files);
+  });
+
+  // manual
+  $('#addManual').addEventListener("click", () => {
+    const el = $('#manual');
+    const lines = el.value.split(/\r?\n/);
+    addNames(lines);
+    el.value = "";
+  });
+  $('#manual').addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); $('#addManual').click(); } });
+
+  // rule inputs -> live preview
+  ["find", "replace", "case", "prefix", "suffix", "pad", "start", "numPos"].forEach((id) => {
+    const el = document.getElementById(id);
+    el.addEventListener("input", render);
+    el.addEventListener("change", render);
+  });
+
+  // list delete (event delegation)
+  $('#list').addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-del]");
+    if (!btn) return;
+    const idx = parseInt(btn.getAttribute("data-del"), 10);
+    items.splice(idx - 1, 1);
+    render();
+  });
+
+  // actions
+  $('#applyBtn').addEventListener("click", applyRule);
+  $('#bulkBtn').addEventListener("click", bulkRename);
+  $('#clearBtn').addEventListener("click", clearList);
+  $('#exportBtn').addEventListener("click", exportData);
+  $('#importBtn').addEventListener("click", () => $('#importInput').click());
+  $('#importInput').addEventListener("change", (e) => { const f = e.target.files[0]; if (f) importData(f); e.target.value = ""; });
+
+  // footer reset
+  $('#resetBtn').addEventListener("click", () => {
+    if (!confirm("Reset RenameRig? This clears your saved names and settings.")) return;
+    items = [];
+    theme = "dark";
+    store.set("rr_items", items);
+    store.set("rr_theme", theme);
+    ["find", "replace", "prefix", "suffix"].forEach((id) => (document.getElementById(id).value = ""));
+    document.getElementById("case").value = "none";
+    document.getElementById("pad").value = "0";
+    document.getElementById("start").value = "1";
+    document.getElementById("numPos").value = "end";
+    applyTheme();
+    render();
+    toast("Reset done.", "ok");
+  });
+}
+
+function init() {
+  // tier badge + edition-specific UI
+  const badge = $('#tierBadge');
+  if (TIER === "full") {
+    badge.textContent = "Full";
+    badge.classList.add("full");
+    $('#dataTools').style.display = "";
+    $('#footLine').textContent = "RenameRig · Full edition · works offline, data stays on this device.";
+  } else {
+    badge.textContent = "Free";
+    $('#dataTools').style.display = "none";
+    $('#footLine').textContent = "RenameRig · Free edition · works offline, data stays on this device.";
+  }
+  applyTheme();
+  wire();
+  render();
+}
+
+init();
+</script>
+</body>
+</html>

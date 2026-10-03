@@ -1,5 +1,65 @@
 [
   {
+    "slug": "file-renamer-basic",
+    "base_slug": "file-renamer",
+    "title": "RenameRig (Basic)",
+    "tier": "basic",
+    "tag": "productivity",
+    "blurb": "Quickly rename a handful of files with find-and-replace, case changes, and auto-numbering \u2014 all offline, no account needed.",
+    "tags": [
+      "rename",
+      "batch",
+      "files",
+      "organize"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/file-renamer-basic/",
+    "itch_url": "https://slingshot-tools.itch.io/file-renamer-basic",
+    "download": "",
+    "price": 0,
+    "free": true,
+    "differences": [
+      "Full edition: no limit on how many files you can rename at once (free caps you at 8).",
+      "Full edition: one-click bulk rename that applies the rule to every name in the list.",
+      "Full edition: export and import your names and rules as a JSON file.",
+      "Full edition: both dark and light themes (free locks you to dark).",
+      "Full edition: keeps your rename history so you can revisit past batches.",
+      "Full edition: no upgrade prompts or caps anywhere in the app."
+    ],
+    "published": true,
+    "badge": "New",
+    "date": "2026-10-03"
+  },
+  {
+    "slug": "file-renamer",
+    "base_slug": "file-renamer",
+    "title": "RenameRig",
+    "tier": "full",
+    "tag": "productivity",
+    "blurb": "Rename thousands of files with no caps, one-click bulk rename, JSON export/import, both themes, and full history.",
+    "tags": [
+      "rename",
+      "batch",
+      "files",
+      "organize"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/file-renamer/",
+    "itch_url": "https://slingshot-tools.itch.io/file-renamer",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [
+      "Full edition: no limit on how many files you can rename at once (free caps you at 8).",
+      "Full edition: one-click bulk rename that applies the rule to every name in the list.",
+      "Full edition: export and import your names and rules as a JSON file.",
+      "Full edition: both dark and light themes (free locks you to dark).",
+      "Full edition: keeps your rename history so you can revisit past batches.",
+      "Full edition: no upgrade prompts or caps anywhere in the app."
+    ],
+    "published": true,
+    "badge": "New",
+    "date": "2026-10-03"
+  },
+  {
     "slug": "habit-tracker-basic",
     "base_slug": "habit-tracker",
     "title": "Streak Keeper (Basic)",
