@@ -23,9 +23,12 @@ from pathlib import Path
 import paid_store
 
 ROOT = Path(__file__).resolve().parent
-APPS_DIR = ROOT / "apps"
 SITE_APPS = ROOT / "site" / "apps"
 SITE = ROOT / "site"
+# Only the basic edition is ever written under site/, which is the folder
+# GitHub Pages publishes. Paid editions go to paid/, outside that tree.
+APPS_DIR = SITE_APPS
+PAID_DIR = ROOT / "paid"
 CATALOG = SITE / "apps.json"
 DATA = ROOT / "data"
 LESSONS = DATA / "lessons.txt"
@@ -376,8 +379,16 @@ def _set_tier(html, tier):
 
 
 def write_app(concept, html, tier="full"):
+    """Write one edition.
+
+    Only the BASIC edition is ever placed under site/, which is the public
+    folder GitHub Pages publishes. The FULL edition goes to paid/, outside the
+    published tree, and is released solely to a buyer who has paid.
+    """
     slug = concept["slug"] if tier == "full" else f"{concept['slug']}-basic"
-    out = APPS_DIR / slug
+    out = (APPS_DIR / slug) if tier == "basic" else (PAID_DIR / slug)
+    if tier == "full" and out.exists():
+        shutil.rmtree(out)
     (out / "app").mkdir(parents=True, exist_ok=True)
     (out / "app" / "index.html").write_text(_set_tier(html, tier), encoding="utf-8")
     meta = {**concept, "slug": slug, "tier": tier, "base_slug": concept["slug"]}
@@ -594,7 +605,9 @@ def publish(concept, app_dir, installer, tier="full", brand="", differences=None
                   else paid_blurb if tier == "full" and paid_blurb
                   else concept["blurb"]),
         "tags": concept["tags"],
-        "url": f"{SITE_URL.rstrip('/')}/apps/{concept['slug']}/",
+        "url": (f"{SITE_URL.rstrip('/')}/apps/{concept['slug']}-basic/"
+                if tier == "basic"
+                else f"{SITE_URL.rstrip('/')}/apps/{concept['slug']}-basic/"),
         "download": "",
         "price": 0.0 if tier == "basic" else max(PRICE_FLOOR, PRICE_START),
         "free": tier == "basic",

@@ -6,14 +6,21 @@
  *
  * Secrets: PAYPAL_CLIENT_ID, PAYPAL_SECRET, PAYPAL_ENV, LICENSE_SECRET
  */
-const ALLOW = (env) => [env.SITE_ORIGIN].filter(Boolean);
+// SITE_ORIGIN must be a bare origin like https://tbougnar.github.io - browsers
+// send Origin without a path, so comparing it to a full site URL fails CORS.
+// SITE_BASE carries the path prefix used to build return URLs.
+const ALLOW = (env) => (env.SITE_ORIGIN || "").replace(/\/+$/, "");
+const base = (env) => `${ALLOW(env)}${env.SITE_PATH || ""}`;
 const cors = (req, env) => {
   const o = req.headers.get("Origin") || "";
-  const ok = ALLOW(env).includes(o) ? o : (ALLOW(env)[0] || o);
+  const allow = ALLOW(env);
+  const ok = allow && o === allow ? o : allow;
   return {
     "Access-Control-Allow-Origin": ok,
     "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Credentials": "false",
+    "Vary": "Origin",
     "Access-Control-Max-Age": "86400",
   };
 };
@@ -99,8 +106,8 @@ export default {
             brand_name: "Slingshot Tools",
             user_action: "PAY_NOW",
             shipping_preference: "NO_SHIPPING",
-            return_url: `${env.SITE_ORIGIN}/full.html`,
-            cancel_url: `${env.SITE_ORIGIN}/checkout.html?cancelled=1`,
+            return_url: `${base(env)}/full.html`,
+            cancel_url: `${base(env)}/checkout.html?cancelled=1`,
           },
         }, tok);
 

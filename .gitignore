@@ -27,3 +27,6 @@ build/
 # front-ends belong there. The paid installer is delivered through itch.io
 # and must never be copied into site/.
 site/licenses/
+
+# Paid editions must never be published
+paid/
