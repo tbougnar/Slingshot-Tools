@@ -1,5 +1,65 @@
 [
   {
+    "slug": "habit-tracker-basic",
+    "base_slug": "habit-tracker",
+    "title": "Streak Keeper (Basic)",
+    "tier": "basic",
+    "tag": "productivity",
+    "blurb": "Track up to 3 habits with a clean daily check-in grid and a 4-week consistency heatmap \u2014 a tidy, offline way to build a few reliable routines.",
+    "tags": [
+      "habits",
+      "streaks",
+      "productivity",
+      "offline"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/habit-tracker-basic/",
+    "itch_url": "https://slingshot-tools.itch.io/habit-tracker-basic",
+    "download": "",
+    "price": 0,
+    "free": true,
+    "differences": [
+      "Full edition: unlimited habits instead of the 3-habit cap.",
+      "Full edition: a 12-week consistency heatmap instead of just 4 weeks.",
+      "Full edition: a working light/dark theme toggle.",
+      "Full edition: export and import your data as JSON for backups and switching devices.",
+      "Full edition: a clear-all-data control for a clean start.",
+      "Full edition: no upgrade prompts or limits anywhere in the app."
+    ],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-03"
+  },
+  {
+    "slug": "habit-tracker",
+    "base_slug": "habit-tracker",
+    "title": "Streak Keeper",
+    "tier": "full",
+    "tag": "productivity",
+    "blurb": "Get unlimited habits, a 12-week heatmap, a light/dark theme, and one-click JSON export & import so your streaks are never capped and never lost.",
+    "tags": [
+      "habits",
+      "streaks",
+      "productivity",
+      "offline"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/habit-tracker/",
+    "itch_url": "https://slingshot-tools.itch.io/habit-tracker",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [
+      "Full edition: unlimited habits instead of the 3-habit cap.",
+      "Full edition: a 12-week consistency heatmap instead of just 4 weeks.",
+      "Full edition: a working light/dark theme toggle.",
+      "Full edition: export and import your data as JSON for backups and switching devices.",
+      "Full edition: a clear-all-data control for a clean start.",
+      "Full edition: no upgrade prompts or limits anywhere in the app."
+    ],
+    "published": true,
+    "badge": "New",
+    "date": "2026-10-03"
+  },
+  {
     "slug": "flashcard-maker-basic",
     "base_slug": "flashcard-maker",
     "title": "Cue (Basic)",

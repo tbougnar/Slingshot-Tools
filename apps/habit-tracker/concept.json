@@ -1,0 +1,16 @@
+{
+  "slug": "habit-tracker",
+  "title": "Streak Keeper",
+  "tag": "productivity",
+  "blurb": "Build unbreakable routines with a visual heatmap that shows your consistency at a glance.",
+  "tags": [
+    "habits",
+    "streaks",
+    "productivity",
+    "offline"
+  ],
+  "problem": "Losing motivation because you can't see your long-term progress or easily track daily consistency without syncing to a cloud service.",
+  "brand": "Streak Keeper",
+  "tier": "full",
+  "base_slug": "habit-tracker"
+}
