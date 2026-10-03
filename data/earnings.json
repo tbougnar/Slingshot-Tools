@@ -5,6 +5,28 @@
   "break_even": 0.32,
   "products": [
     {
+      "slug": "file-renamer-basic",
+      "title": "RenameRig (Basic)",
+      "tier": "basic",
+      "sales": 0,
+      "views": 0,
+      "price": 0.0,
+      "revenue": 0.0,
+      "net": 0.0,
+      "per_sale": 0.0
+    },
+    {
+      "slug": "file-renamer",
+      "title": "RenameRig",
+      "tier": "full",
+      "sales": 0,
+      "views": 0,
+      "price": 3.0,
+      "revenue": 0.0,
+      "net": 0.0,
+      "per_sale": 2.553
+    },
+    {
       "slug": "habit-tracker-basic",
       "title": "Streak Keeper (Basic)",
       "tier": "basic",
@@ -204,7 +226,7 @@
     }
   ],
   "directives": [
-    "9 paid product(s) have zero sales: habit-tracker, flashcard-maker, grade-calculator, compound-interest. Either cut the price to the break-even floor ($0.32), change the pitch, or stop building in that niche and build what sells.",
+    "10 paid product(s) have zero sales: file-renamer, habit-tracker, flashcard-maker, grade-calculator. Either cut the price to the break-even floor ($0.32), change the pitch, or stop building in that niche and build what sells.",
     "Nothing has netted positive yet. Do not build more apps: fix price and the itch.io page for what exists first."
   ]
 }

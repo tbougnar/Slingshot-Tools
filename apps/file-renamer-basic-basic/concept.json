@@ -1,0 +1,16 @@
+{
+  "slug": "file-renamer-basic-basic",
+  "title": "Batch Rename",
+  "tag": "productivity",
+  "blurb": "Rename hundreds of photos or documents in seconds with find-and-replace and auto-numbering.",
+  "tags": [
+    "rename",
+    "batch",
+    "files",
+    "organize"
+  ],
+  "problem": "Manually renaming large batches of downloaded files or photos is tedious, error-prone, and takes hours.",
+  "brand": "RenameRig",
+  "tier": "basic",
+  "base_slug": "file-renamer-basic"
+}
