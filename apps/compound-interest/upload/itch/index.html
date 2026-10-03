@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>Compound — see how your savings grow</title>
+<style>
+:root{--bg:#14100F;--surface:#1E1715;--surface-2:#281E1B;--surface-3:#332622;--border:#3A2C28;--text:#F6EFEC;--muted:#B7A69F;--faint:#8A7A73;--accent:#C1272D;--accent-2:#E23A40;--accent-soft:rgba(193,39,45,.16);--good:#3F9E6E;--good-soft:rgba(63,158,110,.16);--warn:#D99A2B;--warn-soft:rgba(217,154,43,.16);--shadow:0 1px 2px rgba(0,0,0,.35),0 18px 40px -20px rgba(0,0,0,.7);--radius:16px;--radius-sm:11px;--maxw:1140px}
+[data-theme="light"]{--bg:#F6EFEC;--surface:#FFFFFF;--surface-2:#FBF6F3;--surface-3:#F1E7E2;--border:#E7D9D2;--text:#241A17;--muted:#6E5E57;--faint:#9C8B83;--accent:#C1272D;--accent-2:#A51F24;--accent-soft:rgba(193,39,45,.10);--good:#2E7D54;--good-soft:rgba(46,125,84,.12);--warn:#A9760F;--warn-soft:rgba(169,118,15,.12);--shadow:0 1px 2px rgba(90,40,30,.08),0 18px 40px -24px rgba(90,40,30,.30)}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased;transition:background .3s,color .3s}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(1100px 520px at 82% -8%,var(--accent-soft),transparent 60%)}
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 20px;position:relative;z-index:1}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+header.app{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 84%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
+.bar{display:flex;align-items:center;gap:14px;height:64px}
+.brand{display:flex;align-items:center;gap:11px;font-weight:800;font-size:1.18rem;letter-spacing:-.02em}
+.mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(150deg,var(--accent-2),var(--accent));display:grid;place-items:center;box-shadow:0 6px 16px -6px var(--accent)}
+.mark svg{width:19px;height:19px;stroke:#fff}
+.tag{font-size:.7rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:4px 9px;border-radius:999px}
+.spacer{flex:1}
+.icon-btn{display:inline-flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:11px;padding:9px 12px;font:inherit;font-size:.85rem;font-weight:600;cursor:pointer;transition:transform .12s,border-color .15s,background .15s}
+.icon-btn:hover{border-color:var(--accent);transform:translateY(-1px)}
+.icon-btn:active{transform:translateY(0)}
+.icon-btn svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.icon-btn.danger:hover{border-color:var(--warn);color:var(--warn)}
+.icon-btn[hidden]{display:none}
+main{padding:26px 0 60px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:22px;align-items:start}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px}
+.card h2{margin:0 0 4px;font-size:1.02rem;letter-spacing:-.01em}
+.card .sub{margin:0 0 18px;color:var(--muted);font-size:.85rem}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:.8rem;font-weight:700;color:var(--muted);letter-spacing:.02em;margin-bottom:7px}
+.input,.select{width:100%;font:inherit;font-size:1rem;color:var(--text);background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 13px;transition:border-color .15s,box-shadow .15s}
+.input:focus,.select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.money{display:flex;align-items:center;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 13px;transition:border-color .15s,box-shadow .15s}
+.money:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.money .cur{color:var(--muted);font-weight:700}
+.money input{flex:1;border:0;background:transparent;color:var(--text);font:inherit;font-size:1.05rem;padding:12px 10px}
+.money input:focus{outline:none}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.hint{margin:7px 0 0;font-size:.76rem;color:var(--faint)}
+.divider{height:1px;background:var(--border);margin:20px 0}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font:inherit;font-weight:700;font-size:.9rem;border-radius:11px;padding:12px 16px;cursor:pointer;border:1px solid transparent;transition:transform .12s,background .15s,border-color .15s,box-shadow .15s}
+.btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn.primary{background:linear-gradient(150deg,var(--accent-2),var(--accent));color:#fff;box-shadow:0 10px 22px -12px var(--accent)}
+.btn.primary:hover{transform:translateY(-1px);box-shadow:0 14px 26px -12px var(--accent)}
+.btn.primary:active{transform:translateY(0)}
+.btn.ghost{background:var(--surface-2);border-color:var(--border);color:var(--text)}
+.btn.ghost:hover{border-color:var(--accent)}
+.btn.block{width:100%}
+.btn[disabled]{opacity:.5;cursor:not-allowed;transform:none}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.stat{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px}
+.stat .k{font-size:.72rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--muted)}
+.stat .v{font-size:1.18rem;font-weight:800;letter-spacing:-.01em;margin-top:5px;font-variant-numeric:tabular-nums}
+.stat .v.accent{color:var(--accent)}
+.stat .v.good{color:var(--good)}
+.chart-wrap{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 10px 6px}
+#chart{width:100%;height:280px;display:block}
+.legend{display:flex;gap:18px;margin-top:12px;font-size:.8rem;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.dot{width:11px;height:11px;border-radius:3px}
+.dot.principal{background:var(--accent-soft);border:1px solid var(--accent)}
+.dot.interest{background:var(--accent)}
+table{width:100%;border-collapse:collapse;font-size:.85rem}
+thead th{text-align:right;font-size:.7rem;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:8px 10px;border-bottom:1px solid var(--border)}
+thead th:first-child{text-align:left}
+tbody td{text-align:right;padding:9px 10px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums}
+tbody td:first-child{text-align:left;font-weight:700;color:var(--muted)}
+tbody tr:last-child td{border-bottom:0}
+tbody td.interest{color:var(--accent);font-weight:600}
+.explain{margin-top:20px;background:var(--surface-2);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--radius-sm);padding:16px 18px}
+.explain h3{margin:0 0 8px;font-size:.95rem}
+.explain p{margin:0 0 8px;color:var(--muted);font-size:.9rem}
+.explain p:last-child{margin-bottom:0}
+.explain b{color:var(--text);font-variant-numeric:tabular-nums}
+.milestones{margin-top:20px}
+.milestones h3{margin:0 0 12px;font-size:.95rem}
+.milestone{display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--border)}
+.milestone:last-child{border-bottom:0}
+.milestone .ico{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;flex:none;background:var(--surface-2);border:1px solid var(--border);color:var(--muted)}
+.milestone.done .ico{background:var(--good-soft);border-color:var(--good);color:var(--good)}
+.milestone .ico svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.milestone .m-body{flex:1;min-width:0}
+.milestone .m-name{font-weight:700;font-size:.92rem}
+.milestone .m-meta{font-size:.78rem;color:var(--muted)}
+.milestone .m-when{font-weight:800;font-size:.9rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+.milestone.done .m-when{color:var(--good)}
+.empty{display:flex;flex-direction:column;align-items:center;text-align:center;padding:34px 18px;gap:12px}
+.empty .big{width:64px;height:64px;border-radius:18px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent)}
+.empty .big svg{width:32px;height:32px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.empty h3{margin:0;font-size:1.1rem}
+.empty p{margin:0;color:var(--muted);max-width:42ch;font-size:.9rem}
+.empty .btn{margin-top:6px}
+.upgrade{margin-top:22px;background:var(--surface);border:1px dashed var(--accent);border-radius:var(--radius);padding:18px 20px;display:flex;gap:14px;align-items:center}
+.upgrade .u-ico{width:40px;height:40px;border-radius:11px;flex:none;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center}
+.upgrade .u-ico svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.upgrade .u-body{flex:1;min-width:0}
+.upgrade .u-body strong{display:block;font-size:.95rem}
+.upgrade .u-body span{font-size:.82rem;color:var(--muted)}
+[data-tier="full"] .upgrade{display:none}
+footer.app{border-top:1px solid var(--border);padding:22px 0 40px;color:var(--faint);font-size:.8rem}
+footer .fbar{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+footer a{color:var(--muted);text-decoration:none}
+footer a:hover{color:var(--accent)}
+@media (max-width:860px){.layout{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}.row3{grid-template-columns:1fr 1fr}}
+@media (max-width:480px){.row,.row3{grid-template-columns:1fr}.bar{height:auto;padding:12px 0;flex-wrap:wrap}.brand{font-size:1.05rem}}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body data-tier="full">
+<header class="app">
+  <div class="wrap bar">
+    <span class="brand">
+      <span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 19h16"/><path d="M6 19V11"/><path d="M11 19V6"/><path d="M16 19V9"/><path d="M19 6l-3-3"/><path d="M16 3h3v3"/></svg></span>
+      Compound
+    </span>
+    <span class="tag">finance</span>
+    <span class="spacer"></span>
+    <button class="icon-btn" id="themeBtn" aria-pressed="false" aria-label="Switch to light mode">
+      <svg id="themeIcon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      <span id="themeLabel">Light</span>
+    </button>
+    <button class="icon-btn" id="resetBtn" title="Start over"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="layout">
+    <section class="card" aria-labelledby="inputs-h">
+      <h2 id="inputs-h">Your savings plan</h2>
+      <p class="sub">Set the numbers. Everything below updates as you type.</p>
+
+      <div class="field">
+        <label for="start">Starting balance</label>
+        <div class="money"><span class="cur">$</span><input id="start" class="input" type="text" inputmode="decimal" value="5000" aria-describedby="start-hint"></div>
+        <p class="hint" id="start-hint">What you already have saved.</p>
+      </div>
+
+      <div class="field">
+        <label for="monthly">Monthly contribution</label>
+        <div class="money"><span class="cur">$</span><input id="monthly" class="input" type="text" inputmode="decimal" value="200" aria-describedby="monthly-hint"></div>
+        <p class="hint" id="monthly-hint">How much you add each month.</p>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="rate">Annual interest rate</label>
+          <div class="money"><span class="cur">%</span><input id="rate" class="input" type="text" inputmode="decimal" value="5" aria-describedby="rate-hint"></div>
+          <p class="hint" id="rate-hint">Typical savings rates run 1–5%.</p>
+        </div>
+        <div class="field">
+          <label for="compound">Compounding</label>
+          <select id="compound" class="select">
+            <option value="12">Monthly</option>
+            <option value="4">Quarterly</option>
+            <option value="1">Yearly</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="years">How long will you save?</label>
+        <div class="row" style="margin-bottom:0">
+          <input id="years" class="input" type="number" min="1" max="50" step="1" value="10" aria-describedby="years-hint">
+          <div class="money" style="flex:none;width:96px"><span class="cur">yr</span></div>
+        </div>
+        <p class="hint" id="years-hint">1 to 50 years.</p>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="field">
+        <label for="goal">Your goal</label>
+        <div class="money"><span class="cur">$</span><input id="goal" class="input" type="text" inputmode="decimal" value="100000" aria-describedby="goal-hint"></div>
+        <p class="hint" id="goal-hint">A target to watch you reach — e.g. an emergency fund or a down payment.</p>
+      </div>
+
+      <div class="field" id="contributionField">
+        <label for="contribution">Contribution growth</label>
+        <div class="money"><span class="cur">%</span><input id="contribution" class="input" type="text" inputmode="decimal" value="0" aria-describedby="contribution-hint"></div>
+        <p class="hint" id="contribution-hint">Raise your monthly amount by this % each year, to match a raise or a bigger budget.</p>
+      </div>
+
+      <div class="divider"></div>
+
+      <div id="scenarioTools" hidden>
+        <div class="field">
+          <label for="scenario">Saved scenarios</label>
+          <select id="scenario" class="select"></select>
+        </div>
+        <div class="row" style="margin-bottom:14px">
+          <button class="btn ghost" id="saveScenario">Save this plan</button>
+          <button class="btn ghost danger" id="deleteScenario">Delete</button>
+        </div>
+        <div class="field">
+          <label for="scenarioName">Scenario name</label>
+          <input id="scenarioName" class="input" type="text" placeholder="e.g. Emergency fund" maxlength="40">
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div id="dataTools" hidden>
+        <div class="row">
+          <button class="btn ghost" id="exportBtn"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="M8 11l4 4 4-4"/><path d="M4 21h16"/></svg>Export</button>
+          <button class="btn ghost" id="importBtn"><svg viewBox="0 0 24 24"><path d="M12 21V9"/><path d="M8 13l4-4 4 4"/><path d="M4 3h16"/></svg>Import</button>
+        </div>
+        <p class="hint">Back up your plan and scenarios as a JSON file, or restore one you saved.</p>
+      </div>
+    </section>
+
+    <section aria-labelledby="results-h">
+      <h2 id="results-h" class="sr-only">Results</h2>
+      <div id="results"></div>
+    </section>
+  </div>
+</main>
+
+<footer class="app">
+  <div class="wrap fbar">
+    <span>Compound · a Slingshot Tools app</span>
+    <span>Private &amp; offline — your numbers never leave this device.</span>
+  </div>
+</footer>
+
+<script>
+/* ===== TIER SYSTEM ===== */
+const TIER = "full";                 // "basic" or "full"
+const LIMITS = { maxItems: 0, export: true, themes: "all", bulk: true, history: true };
+const BASIC_LIMITS = { maxItems: 3, export: false, themes: "one", bulk: false, history: false };
+const L = (TIER === "basic") ? Object.assign({}, BASIC_LIMITS) : Object.assign({}, LIMITS);
+const canThemes = L.themes === "all";
+const canHistory = !!L.history;
+const canExport = !!L.export;
+const maxScenarios = L.maxItems || 999999;
+
+/* ===== ICONS ===== */
+const svg = (p) => '<svg viewBox="0 0 24 24" aria-hidden="true">' + p + '</svg>';
+const ICON = {
+  check: svg('<path d="M20 6L9 17l-5-5"/>'),
+  target: svg('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>'),
+  hourglass: svg('<path d="M6 3h12M6 21h12M7 3c0 5 5 5 5 9s-5 4-5 9M17 3c0 5-5 5-5 9s5 4 5 9"/>'),
+  sparkle: svg('<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/>'),
+  save: svg('<path d="M5 3h10l4 4v14H5z"/><path d="M8 3v5h7"/><path d="M8 21v-6h8v6"/>'),
+  sun: svg('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'),
+  moon: svg('<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>')
+};
+
+/* ===== STORAGE ===== */
+const KEY = "compound.v1";
+const DEFAULTS = { start: 5000, monthly: 200, rate: 5, compound: 12, years: 10, goal: 100000, contribution: 0 };
+let state = { params: Object.assign({}, DEFAULTS), scenarios: [], active: null };
+
+function load() {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    if (d && d.params) state.params = Object.assign({}, DEFAULTS, d.params);
+    if (Array.isArray(d.scenarios)) state.scenarios = d.scenarios.slice(0, maxScenarios);
+    if (typeof d.active === "string") state.active = d.active;
+  } catch (e) {}
+}
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+}
+
+/* ===== HELPERS ===== */
+function parseNum(el) {
+  const n = parseFloat(String(el.value).replace(/[^0-9.\-]/g, ""));
+  return isFinite(n) ? n : 0;
+}
+function fmtMoney(n) {
+  if (!isFinite(n)) return "$0";
+  const neg = n < 0; n = Math.abs(n);
+  let s;
+  if (n >= 1e6) s = "$" + (n / 1e6).toFixed(2).replace(/\.?0+$/, "") + "M";
+  else if (n >= 1e4) s = "$" + (n / 1e3).toFixed(1).replace(/\.0$/, "") + "K";
+  else s = "$" + Math.round(n).toLocaleString("en-US");
+  return (neg ? "-" : "") + s;
+}
+function fmtFull(n) {
+  if (!isFinite(n)) return "$0";
+  return (n < 0 ? "-$" : "$") + Math.round(Math.abs(n)).toLocaleString("en-US");
+}
+function yearLabel(i) { return i === 0 ? "Start" : (i === 1 ? "Year 1" : "Year " + i); }
+function clampYears(y) { y = Math.round(y); if (!isFinite(y) || y < 1) y = 1; if (y > 50) y = 50; return y; }
+
+/* ===== CALC ===== */
+function compute(p) {
+  const start = Math.max(0, p.start || 0);
+  const monthly = Math.max(0, p.monthly || 0);
+  const rate = Math.max(0, p.rate || 0) / 100;
+  const n = Math.max(1, Math.round(p.compound || 12));
+  const years = clampYears(p.years);
+  const goal = Math.max(0, p.goal || 0);
+  const growth = Math.max(0, p.contribution || 0) / 100;
+  const r = rate / n;
+  const monthsPerYear = 12 / n;
+  const totalPeriods = years * n;
+  const contribs = [];
+  for (let i = 0; i < totalPeriods; i++) {
+    const yr = Math.floor(i / n);
+    contribs.push(monthly * Math.pow(1 + growth, yr));
+  }
+  const yearly = [start];
+  let bal = start;
+  for (let i = 1; i <= totalPeriods; i++) {
+    bal = bal * (1 + r) + contribs[i - 1];
+    if (i % n === 0) yearly.push(bal);
+  }
+  const finalBal = yearly[yearly.length - 1];
+  const totalContrib = start + contribs.reduce((a, b) => a + b, 0);
+  const interest = finalBal - totalContrib;
+  const goalYear = goal > 0 ? yearly.findIndex((v, i) => i > 0 && v >= goal) : -1;
+  const doubleYear = yearly.findIndex((v, i) => i > 0 && v >= start * 2);
+  const maxPeriod = Math.min(totalPeriods, 1200);
+  const chart = [start];
+  let cb = start;
+  for (let i = 1; i <= maxPeriod; i++) { cb = cb * (1 + r) + contribs[i - 1]; chart.push(cb); }
+  return { start, monthly, rate, n, years, goal, growth, finalBal, totalContrib, interest, goalYear, doubleYear, chart, yearly };
+}
+
+/* ===== CHART ===== */
+function buildChart(res) {
+  const W = 760, H = 300, padL = 14, padR = 14, padT = 16, padB = 30;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const data = res.chart;
+  const maxY = Math.max(res.finalBal, res.goal, 1);
+  const N = data.length - 1;
+  const x = (i) => padL + (N ? (i / N) * plotW : 0);
+  const y = (v) => padT + plotH - (v / maxY) * plotH;
+  const y0 = y(0);
+  const line = data.map((v, i) => (i ? "L" : "M") + x(i).toFixed(1) + " " + y(v).toFixed(1)).join(" ");
+  const area = "M" + x(0).toFixed(1) + " " + y0.toFixed(1) + " " + data.map((v, i) => "L" + x(i).toFixed(1) + " " + y(v).toFixed(1)).join(" ") + " L" + x(N).toFixed(1) + " " + y0.toFixed(1) + " Z";
+  const grid = [0, .25, .5, .75, 1].map((f) => {
+    const gy = y(maxY * f);
+    return '<line x1="' + padL + '" y1="' + gy.toFixed(1) + '" x2="' + (W - padR) + '" y2="' + gy.toFixed(1) + '" stroke="var(--border)" stroke-width="1"/>' +
+      '<text x="' + (padL + 2) + '" y="' + (gy - 5).toFixed(1) + '" fill="var(--faint)" font-size="10" font-family="ui-sans-serif,system-ui,sans-serif">' + fmtMoney(maxY * f) + '</text>';
+  }).join("");
+  const xticks = [0, .25, .5, .75, 1].map((f) => {
+    const yr = Math.round(res.years * f);
+    return '<text x="' + x(N * f).toFixed(1) + '" y="' + (H - 8) + '" fill="var(--faint)" font-size="10" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif">' + (yr === 0 ? "0" : yr + "y") + '</text>';
+  }).join("");
+  let goalLine = "";
+  if (res.goal > 0 && res.goal <= maxY) {
+    const gy = y(res.goal);
+    goalLine = '<line x1="' + padL + '" y1="' + gy.toFixed(1) + '" x2="' + (W - padR) + '" y2="' + gy.toFixed(1) + '" stroke="var(--good)" stroke-width="1.5" stroke-dasharray="5 4"/>' +
+      '<text x="' + (W - padR - 2) + '" y="' + (gy - 6).toFixed(1) + '" fill="var(--good)" font-size="10" text-anchor="end" font-weight="700" font-family="ui-sans-serif,system-ui,sans-serif">Goal ' + fmtMoney(res.goal) + '</text>';
+  }
+  return '<svg id="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="A chart showing your balance growing from ' + fmtMoney(res.start) + ' to ' + fmtMoney(res.finalBal) + ' over ' + res.years + ' years.">' +
+    '<defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity="0.35"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0.02"/></linearGradient></defs>' +
+    grid + goalLine +
+    '<path d="' + area + '" fill="url(#cg)"/>' +
+    '<path d="' + line + '" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>' +
+    '<circle cx="' + x(N).toFixed(1) + '" cy="' + y(res.finalBal).toFixed(1) + '" r="4" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/>' +
+    xticks + '</svg>';
+}
+
+/* ===== RESULTS ===== */
+function resultsHTML(res) {
+  const reached = res.goal > 0 && res.goalYear > 0;
+  const goalText = res.goal <= 0 ? "" :
+    (reached ? "You reach your " + fmtFull(res.goal) + " goal in year " + res.goalYear + "." : "You don't quite reach your " + fmtFull(res.goal) + " goal in " + res.years + " years — you'll be at " + fmtFull(res.finalBal) + ".");
+  const doubleText = res.doubleYear > 0 ? "Your starting balance doubles in year " + res.doubleYear + "." : "";
+  const rows = [];
+  const step = Math.max(1, Math.ceil(res.years / 8));
+  for (let i = 0; i <= res.years; i += step) {
+    const bal = res.yearly[i];
+    const contrib = res.start + res.monthly * 12 * i;
+    rows.push("<tr><td>" + yearLabel(i) + "</td><td>" + fmtFull(bal) + "</td><td>" + fmtFull(contrib) + "</td><td class='interest'>" + fmtFull(bal - contrib) + "</td></tr>");
+  }
+  if (res.years % step !== 0) {
+    const i = res.years, bal = res.yearly[i], contrib = res.start + res.monthly * 12 * i;
+    rows.push("<tr><td>" + yearLabel(i) + "</td><td>" + fmtFull(bal) + "</td><td>" + fmtFull(contrib) + "</td><td class='interest'>" + fmtFull(bal - contrib) + "</td></tr>");
+  }
+  const milestones = [];
+  if (res.goal > 0) milestones.push({ name: "Reach your goal", meta: fmtFull(res.goal), done: reached, when: reached ? "Year " + res.goalYear : "Not yet" });
+  milestones.push({ name: "Double your start", meta: fmtFull(res.start * 2), done: res.doubleYear > 0, when: res.doubleYear > 0 ? "Year " + res.doubleYear : "Not yet" });
+  const ms = milestones.map((m) =>
+    '<div class="milestone ' + (m.done ? "done" : "") + '"><span class="ico">' + (m.done ? ICON.check : ICON.hourglass) + '</span>' +
+    '<span class="m-body"><span class="m-name">' + m.name + '</span><span class="m-meta">' + m.meta + '</span></span>' +
+    '<span class="m-when">' + m.when + '</span></div>').join("");
+
+  return '<div class="stats">' +
+    '<div class="stat"><div class="k">Final balance</div><div class="v accent">' + fmtFull(res.finalBal) + '</div></div>' +
+    '<div class="stat"><div class="k">You put in</div><div class="v">' + fmtFull(res.totalContrib) + '</div></div>' +
+    '<div class="stat"><div class="k">Interest earned</div><div class="v good">' + fmtFull(res.interest) + '</div></div>' +
+    '<div class="stat"><div class="k">Interest share</div><div class="v">' + (res.finalBal > 0 ? Math.round(res.interest / res.finalBal * 100) : 0) + '%</div></div>' +
+    '</div>' +
+    '<div class="card" style="padding:16px"><div class="chart-wrap">' + buildChart(res) + '</div>' +
+    '<div class="legend"><span><span class="dot principal"></span>Money you put in</span><span><span class="dot interest"></span>Interest it earns</span></div></div>' +
+    '<div class="card" style="margin-top:20px;padding:16px 16px 8px"><table><thead><tr><th>When</th><th>Balance</th><th>You put in</th><th>Interest</th></tr></thead><tbody>' + rows.join("") + '</tbody></table></div>' +
+    '<div class="milestones"><h3>Milestones</h3>' + ms + '</div>' +
+    '<div class="explain"><h3>What this means</h3>' +
+    '<p>You start with <b>' + fmtFull(res.start) + '</b> and add about <b>' + fmtFull(res.monthly) + '</b> a month. Over <b>' + res.years + ' years</b> at <b>' + res.rate + '%</b> compounded ' + (res.n === 12 ? "monthly" : res.n === 4 ? "quarterly" : "yearly") + ', you'll end with <b>' + fmtFull(res.finalBal) + '</b>.</p>' +
+    '<p>Of that, <b>' + fmtFull(res.interest) + '</b> — about <b>' + (res.finalBal > 0 ? Math.round(res.interest / res.finalBal * 100) : 0) + '%</b> — is interest your money earned for you. ' + goalText + ' ' + doubleText + '</p>' +
+    '</div>';
+}
+
+function emptyHTML() {
+  return '<div class="card"><div class="empty">' +
+    '<span class="big">' + ICON.sparkle + '</span>' +
+    '<h3>Let's see your money grow</h3>' +
+    '<p>Enter a starting balance and a monthly amount on the left. Compound will show you exactly how much you'll have — and how much of it is pure interest.</p>' +
+    '<button class="btn primary" id="startBtn">Use a sample plan</button>' +
+    '</div></div>' + upgradeHTML();
+}
+
+function upgradeHTML() {
+  if (TIER === "full") return "";
+  return '<div class="upgrade"><span class="u-ico">' + ICON.save + '</span>' +
+    '<span class="u-body"><strong>Save more plans &amp; back them up</strong>' +
+    '<span>Keep up to ' + maxScenarios + ' scenarios and export your data with the full edition.</span></span>' +
+    '<button class="btn primary" id="upgradeBtn">See the full edition</button></div>';
+}
+
+/* ===== RENDER ===== */
+const inputs = { start: document.getElementById("start"), monthly: document.getElementById("monthly"), rate: document.getElementById("rate"), compound: document.getElementById("compound"), years: document.getElementById("years"), goal: document.getElementById("goal"), contribution: document.getElementById("contribution") };
+const resultsEl = document.getElementById("results");
+
+function readInputs() {
+  return {
+    start: parseNum(inputs.start), monthly: parseNum(inputs.monthly), rate: parseNum(inputs.rate),
+    compound: parseInt(inputs.compound.value, 10) || 12, years: clampYears(parseInt(inputs.years.value, 10)),
+    goal: parseNum(inputs.goal), contribution: parseNum(inputs.contribution)
+  };
+}
+function render() {
+  const p = readInputs();
+  const res = compute(p);
+  resultsEl.innerHTML = (res.start > 0 || res.monthly > 0) ? resultsHTML(res) : emptyHTML();
+  const sb = document.getElementById("startBtn");
+  if (sb) sb.addEventListener("click", useSample);
+  const ub = document.getElementById("upgradeBtn");
+  if (ub) ub.addEventListener("click", () => { alert("You're already using the full edition — no limits, no walls."); });
+  save();
+}
+function useSample() {
+  inputs.start.value = "5000"; inputs.monthly.value = "200"; inputs.rate.value = "5";
+  inputs.compound.value = "12"; inputs.years.value = "10"; inputs.goal.value = "100000"; inputs.contribution.value = "0";
+  render();
+}
+
+/* ===== SCENARIOS ===== */
+const scenarioSel = document.getElementById("scenario");
+function refreshScenarioSelect() {
+  scenarioSel.innerHTML = "";
+  state.scenarios.forEach((s, i) => {
+    const o = document.createElement("option");
+    o.value = String(i); o.textContent = s.name || ("Plan " + (i + 1));
+    scenarioSel.appendChild(o);
+  });
+  const cur = state.active;
+  if (cur !== null && cur !== undefined && state.scenarios[cur]) scenarioSel.value = String(cur);
+  else scenarioSel.value = "";
+}
+function saveScenario() {
+  const name = (document.getElementById("scenarioName").value || "").trim() || ("Plan " + (state.scenarios.length + 1));
+  if (state.scenarios.length >= maxScenarios) { alert("You can keep up to " + maxScenarios + " scenarios in this edition."); return; }
+  state.scenarios.push({ name: name, params: readInputs() });
+  state.active = state.scenarios.length - 1;
+  document.getElementById("scenarioName").value = "";
+  refreshScenarioSelect(); save();
+}
+function deleteScenario() {
+  const i = parseInt(scenarioSel.value, 10);
+  if (isNaN(i) || !state.scenarios[i]) return;
+  if (!confirm('Delete "' + (state.scenarios[i].name || "Plan " + (i + 1)) + '"?')) return;
+  state.scenarios.splice(i, 1);
+  state.active = null;
+  refreshScenarioSelect(); save();
+}
+function loadScenario() {
+  const i = parseInt(scenarioSel.value, 10);
+  if (isNaN(i) || !state.scenarios[i]) return;
+  const p = state.scenarios[i].params;
+  inputs.start.value = p.start; inputs.monthly.value = p.monthly; inputs.rate.value = p.rate;
+  inputs.compound.value = String(p.compound); inputs.years.value = String(p.years); inputs.goal.value = p.goal; inputs.contribution.value = p.contribution;
+  state.active = i; save(); render();
+}
+
+/* ===== EXPORT / IMPORT ===== */
+function exportData() {
+  const payload = { app: "compound", version: 1, exportedAt: new Date().toISOString(), params: readInputs(), scenarios: state.scenarios };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "compound-plan.json"; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+function importData(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const d = JSON.parse(reader.result);
+      if (d && d.params) {
+        state.params = Object.assign({}, DEFAULTS, d.params);
+        const p = state.params;
+        inputs.start.value = p.start; inputs.monthly.value = p.monthly; inputs.rate.value = p.rate;
+        inputs.compound.value = String(p.compound); inputs.years.value = String(p.years); inputs.goal.value = p.goal; inputs.contribution.value = p.contribution;
+      }
+      if (Array.isArray(d.scenarios)) state.scenarios = d.scenarios.slice(0, maxScenarios);
+      state.active = null;
+      refreshScenarioSelect(); save(); render();
+      alert("Imported. Your plan" + (state.scenarios.length ? " and " + state.scenarios.length + " scenarios" : "") + " are loaded.");
+    } catch (e) { alert("That file couldn't be read. Make sure it's a Compound export."); }
+  };
+  reader.readAsText(file);
+}
+
+/* ===== THEME ===== */
+const themeBtn = document.getElementById("themeBtn");
+const themeIcon = document.getElementById("themeIcon");
+const themeLabel = document.getElementById("themeLabel");
+function applyTheme(t) {
+  document.documentElement.setAttribute("data-theme", t);
+  const dark = t === "dark";
+  themeIcon.innerHTML = dark ? '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>' : '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>';
+  themeLabel.textContent = dark ? "Light" : "Dark";
+  themeBtn.setAttribute("aria-pressed", String(!dark));
+  themeBtn.setAttribute("aria-label", "Switch to " + (dark ? "light" : "dark") + " mode");
+  try { localStorage.setItem("compound.theme", t); } catch (e) {}
+}
+function initTheme() {
+  let t = "dark";
+  try { t = localStorage.getItem("compound.theme") || "dark"; } catch (e) {}
+  if (!canThemes) t = "dark";
+  applyTheme(t);
+  if (!canThemes) { themeBtn.style.display = "none"; }
+}
+
+/* ===== WIRE UP ===== */
+function init() {
+  load();
+  initTheme();
+  const p = state.params;
+  inputs.start.value = p.start; inputs.monthly.value = p.monthly; inputs.rate.value = p.rate;
+  inputs.compound.value = String(p.compound); inputs.years.value = String(p.years); inputs.goal.value = p.goal; inputs.contribution.value = p.contribution;
+
+  if (canHistory) {
+    document.getElementById("scenarioTools").hidden = false;
+    refreshScenarioSelect();
+    scenarioSel.addEventListener("change", loadScenario);
+    document.getElementById("saveScenario").addEventListener("click", saveScenario);
+    document.getElementById("deleteScenario").addEventListener("click", deleteScenario);
+  } else {
+    document.getElementById("contributionField").style.display = "none";
+  }
+  if (canExport) {
+    document.getElementById("dataTools").hidden = false;
+    document.getElementById("exportBtn").addEventListener("click", exportData);
+    const file = document.createElement("input");
+    file.type = "file"; file.accept = "application/json,.json"; file.style.display = "none";
+    file.id = "importFile"; document.body.appendChild(file);
+    file.addEventListener("change", () => { if (file.files[0]) importData(file.files[0]); file.value = ""; });
+    document.getElementById("importBtn").addEventListener("click", () => file.click());
+  }
+
+  Object.values(inputs).forEach((el) => el.addEventListener("input", render));
+  themeBtn.addEventListener("click", () => {
+    const cur = document.documentElement.getAttribute("data-theme");
+    applyTheme(cur === "dark" ? "light" : "dark");
+  });
+  document.getElementById("resetBtn").addEventListener("click", () => {
+    if (!confirm("Start over? This clears your plan and saved scenarios on this device.")) return;
+    state = { params: Object.assign({}, DEFAULTS), scenarios: [], active: null };
+    save();
+    inputs.start.value = DEFAULTS.start; inputs.monthly.value = DEFAULTS.monthly; inputs.rate.value = DEFAULTS.rate;
+    inputs.compound.value = String(DEFAULTS.compound); inputs.years.value = String(DEFAULTS.years); inputs.goal.value = DEFAULTS.goal; inputs.contribution.value = DEFAULTS.contribution;
+    document.getElementById("scenarioName").value = "";
+    refreshScenarioSelect(); render();
+  });
+
+  render();
+}
+init();
+</script>
+</body>
+</html>

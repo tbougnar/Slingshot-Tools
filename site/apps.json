@@ -1,5 +1,63 @@
 [
   {
+    "slug": "compound-interest-basic",
+    "base_slug": "compound-interest",
+    "title": "Compound (Basic)",
+    "tier": "basic",
+    "tag": "finance",
+    "blurb": "See exactly how your savings grow over time with a plain-English explanation of every dollar earned.",
+    "tags": [
+      "savings",
+      "interest",
+      "finance",
+      "investment"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/compound-interest-basic/",
+    "itch_url": "https://slingshot-tools.itch.io/compound-interest-basic",
+    "download": "",
+    "price": 0,
+    "free": true,
+    "differences": [
+      "Full edition: save unlimited scenarios to compare side-by-side, instead of just 3.",
+      "Full edition: export and import your plan and scenarios as a JSON file for backups.",
+      "Full edition: switch between the dark red and light themes (basic is locked to dark).",
+      "Full edition: use the contribution-growth field to model raises and a growing budget.",
+      "Full edition: no upgrade prompts or walls anywhere in the app."
+    ],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-03"
+  },
+  {
+    "slug": "compound-interest",
+    "base_slug": "compound-interest",
+    "title": "Compound",
+    "tier": "full",
+    "tag": "finance",
+    "blurb": "See exactly how your savings grow over time with a plain-English explanation of every dollar earned.",
+    "tags": [
+      "savings",
+      "interest",
+      "finance",
+      "investment"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/compound-interest/",
+    "itch_url": "https://slingshot-tools.itch.io/compound-interest",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [
+      "Full edition: save unlimited scenarios to compare side-by-side, instead of just 3.",
+      "Full edition: export and import your plan and scenarios as a JSON file for backups.",
+      "Full edition: switch between the dark red and light themes (basic is locked to dark).",
+      "Full edition: use the contribution-growth field to model raises and a growing budget.",
+      "Full edition: no upgrade prompts or walls anywhere in the app."
+    ],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-03"
+  },
+  {
     "slug": "gst-calculator-basic",
     "base_slug": "gst-calculator",
     "title": "Tax & Tip Calculator (Basic)",
