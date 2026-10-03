@@ -68,3 +68,4 @@ jobs:
           git add -A
           git commit -m "feat: new Slingshot Tool - $(python -c "import json;print(json.load(open('site/apps.json'))[0]['title'])") [skip ci]" || echo "nothing to commit"
           git push || echo "push failed (will retry next week)"
+# slingshot: itch publishing is handled by this workflow
