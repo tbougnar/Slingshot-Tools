@@ -26,3 +26,4 @@ build/
 # NOTE: site/ is intentionally public (GitHub Pages). Only the product
 # front-ends belong there. The paid installer is delivered through itch.io
 # and must never be copied into site/.
+site/licenses/

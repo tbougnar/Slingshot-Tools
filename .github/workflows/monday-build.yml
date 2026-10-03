@@ -18,11 +18,14 @@ jobs:
     timeout-minutes: 30
     env:
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      PAYPAL_CLIENT_ID: ${{ secrets.PAYPAL_CLIENT_ID }}
+      PAYPAL_SECRET: ${{ secrets.PAYPAL_SECRET }}
+      PAYPAL_SANDBOX_CLIENT_ID: ${{ secrets.PAYPAL_SANDBOX_CLIENT_ID }}
+      PAYPAL_SANDBOX_SECRET: ${{ secrets.PAYPAL_SANDBOX_SECRET }}
+      PAYPAL_ENV: sandbox
+      LICENSE_SECRET: ${{ secrets.LICENSE_SECRET }}
       GROQ_CHAT_MODEL: ${{ secrets.GROQ_CHAT_MODEL }}
       SITE_URL: ${{ vars.SITE_URL }}
-      ITCH_PAGE: ${{ vars.ITCH_PAGE }}
-      ITCH_API_KEY: ${{ secrets.ITCH_API_KEY }}
-      ITCH_PAGE_URL: ${{ vars.ITCH_PAGE_URL }}
       PRICE_FLOOR: "1.00"
       PRICE_CEILING: "9.00"
       PRICE_START: "3.00"
@@ -68,4 +71,4 @@ jobs:
           git add -A
           git commit -m "feat: new Slingshot Tool - $(python -c "import json;print(json.load(open('site/apps.json'))[0]['title'])") [skip ci]" || echo "nothing to commit"
           git push || echo "push failed (will retry next week)"
-# slingshot: itch publishing is handled by this workflow
+# payments run on the slingshot-pay Cloudflare Worker
