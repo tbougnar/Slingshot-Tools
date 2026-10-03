@@ -32,6 +32,7 @@
   <div class="spin" id="spin">Waiting for PayPal to confirm. This only takes a few seconds.</div>
   <div class="bar" id="bar"><i></i></div>
   <div class="msg" id="m"></div>
+  <p id="ss" style="display:none;margin-top:14px;padding:12px;border-radius:9px;font-size:13.5px;background:#1b1418;border:1px solid #2a2026;color:#d9cdd3"><b>Windows may show &ldquo;Windows protected your PC&rdquo;.</b><br>This is because the installer is not signed yet. Click <b>More info</b>, then <b>Run anyway</b>. It installs normally.</p>
   <ol id="how" style="display:none">
     <li>Open the downloaded <b>.exe</b> and install the app.</li>
     <li>It appears on your desktop and in your Start menu.</li>
@@ -54,7 +55,7 @@ async function poll(n=0){
       const blob=await r.blob();
       document.getElementById('s').textContent='Your download is starting for '+sess()+'.';
       document.getElementById('spin').style.display='none';
-      document.getElementById('how').style.display='block';
+      document.getElementById('how').style.display='block';document.getElementById('ss').style.display='block';
       out.innerHTML='<button id="dl">Download again</button>';
       saveBlob(blob,t);
       document.getElementById('dl').onclick=()=>saveBlob(blob,t);
