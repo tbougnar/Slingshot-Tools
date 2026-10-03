@@ -1,0 +1,16 @@
+{
+  "slug": "compound-interest",
+  "title": "Compound Interest",
+  "tag": "finance",
+  "blurb": "See exactly how your savings grow over time with a plain-English explanation of every dollar earned.",
+  "tags": [
+    "savings",
+    "interest",
+    "finance",
+    "investment"
+  ],
+  "problem": "People don't understand how long it takes to reach financial goals or how much interest they'll actually earn, leading to poor saving habits.",
+  "brand": "Compound",
+  "tier": "full",
+  "base_slug": "compound-interest"
+}
