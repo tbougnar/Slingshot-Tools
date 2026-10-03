@@ -460,6 +460,37 @@ Section "Uninstall"
 SectionEnd
 """
 
+
+NATIVE_LAUNCHER = '''import os, sys
+from pathlib import Path
+import webview
+
+HERE = Path(__file__).resolve().parent
+APP = HERE / "app" / "index.html"
+
+def main():
+    title = "Slingshot Tool"
+    meta = HERE / "app" / "app.json"
+    if meta.exists():
+        try:
+            import json
+            title = json.loads(meta.read_text(encoding="utf-8-sig")).get("title", title)
+        except Exception:
+            pass
+    if not APP.exists():
+        return 1
+    try:
+        webview.create_window(title=title, width=1180, height=820, min_size=(760, 560))
+        webview.start()
+    except Exception:
+        import webbrowser
+        webbrowser.open(APP.as_uri())
+    return 0
+
+if __name__ == "__main__":
+    sys.exit(main())
+'''
+
 LAUNCH_CMD = """@echo off
 cd /d "%~dp0"
 where pythonw >nul 2>&1 && (start "" pythonw launcher.py & exit /b 0)
@@ -499,7 +530,19 @@ def build_installer(app_dir: Path, concept):
             .replace("__ICON__", ico.as_posix())
             .replace("{SITE}", SITE_URL))
     nsi.write_text(text, encoding="utf-8")
-    (app_dir / "Launch.cmd").write_text(LAUNCH_CMD.replace("%%", "%"), encoding="utf-8")
+    # the installer ships these; without them makensis aborts on a missing File
+    (app_dir / "Start App.cmd").write_text(LAUNCH_CMD.replace("%%", "%"), encoding="utf-8")
+    (app_dir / "app" / "app.json").write_text(
+        json.dumps({"title": concept["title"]}, ensure_ascii=False),
+        encoding="utf-8")
+    launcher_src = ROOT / "native_launcher.py"
+    if launcher_src.exists():
+        shutil.copy2(launcher_src, app_dir / "launcher.py")
+    else:
+        (app_dir / "launcher.py").write_text(NATIVE_LAUNCHER, encoding="utf-8")
+    icon_png = ROOT / "site" / "icon-512.png"
+    if icon_png.exists():
+        shutil.copy2(icon_png, app_dir / "app" / "icon.png")
 
     if shutil.which("makensis") is None:
         log("makensis not installed - shipping portable folder only")
@@ -643,7 +686,7 @@ def push_to_itch(concept, app_dir):
                            capture_output=True, text=True, env=env, timeout=900)
         if r.returncode != 0:
             log(f"itch upload did not succeed (non-fatal): "
-                f"{(r.stderr or r.stdout)[-200:]}")
+                f"{(r.stderr or r.stdout)[:400]}")
             return False
         log(f"uploaded to itch.io as '{slug}'")
         return True
