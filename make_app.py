@@ -334,14 +334,17 @@ Return JSON only, exactly this shape:
 The html value must be a single JSON string with all quotes escaped. No commentary."""
 
 
-def build_html(concept, lessons):
+def build_html(concept, lessons, attempt=1):
     d = groq_json(
         "You are a senior front-end engineer shipping a polished, genuinely useful "
         "single-file web app in a free basic edition and a paid full edition. "
         "You return JSON only.",
-        APP_SPEC + f"\n\nTHE APP: {json.dumps(concept, indent=2)}\n"
-        f"\nLESSONS FROM REAL USERS (apply them):\n{lessons or '(none yet)'}",
-        max_tokens=9000, temperature=0.5,
+        APP_SPEC
+        + f"\n\nTHE APP: {json.dumps(concept, indent=2)}\n"
+        + ("\n\nIMPORTANT: keep the HTML compact - short CSS, short JS, no comments. "
+           "It MUST be complete and end with </html>." if attempt > 1 else "")
+        + f"\nLESSONS FROM REAL USERS (apply them):\n{lessons or '(none yet)'}",
+        max_tokens=16000, temperature=0.5,
     )
     html = d.get("html") or ""
     if "<!DOCTYPE" not in html and "<html" not in html:
@@ -386,9 +389,11 @@ def html_looks_fine(html):
         problems.append("external script")
     if len(html) < 1500:
         problems.append("too small")
-    for needle in ("localStorage", "data-theme", "</html>"):
+    for needle in ("data-theme", "</html>"):
         if needle not in html:
             problems.append(f"missing {needle}")
+    if "localStorage" not in html and "indexedDB" not in html:
+        problems.append("missing localStorage (the app would not save anything)")
     return problems
 
 
@@ -682,11 +687,13 @@ def push_to_itch(concept, app_dir):
             "stays in your browser and is never sent anywhere.\n",
             encoding="utf-8")
         env = dict(os.environ, BUTLER_API_KEY=ITCH_API_KEY, BUTLER_CHANNEL=ITCH_PAGE)
-        r = subprocess.run([butler, "push", str(payload), "--project", slug, "--create", "--yes"],
+        r = subprocess.run([butler, "push", str(payload), "--project", slug],
                            capture_output=True, text=True, env=env, timeout=900)
         if r.returncode != 0:
-            log(f"itch upload did not succeed (non-fatal): "
-                f"{(r.stderr or r.stdout)[:400]}")
+            log("itch upload failed - butler said:")
+            for ln in ((r.stderr or "") + (r.stdout or "")).splitlines()[:12]:
+                if ln.strip():
+                    log("   butler: " + ln.strip()[:160])
             return False
         log(f"uploaded to itch.io as '{slug}'")
         return True
@@ -758,7 +765,8 @@ def main():
     concept = pick_concept(money)
     log(f"concept: {concept['title']} ({concept['slug']})")
     for attempt in range(1, 3):
-        html, brand, diffs, free_blurb, paid_blurb = build_html(concept, lessons)
+        html, brand, diffs, free_blurb, paid_blurb = build_html(
+            concept, lessons, attempt=attempt)
         issues = html_looks_fine(html)
         if issues:
             log(f"attempt {attempt} rejected: {issues}")
