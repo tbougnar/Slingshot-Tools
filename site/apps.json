@@ -1,5 +1,51 @@
 [
   {
+    "slug": "gst-calculator-basic",
+    "base_slug": "gst-calculator",
+    "title": "Tax & Tip Calculator (Basic)",
+    "tier": "basic",
+    "tag": "finance",
+    "blurb": "Instantly split bills and calculate exact tax and tips without mental math.",
+    "tags": [
+      "bill-split",
+      "tax",
+      "tip",
+      "receipt"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/gst-calculator-basic/",
+    "itch_url": "https://slingshot-tools.itch.io/gst-calculator-basic",
+    "download": "",
+    "price": 0,
+    "free": true,
+    "differences": [],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-03"
+  },
+  {
+    "slug": "gst-calculator",
+    "base_slug": "gst-calculator",
+    "title": "Tax & Tip Calculator",
+    "tier": "full",
+    "tag": "finance",
+    "blurb": "Instantly split bills and calculate exact tax and tips without mental math.",
+    "tags": [
+      "bill-split",
+      "tax",
+      "tip",
+      "receipt"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/gst-calculator/",
+    "itch_url": "https://slingshot-tools.itch.io/gst-calculator",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-03"
+  },
+  {
     "slug": "unit-price-compare-basic",
     "base_slug": "unit-price-compare",
     "title": "Unit Price Compare (Basic)",

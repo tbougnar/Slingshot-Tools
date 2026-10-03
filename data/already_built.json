@@ -18,5 +18,10 @@
     "slug": "unit-price-compare",
     "title": "Unit Price Compare",
     "date": "2026-10-02"
+  },
+  {
+    "slug": "gst-calculator",
+    "title": "Tax & Tip Calculator",
+    "date": "2026-10-03"
   }
 ]
