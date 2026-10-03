@@ -1,5 +1,65 @@
 [
   {
+    "slug": "flashcard-maker-basic",
+    "base_slug": "flashcard-maker",
+    "title": "Cue (Basic)",
+    "tier": "basic",
+    "tag": "study",
+    "blurb": "Free Cue keeps a small deck of up to 3 cards in smart spaced repetition, so you can lock in the facts you study most.",
+    "tags": [
+      "study",
+      "memory",
+      "exams",
+      "offline"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/flashcard-maker-basic/",
+    "itch_url": "https://slingshot-tools.itch.io/flashcard-maker-basic",
+    "download": "",
+    "price": 0,
+    "free": true,
+    "differences": [
+      "Full edition: unlimited flashcards instead of a 3-card cap.",
+      "Full edition: export and import your entire deck as JSON so you can back up or move it anywhere.",
+      "Full edition: a working light mode to match the dark red theme.",
+      "Full edition: bulk management of large decks without hitting a wall.",
+      "Full edition: complete review history and scheduling across every card.",
+      "Full edition: no upgrade prompts or limits, ever."
+    ],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-03"
+  },
+  {
+    "slug": "flashcard-maker",
+    "base_slug": "flashcard-maker",
+    "title": "Cue",
+    "tier": "full",
+    "tag": "study",
+    "blurb": "Unlock unlimited cards, JSON export and import, light mode, and full review history \u2014 study any subject with zero walls.",
+    "tags": [
+      "study",
+      "memory",
+      "exams",
+      "offline"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/flashcard-maker/",
+    "itch_url": "https://slingshot-tools.itch.io/flashcard-maker",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [
+      "Full edition: unlimited flashcards instead of a 3-card cap.",
+      "Full edition: export and import your entire deck as JSON so you can back up or move it anywhere.",
+      "Full edition: a working light mode to match the dark red theme.",
+      "Full edition: bulk management of large decks without hitting a wall.",
+      "Full edition: complete review history and scheduling across every card.",
+      "Full edition: no upgrade prompts or limits, ever."
+    ],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-03"
+  },
+  {
     "slug": "grade-calculator-basic",
     "base_slug": "grade-calculator",
     "title": "Final Call (Basic)",
