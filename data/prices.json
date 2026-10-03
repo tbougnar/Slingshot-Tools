@@ -82,5 +82,19 @@
     "sales": 0,
     "views": 0,
     "itch_url": "https://slingshot-tools.itch.io/compound-interest"
+  },
+  "grade-calculator-basic": {
+    "price": 0.0,
+    "tier": "basic",
+    "sales": 0,
+    "views": 0,
+    "itch_url": "https://slingshot-tools.itch.io/grade-calculator-basic"
+  },
+  "grade-calculator": {
+    "price": 3.0,
+    "tier": "full",
+    "sales": 0,
+    "views": 0,
+    "itch_url": "https://slingshot-tools.itch.io/grade-calculator"
   }
 }

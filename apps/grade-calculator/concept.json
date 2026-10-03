@@ -1,0 +1,16 @@
+{
+  "slug": "grade-calculator",
+  "title": "Grade Calculator",
+  "tag": "education",
+  "blurb": "Plan your final exam score to hit your target GPA without doing the math.",
+  "tags": [
+    "student",
+    "gpa",
+    "exam",
+    "planning"
+  ],
+  "problem": "Students stress over whether they can pass a course or hit a specific GPA, but rarely have a quick tool to calculate the exact percentage needed on the final exam given their current weighted progress.",
+  "brand": "Final Call",
+  "tier": "full",
+  "base_slug": "grade-calculator"
+}

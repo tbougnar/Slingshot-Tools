@@ -1,5 +1,65 @@
 [
   {
+    "slug": "grade-calculator-basic",
+    "base_slug": "grade-calculator",
+    "title": "Final Call (Basic)",
+    "tier": "basic",
+    "tag": "education",
+    "blurb": "The free tier is a clean, honest calculator that tells you exactly what you need on the final for a handful of graded items \u2014 perfect for a single course.",
+    "tags": [
+      "student",
+      "gpa",
+      "exam",
+      "planning"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/grade-calculator-basic/",
+    "itch_url": "https://slingshot-tools.itch.io/grade-calculator-basic",
+    "download": "",
+    "price": 0,
+    "free": true,
+    "differences": [
+      "Full edition: unlimited graded items and courses, not just three.",
+      "Full edition: export and import all your data as JSON to back up or move it.",
+      "Full edition: every theme, including the light mode you can't switch to in free.",
+      "Full edition: full grade history so you can revisit past targets and results.",
+      "Full edition: bulk tools to duplicate a course or reset a term in one click.",
+      "Full edition: no upgrade prompts or limits anywhere \u2014 the whole app, unlocked."
+    ],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-03"
+  },
+  {
+    "slug": "grade-calculator",
+    "base_slug": "grade-calculator",
+    "title": "Final Call",
+    "tier": "full",
+    "tag": "education",
+    "blurb": "Full gives you unlimited courses and items, JSON export/import, every theme, and full grade history so you never lose a plan again.",
+    "tags": [
+      "student",
+      "gpa",
+      "exam",
+      "planning"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/grade-calculator/",
+    "itch_url": "https://slingshot-tools.itch.io/grade-calculator",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [
+      "Full edition: unlimited graded items and courses, not just three.",
+      "Full edition: export and import all your data as JSON to back up or move it.",
+      "Full edition: every theme, including the light mode you can't switch to in free.",
+      "Full edition: full grade history so you can revisit past targets and results.",
+      "Full edition: bulk tools to duplicate a course or reset a term in one click.",
+      "Full edition: no upgrade prompts or limits anywhere \u2014 the whole app, unlocked."
+    ],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-03"
+  },
+  {
     "slug": "compound-interest-basic",
     "base_slug": "compound-interest",
     "title": "Compound (Basic)",
