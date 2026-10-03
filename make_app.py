@@ -37,6 +37,7 @@ CHAT_FALLBACKS = ["openai/gpt-oss-120b", "openai/gpt-oss-20b",
 SITE_URL = (os.environ.get("SITE_URL") or "").strip() or "https://tbougnar.github.io/Slingshot-Tools"
 ITCH_PAGE = (os.environ.get("ITCH_PAGE") or "").strip() or "slingshot-tools"
 ITCH_API_KEY = (os.environ.get("ITCH_API_KEY") or "").strip()
+ITCH_CHANNEL = (os.environ.get("ITCH_CHANNEL") or "").strip() or "html5"
 ITCH_PAGE_URL = (os.environ.get("ITCH_PAGE_URL") or "").strip() or "https://slingshot-tools.itch.io/"
 PRICE_FLOOR = float((os.environ.get("PRICE_FLOOR") or "").strip() or 1.00)
 PRICE_START = float((os.environ.get("PRICE_START") or "").strip() or 3.00)
@@ -687,7 +688,7 @@ def push_to_itch(concept, app_dir):
             "stays in your browser and is never sent anywhere.\n",
             encoding="utf-8")
         env = dict(os.environ, BUTLER_API_KEY=ITCH_API_KEY, BUTLER_CHANNEL=ITCH_PAGE)
-        target = f"{ITCH_PAGE}/{slug}"
+        target = f"{ITCH_PAGE}/{slug}:{ITCH_CHANNEL}"
         r = subprocess.run([butler, "push", str(payload), target, "--assume-yes"],
                            capture_output=True, text=True, env=env, timeout=900)
         if r.returncode != 0:
