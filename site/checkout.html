@@ -31,8 +31,6 @@
   <h1 id="h">Checkout</h1>
   <p class="sub">Secure payment by PayPal. Card, PayPal balance, Apple Pay or Google Pay.</p>
   <div class="row"><span id="lbl">Full edition</span><span class="amt" id="amt">$0.00</span></div>
-  <label for="email">Email for your license key</label>
-  <input id="email" type="email" placeholder="you@example.com" required autocomplete="email">
   <button id="go" onclick="start()">Pay with PayPal</button>
   <div class="msg" id="m"></div>
   <p style="margin-top:18px"><a class="back" href="./">&larr; Back to all apps</a></p>
@@ -49,11 +47,9 @@ if(!slug||!(price>0)){const m=document.getElementById('m');m.className='msg err'
 
 async function start(){
   const btn=document.getElementById('go'),m=document.getElementById('m');
-  const email=document.getElementById('email').value.trim();
-  if(!email){m.className='msg err';m.textContent='Please enter your email.';return;}
   btn.disabled=true;btn.textContent='Connecting to PayPal...';m.className='msg';
   try{
-    const r=await fetch(SLINGSHOT_API+'/api/order',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({slug,price,title:q.get('title')||'',email})});
+    const r=await fetch(SLINGSHOT_API+'/api/order',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({slug,price,title:q.get('title')||''})});
     const d=await r.json();
     if(!r.ok||!d.approve){throw new Error(d.error||'Could not start the payment.');}
     try{sessionStorage.setItem('ss_order',d.order);sessionStorage.setItem('ss_title',q.get('title')||'');}catch(e){}

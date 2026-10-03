@@ -119,8 +119,8 @@ export default {
         const name = slug.toLowerCase().replace(/[^a-z0-9-]/g, "-");
         return new Response(file, {
           headers: {
-            "Content-Type": "application/zip",
-            "Content-Disposition": `attachment; filename="slingshot-${name}.zip"`,
+            "Content-Type": "application/vnd.microsoft.portable-executable",
+            "Content-Disposition": `attachment; filename="SlingshotTool-${name}-Setup.exe"`,
             "Content-Length": String(file.byteLength),
             ...cors(req, env),
           },

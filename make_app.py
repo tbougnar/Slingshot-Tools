@@ -655,7 +655,7 @@ def main():
         full_meta = {**concept, "brand": brand}
         full_dir = write_app(full_meta, html, tier="full")
         installer = build_installer(full_dir, full_meta)
-        ok_full = stage_paid(full_dir, concept["slug"])
+        ok_full = stage_paid(full_dir, concept["slug"], installer)
         full_entry = publish({**full_meta, "base_slug": concept["slug"]}, full_dir,
                              installer, tier="full", brand=brand, differences=diffs,
                              free_blurb=free_blurb, paid_blurb=paid_blurb,

@@ -33,10 +33,9 @@
   <div class="bar" id="bar"><i></i></div>
   <div class="msg" id="m"></div>
   <ol id="how" style="display:none">
-    <li>Unzip the downloaded file.</li>
-    <li>Windows: run the installer to get the real desktop app.</li>
-    <li>Or open <b>app/index.html</b> to use it straight away.</li>
-    <li>Your copy is yours to keep. No key, no renewal, no account.</li>
+    <li>Open the downloaded <b>.exe</b> and install the app.</li>
+    <li>It appears on your desktop and in your Start menu.</li>
+    <li>Enjoy!</li>
   </ol>
   <p style="margin-top:20px"><a href="./" style="color:var(--dim);font-size:13px;text-decoration:none">&larr; Back to all apps</a></p>
 </div>
@@ -73,7 +72,7 @@ async function poll(n=0){
 function saveBlob(blob,token){
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
-  a.download='slingshot-'+sess().toLowerCase().replace(/[^a-z0-9]+/g,'-')+'.zip';
+  a.download='slingshot-'+sess().toLowerCase().replace(/[^a-z0-9]+/g,'-')+'-Setup.exe';
   document.body.appendChild(a);a.click();
   setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},4000);
 }
