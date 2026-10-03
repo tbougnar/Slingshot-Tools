@@ -5,6 +5,28 @@
   "break_even": 0.32,
   "products": [
     {
+      "slug": "grade-calculator-basic",
+      "title": "Final Call (Basic)",
+      "tier": "basic",
+      "sales": 0,
+      "views": 0,
+      "price": 0.0,
+      "revenue": 0.0,
+      "net": 0.0,
+      "per_sale": 0.0
+    },
+    {
+      "slug": "grade-calculator",
+      "title": "Final Call",
+      "tier": "full",
+      "sales": 0,
+      "views": 0,
+      "price": 3.0,
+      "revenue": 0.0,
+      "net": 0.0,
+      "per_sale": 2.553
+    },
+    {
       "slug": "compound-interest-basic",
       "title": "Compound (Basic)",
       "tier": "basic",
@@ -138,7 +160,7 @@
     }
   ],
   "directives": [
-    "6 paid product(s) have zero sales: compound-interest, gst-calculator, unit-price-compare, invoice-maker. Either cut the price to the break-even floor ($0.32), change the pitch, or stop building in that niche and build what sells.",
+    "7 paid product(s) have zero sales: grade-calculator, compound-interest, gst-calculator, unit-price-compare. Either cut the price to the break-even floor ($0.32), change the pitch, or stop building in that niche and build what sells.",
     "Nothing has netted positive yet. Do not build more apps: fix price and the itch.io page for what exists first."
   ]
 }
