@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Your key - Slingshot Tools</title>
+<title>Your download - Slingshot Tools</title>
 <link rel="icon" href="favicon.png">
 <style>
   :root{--bg:#0d0a0c;--panel:#171114;--line:#2a2026;--txt:#f4eef1;--dim:#a99ba3;--acc:#c8102e;--acc2:#ff5a72}
@@ -13,55 +13,70 @@
   .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:28px;width:100%;max-width:520px}
   h1{margin:0 0 6px;font-size:22px}
   .sub{color:var(--dim);margin:0 0 20px;font-size:14px}
-  .key{font-family:ui-monospace,Consolas,monospace;font-size:15px;word-break:break-all;background:var(--bg);padding:14px;border-radius:8px;border:1px solid var(--line);margin:10px 0}
-  button{width:100%;margin-top:14px;padding:13px;border:0;border-radius:10px;background:var(--acc);color:#fff;font-size:15px;font-weight:700;cursor:pointer}
+  button{width:100%;margin-top:16px;padding:14px;border:0;border-radius:10px;background:var(--acc);color:#fff;font-size:16px;font-weight:700;cursor:pointer}
+  button:disabled{opacity:.6;cursor:not-allowed}
   .msg{margin-top:14px;padding:11px;border-radius:9px;font-size:14px;display:none}
   .err{background:#3a1420;color:#ffb9c4;display:block;border:1px solid #5c1c2c}
   .spin{color:var(--dim);font-size:14px;margin-top:18px}
+  .bar{height:6px;background:var(--line);border-radius:4px;overflow:hidden;margin-top:14px;display:none}
+  .bar i{display:block;height:100%;width:40%;background:var(--acc2);animation:mv 1.1s infinite}
+  @keyframes mv{0%{margin-left:-40%}100%{margin-left:100%}}
   ol{padding-left:20px;color:var(--dim);font-size:14px}
 </style>
 </head>
 <body>
 <div class="card">
   <h1 id="h">Thank you</h1>
-  <p class="sub" id="s">Checking your payment...</p>
+  <p class="sub" id="s">Checking your payment and getting your files.</p>
   <div id="out"></div>
-  <div class="spin" id="spin">Waiting for PayPal to confirm the payment. This can take a few seconds.</div>
+  <div class="spin" id="spin">Waiting for PayPal to confirm. This only takes a few seconds.</div>
+  <div class="bar" id="bar"><i></i></div>
   <div class="msg" id="m"></div>
   <ol id="how" style="display:none">
-    <li>Open the paid app you downloaded.</li>
-    <li>Paste the key above when it asks to unlock Full.</li>
-    <li>The key is tied to this app only and works forever.</li>
+    <li>Unzip the downloaded file.</li>
+    <li>Windows: run the installer to get the real desktop app.</li>
+    <li>Or open <b>app/index.html</b> to use it straight away.</li>
+    <li>Your copy is yours to keep. No key, no renewal, no account.</li>
   </ol>
   <p style="margin-top:20px"><a href="./" style="color:var(--dim);font-size:13px;text-decoration:none">&larr; Back to all apps</a></p>
 </div>
 <script>
 const SLINGSHOT_API="https://slingshot-pay.bougnartaha2.workers.dev";
-const q=new URLSearchParams(location.search);
-const token=q.get('token')||'';
 const m=document.getElementById('m'),out=document.getElementById('out');
+const token=()=>new URLSearchParams(location.search).get('token')||sessionStorage.getItem('ss_order')||'';
+const sess=()=>sessionStorage.getItem('ss_title')||'your app';
 
 async function poll(n=0){
-  if(!token){m.className='msg err';m.textContent='No order reference found. Use the link from your checkout.';return;}
+  const t=token();
+  if(!t){m.className='msg err';m.textContent='No order reference found. If you were charged, use the link from your checkout page.';document.getElementById('spin').style.display='none';return;}
   try{
-    const r=await fetch(SLINGSHOT_API+'/api/key?token='+encodeURIComponent(token));
-    const d=await r.json();
-    if(r.ok&&d.key){
-      document.getElementById('s').textContent='Your license key for '+d.title;
-      out.innerHTML='<div class="key" id="k">'+d.key+'</div>'+
-        '<button onclick="cp()">Copy key</button>';
-      document.getElementById('how').style.display='block';
+    const r=await fetch(SLINGSHOT_API+'/api/download?token='+encodeURIComponent(t));
+    if(r.ok){
+      const blob=await r.blob();
+      document.getElementById('s').textContent='Your download is starting for '+sess()+'.';
       document.getElementById('spin').style.display='none';
+      document.getElementById('how').style.display='block';
+      out.innerHTML='<button id="dl">Download again</button>';
+      saveBlob(blob,t);
+      document.getElementById('dl').onclick=()=>saveBlob(blob,t);
       return;
     }
-    if(d.status&&/PENDING|APPROVED|CREATED/.test(d.status)){if(n<20){setTimeout(()=>poll(n+1),3000);return;}}
+    const d=await r.json().catch(()=>({}));
+    if(r.status===202||/PENDING|APPROVED|CREATED/.test(d.status||'')){if(n<25){setTimeout(()=>poll(n+1),3000);return;}}
+    if(r.status===404){m.className='msg err';m.textContent=d.error||'This build is not available yet. Contact support with your receipt.';document.getElementById('spin').style.display='none';return;}
   }catch(e){}
-  if(n<20){setTimeout(()=>poll(n+1),3000);return;}
+  if(n<25){setTimeout(()=>poll(n+1),3000);return;}
   document.getElementById('spin').style.display='none';
   m.className='msg err';
-  m.textContent='Still waiting for PayPal. If you were charged, refresh this page in a moment or email support with your receipt.';
+  m.textContent='Still waiting for PayPal. If you were charged, refresh this page in a moment.';
 }
-function cp(){const k=document.getElementById('k').textContent;navigator.clipboard.writeText(k).then(()=>{event.target.textContent='Copied';});}
+function saveBlob(blob,token){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='slingshot-'+sess().toLowerCase().replace(/[^a-z0-9]+/g,'-')+'.zip';
+  document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},4000);
+}
 poll();
 </script>
 </body>

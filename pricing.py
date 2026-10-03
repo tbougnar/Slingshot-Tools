@@ -27,7 +27,7 @@ GROQ_KEY = (os.environ.get("GROQ_API_KEY") or "").strip()
 CHAT_MODEL = (os.environ.get("GROQ_CHAT_MODEL") or "").strip() or "qwen/qwen3.8-27b"
 
 FLOOR = float((os.environ.get("PRICE_FLOOR") or "").strip() or "1.00")
-CEILING = float((os.environ.get("PRICE_CEILING") or "").strip() or "9.00")
+CEILING = float((os.environ.get("PRICE_CEILING") or "").strip() or "10.00")
 START_PRICE = float((os.environ.get("PRICE_START") or "").strip() or "3.00")
 MIN_SALES_BEFORE_MOVE = int((os.environ.get("PRICE_MIN_SAMPLES") or "").strip() or "5")
 STEP = float((os.environ.get("PRICE_STEP") or "").strip() or "0.50")

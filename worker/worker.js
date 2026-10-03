@@ -2,35 +2,29 @@
  * Slingshot Tools payment API.
  *
  * POST /api/order  {slug, price, title, email} -> {approve, order}
- * GET  /api/key?token=<orderId>                -> {key, title} once paid
+ * GET  /api/download?token=<orderId>          -> the paid build, after payment
  *
- * Secrets: PAYPAL_CLIENT_ID, PAYPAL_SECRET, PAYPAL_ENV, LICENSE_SECRET
+ * No license keys: payment authorises the download directly. The paid build is
+ * never in the published site, so this endpoint is the only way to obtain it,
+ * and it refuses until PayPal reports the order COMPLETED.
  */
-// SITE_ORIGIN must be a bare origin like https://tbougnar.github.io - browsers
-// send Origin without a path, so comparing it to a full site URL fails CORS.
-// SITE_BASE carries the path prefix used to build return URLs.
-const ALLOW = (env) => (env.SITE_ORIGIN || "").replace(/\/+$/, "");
-const base = (env) => `${ALLOW(env)}${env.SITE_PATH || ""}`;
 const cors = (req, env) => {
+  const allow = (env.SITE_ORIGIN || "").replace(/\/+$/, "");
   const o = req.headers.get("Origin") || "";
-  const allow = ALLOW(env);
-  const ok = allow && o === allow ? o : allow;
   return {
-    "Access-Control-Allow-Origin": ok,
+    "Access-Control-Allow-Origin": allow && o === allow ? o : allow,
     "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
-    "Access-Control-Allow-Credentials": "false",
-    "Vary": "Origin",
     "Access-Control-Max-Age": "86400",
+    "Vary": "Origin",
   };
 };
+const base = (env) => `${(env.SITE_ORIGIN || "").replace(/\/+$/, "")}${env.SITE_PATH || ""}`;
 const json = (body, status, req, env) =>
   new Response(JSON.stringify(body), {
     status,
     headers: { "Content-Type": "application/json", ...cors(req, env) },
   });
-
-const b64 = (s) => btoa(s);
 const api = (env) =>
   (env.PAYPAL_ENV === "live" ? "https://api-m.paypal.com" : "https://api-m.sandbox.paypal.com");
 
@@ -38,7 +32,7 @@ async function token(env) {
   const r = await fetch(`${api(env)}/v1/oauth2/token?grant_type=client_credentials`, {
     method: "POST",
     headers: {
-      Authorization: "Basic " + b64(`${env.PAYPAL_CLIENT_ID}:${env.PAYPAL_SECRET}`),
+      Authorization: "Basic " + btoa(`${env.PAYPAL_CLIENT_ID}:${env.PAYPAL_SECRET}`),
       Accept: "application/json",
       "Content-Type": "application/x-www-form-urlencoded",
     },
@@ -48,7 +42,7 @@ async function token(env) {
   return d.access_token;
 }
 
-async function paypal(env, path, method = "GET", body = null, tok) {
+async function pp(env, path, method = "GET", body = null, tok) {
   const r = await fetch(`${api(env)}${path}`, {
     method,
     headers: {
@@ -62,39 +56,23 @@ async function paypal(env, path, method = "GET", body = null, tok) {
   try { return JSON.parse(t); } catch { return { raw: t }; }
 }
 
-// ---- license keys: HMAC signed, tied to one product ----
-const enc = new TextEncoder();
-async function signKey(env, slug, raw) {
-  const k = await crypto.subtle.importKey(
-    "raw", enc.encode(env.LICENSE_SECRET || "slingshot-dev"),
-    { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  const sig = new Uint8Array(
-    await crypto.subtle.sign("HMAC", k, enc.encode(`slingshot|${slug}|${raw}`)));
-  return [...sig].map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 8);
-}
-const rawKey = () => {
-  const b = new Uint8Array(24);
-  crypto.getRandomValues(b);
-  return [...b].map((x) => x.toString(36).padStart(2, "0")).join("").slice(0, 24);
-};
-async function newKey(env, slug) {
-  const raw = rawKey();
-  return `SS-${raw.slice(0, 16)}-${raw.slice(16)}-${await signKey(env, slug, raw)}`;
-}
-
 export default {
   async fetch(req, env) {
     if (req.method === "OPTIONS") return new Response(null, { headers: cors(req, env) });
     const url = new URL(req.url);
+    const BAD = { success: false, error: "Not found" };
     try {
+      // ---------------- create the order ----------------
       if (url.pathname === "/api/order" && req.method === "POST") {
         const body = await req.json().catch(() => ({}));
         const slug = String(body.slug || "").replace(/[^a-z0-9-]/g, "").slice(0, 40);
-        const price = Math.max(Math.round(Number(body.price) * 100) / 100, 0.5);
+        // The AI picks the price, but never outside $1.00 - $10.00.
+        const price = Math.min(Math.max(Math.round(Number(body.price) * 100) / 100, 1.0), 10.0);
         if (!slug) return json({ error: "Missing product." }, 400, req, env);
+        if (!env.BUILDS) return json({ error: "Store is not configured." }, 503, req, env);
 
         const tok = await token(env);
-        const order = await paypal(env, "/v2/checkout/orders", "POST", {
+        const order = await pp(env, "/v2/checkout/orders", "POST", {
           intent: "CAPTURE",
           purchase_units: [{
             reference_id: slug,
@@ -116,37 +94,42 @@ export default {
         return json({ order: order.id, approve: approve ? approve.href : "", price }, 200, req, env);
       }
 
-      if (url.pathname === "/api/key" && req.method === "GET") {
+      // ---------------- hand over the paid build ----------------
+      if (url.pathname === "/api/download" && req.method === "GET") {
         const id = url.searchParams.get("token") || "";
         if (!/^[A-Z0-9]{10,32}$/.test(id)) return json({ error: "Bad order reference." }, 400, req, env);
 
         const tok = await token(env);
-        const order = await paypal(env, `/v2/checkout/orders/${id}`, "GET", null, tok);
+        let order = await pp(env, `/v2/checkout/orders/${id}`, "GET", null, tok);
         if (order.status === "APPROVED") {
-          await paypal(env, `/v2/checkout/orders/${id}/capture`, "POST", {}, tok);
+          order = await pp(env, `/v2/checkout/orders/${id}/capture`, "POST", {}, tok);
         }
-        const check = await paypal(env, `/v2/checkout/orders/${id}`, "GET", null, tok);
-        if (check.status !== "COMPLETED") {
-          return json({ status: check.status || "PENDING" }, 202, req, env);
+        if (order.status !== "COMPLETED") {
+          return json({ status: order.status || "PENDING" }, 202, req, env);
         }
 
-        const unit = (check.purchase_units || [])[0] || {};
+        const unit = (order.purchase_units || [])[0] || {};
         const slug = unit.custom_id || unit.reference_id || "";
-        if (!slug) return json({ error: "Order is missing its product reference." }, 400, req, env);
+        if (!slug) return json({ error: "Order has no product reference." }, 400, req, env);
 
-        // one stable key per product, reused by every buyer
-        const marker = `${slug}::${env.KEY_STORE_VERSION || "1"}`;
-        const old = await env.KEYS.get(marker);
-        const key = old || await newKey(env, slug);
-        await env.KEYS.put(marker, key);
+        const key = `build:${slug}`;
+        const file = await env.BUILDS.get(key, "arrayBuffer");
+        if (!file) return json({ error: "Build not found for this order." }, 404, req, env);
 
-        const amount = (unit.amount && unit.amount.value) || "0.00";
-        return json({ key, title: unit.description || slug, amount, email: (check.payer || {}).email_address || "" }, 200, req, env);
+        const name = slug.toLowerCase().replace(/[^a-z0-9-]/g, "-");
+        return new Response(file, {
+          headers: {
+            "Content-Type": "application/zip",
+            "Content-Disposition": `attachment; filename="slingshot-${name}.zip"`,
+            "Content-Length": String(file.byteLength),
+            ...cors(req, env),
+          },
+        });
       }
 
-      return json({ error: "Not found" }, 404, req, env);
+      return json(BAD, 404, req, env);
     } catch (e) {
-      return json({ error: String(e && e.message || e) }, 500, req, env);
+      return json({ error: String((e && e.message) || e) }, 500, req, env);
     }
   },
 };

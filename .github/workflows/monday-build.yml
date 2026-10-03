@@ -24,6 +24,12 @@ jobs:
       PAYPAL_SANDBOX_SECRET: ${{ secrets.PAYPAL_SANDBOX_SECRET }}
       PAYPAL_ENV: sandbox
       LICENSE_SECRET: ${{ secrets.LICENSE_SECRET }}
+      CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+      CF_ACCOUNT_ID: 72d86a35ce85cf491146e9f10cc2caca
+      CF_BUILDS_NAMESPACE: 3d55488f7d384ce3ad51c0ba34afeade
+      PAY_WORKER: ${{ secrets.PAY_WORKER }}
+      PRICE_FLOOR: '1.00'
+      PRICE_CEILING: '10.00'
       GROQ_CHAT_MODEL: ${{ secrets.GROQ_CHAT_MODEL }}
       SITE_URL: ${{ vars.SITE_URL }}
       PRICE_FLOOR: "1.00"

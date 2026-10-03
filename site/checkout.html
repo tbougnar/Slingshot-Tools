@@ -56,6 +56,7 @@ async function start(){
     const r=await fetch(SLINGSHOT_API+'/api/order',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({slug,price,title:q.get('title')||'',email})});
     const d=await r.json();
     if(!r.ok||!d.approve){throw new Error(d.error||'Could not start the payment.');}
+    try{sessionStorage.setItem('ss_order',d.order);sessionStorage.setItem('ss_title',q.get('title')||'');}catch(e){}
     location.href=d.approve;
   }catch(e){m.className='msg err';m.textContent=e.message;btn.disabled=false;btn.textContent='Pay with PayPal';}
 }

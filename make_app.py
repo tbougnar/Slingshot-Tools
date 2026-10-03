@@ -47,6 +47,8 @@ PAYPAL_ENV_LIVE = (os.environ.get("PAYPAL_ENV") or "").lower() == "live"
 LICENSE_SECRET = (os.environ.get("LICENSE_SECRET") or "").strip()
 PRICE_FLOOR = float((os.environ.get("PRICE_FLOOR") or "").strip() or 1.00)
 PRICE_START = float((os.environ.get("PRICE_START") or "").strip() or 3.00)
+# Hard bounds the AI may never leave: $1.00 to $10.00.
+PRICE_CEILING = float((os.environ.get("PRICE_CEILING") or "").strip() or 10.00)
 
 CATEGORIES = [
     ("password-manager", "offline password manager with vault encryption and a generator"),
@@ -609,7 +611,8 @@ def publish(concept, app_dir, installer, tier="full", brand="", differences=None
                 if tier == "basic"
                 else f"{SITE_URL.rstrip('/')}/apps/{concept['slug']}-basic/"),
         "download": "",
-        "price": 0.0 if tier == "basic" else max(PRICE_FLOOR, PRICE_START),
+        "price": 0.0 if tier == "basic"
+                else max(PRICE_FLOOR, min(PRICE_CEILING, PRICE_START)),
         "free": tier == "basic",
         "differences": differences or [],
         "published": published,
