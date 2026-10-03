@@ -687,7 +687,8 @@ def push_to_itch(concept, app_dir):
             "stays in your browser and is never sent anywhere.\n",
             encoding="utf-8")
         env = dict(os.environ, BUTLER_API_KEY=ITCH_API_KEY, BUTLER_CHANNEL=ITCH_PAGE)
-        r = subprocess.run([butler, "push", str(payload), "--project", slug],
+        target = f"{ITCH_PAGE}/{slug}"
+        r = subprocess.run([butler, "push", str(payload), target, "--assume-yes"],
                            capture_output=True, text=True, env=env, timeout=900)
         if r.returncode != 0:
             log("itch upload failed - butler said:")
