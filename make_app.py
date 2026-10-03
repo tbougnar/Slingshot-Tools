@@ -692,8 +692,21 @@ def push_to_itch(concept, app_dir):
             encoding="utf-8")
         env = dict(os.environ, BUTLER_API_KEY=ITCH_API_KEY, BUTLER_CHANNEL=ITCH_PAGE)
         target = f"{ITCH_PAGE}/{ITCH_PROJECT}:{ITCH_CHANNEL}"
-        r = subprocess.run([butler, "push", str(payload), target, "--assume-yes"],
-                           capture_output=True, text=True, env=env, timeout=900)
+        # itch serialises builds per channel: a brand new channel (or one fed by
+        # hand) reports "latest build is still processing" for a while. Retry.
+        r = None
+        for attempt in range(6):
+            r = subprocess.run([butler, "push", str(payload), target, "--assume-yes"],
+                               capture_output=True, text=True, env=env, timeout=900)
+            blob = (r.stderr or "") + (r.stdout or "")
+            if r.returncode == 0:
+                break
+            if "still processing" not in blob:
+                break
+            wait = 45 * (attempt + 1)
+            log(f"itch is still processing the previous build - waiting {wait}s "
+                f"and retrying ({attempt + 1}/6)")
+            time.sleep(wait)
         if r.returncode != 0:
             log("itch upload failed - butler said:")
             for ln in ((r.stderr or "") + (r.stdout or "")).splitlines()[:12]:
