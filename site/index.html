@@ -106,7 +106,7 @@
       <span>Slingshot <b>Tools</b></span>
     </a>
     <div class="spacer"></div>
-    <a class="btn" href="https://slingshot-tools.itch.io" target="_blank" rel="noopener">itch.io</a>
+    <a class="btn" href="#apps">Browse the apps</a>
     <button class="btn" id="themeBtn" aria-label="Toggle light and dark mode">Light mode</button>
   </div>
 </header>
@@ -120,7 +120,7 @@
       nothing to install if you don't want to, no accounts, no tracking.</p>
     <div class="cta">
       <a class="btn primary" href="#apps">Browse the apps</a>
-      <a class="btn" href="https://slingshot-tools.itch.io" target="_blank" rel="noopener">Play on itch.io</a>
+      <a class="btn primary" href="#apps">Browse the apps</a>
     </div>
   </section>
 
@@ -166,7 +166,8 @@ btn.onclick = () => {
 
 const appsEl = document.getElementById("apps");
 const filtersEl = document.getElementById("filters");
-const ITCH = "https://slingshot-tools.itch.io/";
+const CHECKOUT = "./checkout.html";
+const FULL = "./full.html";
 let APPS = [];
 let active = "all";
 
@@ -222,7 +223,7 @@ function renderFilters(){
 function groupProducts(list){
   const byBase = {};
   list.forEach(a => {
-    if (a.published === false) return;            // not on itch.io yet -> hidden
+    if (a.published === false) return;            // not published yet -> hidden
     const key = a.base_slug || a.slug;
     (byBase[key] = byBase[key] || []).push(a);
   });
@@ -237,10 +238,10 @@ function openDialog(item){
   const opts = [];
   if (item.basic) opts.push({
     tier:'basic', title:item.basic.title, blurb:item.basic.blurb,
-    price:'Free', href:item.basic.itch_url});
+    price:'Free', href:item.basic.url});
   if (item.full) opts.push({
     tier:'full', title:item.full.title, blurb:item.full.blurb,
-    price:'$' + Number(item.full.price || 0).toFixed(2), href:item.full.itch_url});
+    price:'$' + Number(item.full.price || 0).toFixed(2), href:CHECKOUT + '?slug=' + encodeURIComponent(item.base_slug || item.full.slug) + '&price=' + Number(item.full.price || 0).toFixed(2) + '&title=' + encodeURIComponent(item.full.title)});
   const d = document.getElementById('dlg');
   document.getElementById('dlgTitle').textContent = item.full.title;
   document.getElementById('dlgBlurb').textContent = item.full.blurb || '';

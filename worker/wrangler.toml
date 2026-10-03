@@ -1,0 +1,12 @@
+name = "slingshot-pay"
+main = "worker.js"
+compatibility_date = "2026-10-03"
+
+kv_namespaces = [
+  { binding = "KEYS", id = "2628d5a9a3f942449279770b2568d216" }
+]
+
+[vars]
+SITE_ORIGIN = "https://tbougnar.github.io/Slingshot-Tools"
+PAYPAL_ENV = "sandbox"
+KEY_STORE_VERSION = "1"

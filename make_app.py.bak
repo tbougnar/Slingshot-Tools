@@ -20,8 +20,6 @@ import urllib.request
 from datetime import date
 from pathlib import Path
 
-import paid_store
-
 ROOT = Path(__file__).resolve().parent
 APPS_DIR = ROOT / "apps"
 SITE_APPS = ROOT / "site" / "apps"
@@ -37,11 +35,13 @@ CHAT_MODEL = (os.environ.get("GROQ_CHAT_MODEL") or "").strip() or "qwen/qwen3.8-
 CHAT_FALLBACKS = ["openai/gpt-oss-120b", "openai/gpt-oss-20b",
                      "qwen/qwen3.8-27b"]
 SITE_URL = (os.environ.get("SITE_URL") or "").strip() or "https://tbougnar.github.io/Slingshot-Tools"
-SITE_BASE = SITE_URL.rstrip("/")
-# PayPal replaces itch.io. Sandbox until the business account is approved,
-# then set PAYPAL_ENV=live (secrets are already stored for both).
-PAYPAL_ENV_LIVE = (os.environ.get("PAYPAL_ENV") or "").lower() == "live"
-LICENSE_SECRET = (os.environ.get("LICENSE_SECRET") or "").strip()
+ITCH_PAGE = (os.environ.get("ITCH_PAGE") or "").strip() or "slingshot-tools"
+ITCH_API_KEY = (os.environ.get("ITCH_API_KEY") or "").strip()
+ITCH_CHANNEL = (os.environ.get("ITCH_CHANNEL") or "").strip() or "html5"
+# every product ships as a new BUILD of one itch project, so monthly
+# publishing works from GitHub cloud with no browser and no local PC.
+ITCH_PROJECT = (os.environ.get("ITCH_PROJECT") or "").strip() or "slingshot-tools"
+ITCH_PAGE_URL = (os.environ.get("ITCH_PAGE_URL") or "").strip() or "https://slingshot-tools.itch.io/"
 PRICE_FLOOR = float((os.environ.get("PRICE_FLOOR") or "").strip() or 1.00)
 PRICE_START = float((os.environ.get("PRICE_START") or "").strip() or 3.00)
 
@@ -566,6 +566,160 @@ def build_installer(app_dir: Path, concept):
 
 
 
+BUTLER_RELEASES = "https://api.github.com/repos/itchio/butler/releases"
+BUTLER_FALLBACK_VERSION = "v15.31.0"
+
+
+def _butler_asset_urls():
+    """butler ships official binaries on its GitHub releases. Ask the API for the
+    newest release so we never hardcode a dead version."""
+    machine = platform.machine().lower()
+    key = "butler-linux-arm64.zip" if ("arm" in machine or "aarch" in machine) \
+        else "butler-linux-amd64.zip"
+    version = BUTLER_FALLBACK_VERSION
+    try:
+        r = requests.get(BUTLER_RELEASES + "/latest",
+                         headers={"Accept": "application/vnd.github+json",
+                                  "User-Agent": "slingshot"},
+                         timeout=60)
+        if r.status_code == 200:
+            tag = r.json().get("tag_name")
+            if tag:
+                version = tag
+    except Exception as e:  # noqa: BLE001
+        log(f"release lookup failed, using pinned {version}: {str(e)[:70]}")
+    urls = [f"https://github.com/itchio/butler/releases/download/{version}/{key}"]
+    if version != BUTLER_FALLBACK_VERSION:
+        urls.append(
+            f"https://github.com/itchio/butler/releases/download/"
+            f"{BUTLER_FALLBACK_VERSION}/{key}")
+    return urls
+
+
+def _butler_usable(path):
+    """A file named butler is not proof it is butler: check it is an ELF for this
+    CPU and that it actually runs."""
+    try:
+        blob = Path(path).read_bytes()
+    except Exception:  # noqa: BLE001
+        return False
+    if blob[:4] != b"\x7fELF" or len(blob) < 1_000_000:
+        return False
+    machine = platform.machine().lower()
+    is_arm = blob[18] == 0xB7
+    if ("arm" in machine or "aarch" in machine) != is_arm:
+        return False
+    try:
+        r = subprocess.run([str(path), "version"], capture_output=True, timeout=60)
+        return r.returncode == 0
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def install_butler():
+    """Fetch butler from its official GitHub release and verify it really is a
+    Linux binary for this CPU before we ever execute it."""
+    dest = Path("/usr/local/bin/butler")
+    existing = shutil.which("butler")
+    if existing and _butler_usable(Path(existing)):
+        return existing
+    if existing:
+        # a previous step left a broken file (e.g. a saved 404 page) - remove it
+        log("existing butler is not a working binary - reinstalling")
+        try:
+            Path(existing).unlink()
+        except Exception:  # noqa: BLE001
+            pass
+    for url in _butler_asset_urls():
+        try:
+            r = requests.get(url, timeout=300)
+            if r.status_code != 200 or len(r.content) < 100_000:
+                log(f"butler release rejected: {r.status_code} {url}")
+                continue
+            import io
+            import zipfile
+            with zipfile.ZipFile(io.BytesIO(r.content)) as z:
+                name = next(n for n in z.namelist()
+                            if n.endswith("butler") and "source" not in n)
+                blob = z.read(name)
+            if blob[:4] != b"\x7fELF":
+                log(f"not an ELF binary: {url}")
+                continue
+            machine = platform.machine().lower()
+            is_arm = blob[18] == 0xB7
+            if ("arm" in machine or "aarch" in machine) != is_arm:
+                log(f"wrong CPU architecture: {url}")
+                continue
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes(blob)
+            dest.chmod(0o755)
+            chk = subprocess.run([str(dest), "version"], capture_output=True, timeout=60)
+            log(f"butler installed from {url} ({len(blob)//1024} KB, "
+                f"self-check rc={chk.returncode})")
+            return str(dest)
+        except Exception as e:  # noqa: BLE001
+            log(f"butler source failed: {str(e)[:90]}")
+    log("no usable butler release found")
+    return None
+
+
+def push_to_itch(concept, app_dir):
+    """Best-effort upload to itch.io. Never fatal: a finished app matters far
+    more than the upload, and butler/arch problems must not kill the build."""
+    slug = concept["slug"]
+    try:
+        if not ITCH_API_KEY:
+            log("no itch key - skipping upload")
+            return False
+        butler = install_butler()
+        if not butler:
+            log("could not obtain butler - product stays unpublished")
+            return False
+        machine = platform.machine().lower()
+        arch = "aarch64" if machine in ("arm64", "aarch64") else "amd64"
+        upload_dir = app_dir / "upload"
+        if upload_dir.exists():
+            shutil.rmtree(upload_dir)
+        payload = upload_dir / "itch"
+        payload.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(app_dir / "app" / "index.html", payload / "index.html")
+        if (ROOT / "site" / "icon-512.png").exists():
+            shutil.copy2(ROOT / "site" / "icon-512.png", payload / "icon.png")
+        (payload / "README.txt").write_text(
+            f"{concept.get('brand') or concept['title']}\n{concept['blurb']}\n\n"
+            "A single-file app: open index.html in any modern browser. Your data "
+            "stays in your browser and is never sent anywhere.\n",
+            encoding="utf-8")
+        env = dict(os.environ, BUTLER_API_KEY=ITCH_API_KEY, BUTLER_CHANNEL=ITCH_PAGE)
+        target = f"{ITCH_PAGE}/{ITCH_PROJECT}:{ITCH_CHANNEL}"
+        # itch serialises builds per channel: a brand new channel (or one fed by
+        # hand) reports "latest build is still processing" for a while. Retry.
+        r = None
+        for attempt in range(6):
+            r = subprocess.run([butler, "push", str(payload), target, "--assume-yes"],
+                               capture_output=True, text=True, env=env, timeout=900)
+            blob = (r.stderr or "") + (r.stdout or "")
+            if r.returncode == 0:
+                break
+            if "still processing" not in blob:
+                break
+            wait = 45 * (attempt + 1)
+            log(f"itch is still processing the previous build - waiting {wait}s "
+                f"and retrying ({attempt + 1}/6)")
+            time.sleep(wait)
+        if r.returncode != 0:
+            log("itch upload failed - butler said:")
+            for ln in ((r.stderr or "") + (r.stdout or "")).splitlines()[:12]:
+                if ln.strip():
+                    log("   butler: " + ln.strip()[:160])
+            return False
+        log(f"uploaded to itch.io as '{slug}'")
+        return True
+    except Exception as e:  # noqa: BLE001
+        log(f"itch upload skipped, build continues: {str(e)[:160]}")
+        return False
+
+
 def publish(concept, app_dir, installer, tier="full", brand="", differences=None,
              free_blurb="", paid_blurb="", published=False):
     dest = SITE_APPS / concept["slug"]
@@ -595,6 +749,7 @@ def publish(concept, app_dir, installer, tier="full", brand="", differences=None
                   else concept["blurb"]),
         "tags": concept["tags"],
         "url": f"{SITE_URL.rstrip('/')}/apps/{concept['slug']}/",
+        "itch_url": f"{ITCH_PAGE_URL.rstrip('/')}/{concept['slug']}",
         "download": "",
         "price": 0.0 if tier == "basic" else max(PRICE_FLOOR, PRICE_START),
         "free": tier == "basic",
@@ -604,11 +759,11 @@ def publish(concept, app_dir, installer, tier="full", brand="", differences=None
         "date": date.today().isoformat(),
     }
     if installer and installer.exists() and tier == "full":
-        # site/ is public, so the paid app and installer are never copied into
-        # it. They live in paid/ (kept out of the published folder) and are
-        # delivered only after PayPal confirms payment.
-        print(f"[publish] paid build kept out of the public site "
-              f"({installer.name}); delivered after payment", flush=True)
+        # The paid build is delivered through itch.io only. Never copy the
+        # installer or the full app into site/, which is public - that would
+        # hand the paid product to anyone who opens the catalog.
+        print(f"[publish] installer built but NOT published publicly "
+              f"({installer.name}); delivery happens via itch.io", flush=True)
     apps = [a for a in apps if a.get("slug") != concept["slug"]]
     apps.insert(0, entry)
     CATALOG.write_text(json.dumps(apps, indent=2), encoding="utf-8")
@@ -639,7 +794,7 @@ def main():
         full_meta = {**concept, "brand": brand}
         full_dir = write_app(full_meta, html, tier="full")
         installer = build_installer(full_dir, full_meta)
-        ok_full = stage_paid(full_dir, concept["slug"])
+        ok_full = push_to_itch({**full_meta, "slug": concept["slug"]}, full_dir)
         full_entry = publish({**full_meta, "base_slug": concept["slug"]}, full_dir,
                              installer, tier="full", brand=brand, differences=diffs,
                              free_blurb=free_blurb, paid_blurb=paid_blurb,
@@ -648,7 +803,7 @@ def main():
         basic_meta = {**concept, "brand": brand,
                       "slug": f"{concept['slug']}-basic"}
         basic_dir = write_app(basic_meta, html, tier="basic")
-        ok_basic = True
+        ok_basic = push_to_itch(basic_meta, basic_dir)
         basic_entry = publish({**basic_meta, "base_slug": concept["slug"]}, basic_dir,
                               None, tier="basic", brand=brand, differences=diffs,
                               free_blurb=free_blurb, paid_blurb=paid_blurb,
