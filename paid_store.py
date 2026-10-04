@@ -9,7 +9,10 @@ import hashlib
 import json
 import os
 import shutil
+import zipfile
 import urllib.request
+
+import build_exe
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -46,17 +49,28 @@ def stage(app_dir: Path, slug: str, installer: Path | None = None) -> bool:
                 out.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(p, out)
 
-    exe = installer or (ROOT / "dist" / f"SlingshotTool-{slug}-Setup.exe")
-    if not exe.exists():
-        print(f"[paid] WARNING: no installer for {slug}; buyers would get nothing",
+    # Build a real standalone exe so the customer needs no Python or pywebview.
+    title = dest.name
+    exe = None
+    try:
+        exe = build_exe.build_exe(dest, title)
+    except Exception as e:  # noqa: BLE001
+        print(f"[paid] standalone build failed for {slug}: {str(e)[:120]}", flush=True)
+    if not exe:
+        print(f"[paid] WARNING: no exe for {slug}; buyers would get nothing",
               flush=True)
         return False
-    staged = dest / exe.name
-    shutil.copy2(exe, staged)
-    print(f"[paid] staged {slug}: {exe.name} ({staged.stat().st_size // 1024} KB)",
+    # The standalone exe is ~28 MB, above the 25 MB limit of the store, so it
+    # ships as one zip that contains exactly one file: the exe.
+    zpath = PAID / f"{slug}-app.zip"
+    with zipfile.ZipFile(zpath, "w", zipfile.ZIP_DEFLATED) as z:
+        z.write(exe, exe.name)
+    size = zpath.stat().st_size
+    print(f"[paid] staged {slug}: {exe.name} -> {zpath.name} "
+          f"({exe.stat().st_size // 1024 // 1024} MB exe, {size // 1024} KB zip)",
           flush=True)
 
-    if upload(slug, staged, exe.name):
+    if upload(slug, zpath, zpath.name):
         return True
     print(f"[paid] WARNING: {slug} not published to the store", flush=True)
     return False

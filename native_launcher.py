@@ -13,13 +13,17 @@ from pathlib import Path
 import webview
 
 HERE = Path(__file__).resolve().parent
-APP = HERE / "app" / "index.html"
-ICON_PNG = HERE / "app" / "icon.png"
-ICON_ICO = HERE / "app" / "icon.ico"
+# When frozen with PyInstaller the app files live in the bundle's temp folder,
+# so the customer does not need Python, pywebview, or the app folder installed.
+BUNDLE = getattr(sys, "_MEIPASS", None)
+BASE = Path(BUNDLE) if BUNDLE else HERE
+APP = BASE / "app" / "index.html"
+ICON_PNG = BASE / "app" / "icon.png"
+ICON_ICO = BASE / "app" / "icon.ico"
 
 
 def _title():
-    meta = HERE / "app" / "app.json"
+    meta = BASE / "app" / "app.json"
     if meta.exists():
         try:
             return json.loads(meta.read_text(encoding="utf-8-sig")).get("title") or "Slingshot Tool"
@@ -37,7 +41,7 @@ def _apply_icon(hwnd):
     elif ICON_PNG.exists():
         try:
             from PIL import Image
-            tmp = HERE / "app" / "_icon.ico"
+            tmp = BASE / "app" / "_icon.ico"
             Image.open(ICON_PNG).convert("RGBA").save(
                 tmp, sizes=[(256, 256), (128, 128), (64, 64), (48, 48), (32, 32), (16, 16)])
             ico = str(tmp)

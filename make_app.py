@@ -21,6 +21,7 @@ from datetime import date
 from pathlib import Path
 
 import paid_store
+import build_exe
 
 ROOT = Path(__file__).resolve().parent
 SITE_APPS = ROOT / "site" / "apps"
