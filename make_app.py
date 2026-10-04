@@ -104,8 +104,8 @@ def log(msg):
     print(f"[slingshot] {msg}", flush=True)
 
 
-MODELS = ["llama-3.3-70b-versatile", "openai/gpt-oss-120b",
-          "moonshotai/kimi-k2-instruct", "llama-3.1-8b-instant"]
+CHAT_MODEL = "openai/gpt-oss-120b"
+MODELS = ["openai/gpt-oss-120b", "qwen/qwen3.8-27b", "openai/gpt-oss-20b"]
 
 
 def groq(system, user, max_tokens=4000, temperature=0.8, tries=6):

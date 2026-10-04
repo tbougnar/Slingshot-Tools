@@ -20,7 +20,7 @@ def main() -> int:
     except Exception as e:  # noqa: BLE001
         print("models endpoint FAILED:", str(e)[:300])
         return 1
-    for m in ("llama-3.3-70b-versatile", "openai/gpt-oss-120b"):
+    for m in ("openai/gpt-oss-120b", "qwen/qwen3.8-27b", "openai/gpt-oss-20b"):
         if m not in ids:
             print(f"chat {m}: not offered")
             continue

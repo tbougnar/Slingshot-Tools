@@ -25,7 +25,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 MAX_ATTEMPT = int(os.environ.get("SELFHEAL_MAX", "3"))
-MODEL = "llama-3.3-70b-versatile"
+MODEL = "openai/gpt-oss-120b"
 
 ALLOWED = {
     "make_app.py",

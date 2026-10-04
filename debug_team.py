@@ -15,16 +15,12 @@ import ai
 from pathlib import Path
 
 # Groq's catalogue changes often; unknown ids are skipped at runtime.
+# Checked against the live catalogue: the prompt-guard models are classifiers
+# and whisper is audio, so only three of the eleven can be asked for a repair.
 CANDIDATES = [
-    "llama-3.3-70b-versatile",
     "openai/gpt-oss-120b",
+    "qwen/qwen3.8-27b",
     "openai/gpt-oss-20b",
-    "moonshotai/kimi-k2-instruct",
-    "deepseek-r1-distill-llama-70b",
-    "meta-llama/llama-4-scout-17b-16e-instruct",
-    "meta-llama/llama-4-maverick-17b-128e-instruct",
-    "llama-3.1-8b-instant",
-    "gemma2-9b-it",
 ]
 
 LEADERS = 3           # the three that reconcile the reports
@@ -140,7 +136,7 @@ def audit(models: list[str], scan: dict) -> dict:
             k = key_of(b.get("control", ""))
             if k:
                 votes[k] = votes.get(k, 0) + 1
-    need = max(2, (len(reports) // 2) + 1)
+    need = max(2, (len(reports) // 2) + 1)  # 2 of 3 is a majority
     confirmed = [lbl for lbl, n in votes.items() if n >= need]
 
     # map a confirmed vote back onto the scanner's exact labels so the repair
@@ -187,7 +183,7 @@ def fix(leaders: list[str], scan: dict, confirmed: list[str],
                       scope=SCOPE.get(mode, SCOPE["minimal"]))
     if mode == "rewrite":
         # a full rewrite needs the biggest models first, not the first responder
-        order = [m for m in leaders if "120b" in m or "70b" in m or "kimi" in m] + list(leaders)
+        order = [m for m in leaders if "120b" in m or "27b" in m] + list(leaders)
         seen, ordered = set(), []
         for m in order:
             if m not in seen:
