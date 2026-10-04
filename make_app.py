@@ -21,6 +21,7 @@ from datetime import date
 from pathlib import Path
 
 import paid_store
+import qa_loop
 import build_exe
 
 ROOT = Path(__file__).resolve().parent
@@ -665,6 +666,29 @@ def main():
             log(f"attempt {attempt} rejected: {issues}")
             continue
         log(f"attempt {attempt} ok ({len(html)} bytes, brand={brand!r})")
+
+        # Interactive QA: click every control in a real browser. A majority of
+        # models must agree something is broken before anything is repaired,
+        # and nothing is published unless the app comes back clean.
+        probe = PAID_DIR / f"{concept['slug']}.qa.html"
+        probe.parent.mkdir(parents=True, exist_ok=True)
+        probe.write_text(html, encoding="utf-8")
+        qa_ok, qa_history = qa_loop.repair_until_clean(probe, log=log)
+        if qa_ok:
+            repaired = probe.read_text(encoding="utf-8", errors="replace")
+            if len(repaired) > 1500 and "<html" in repaired:
+                if repaired != html:
+                    log(f"QA changed the app ({len(html)} -> {len(repaired)} bytes)")
+                    html = repaired
+                else:
+                    log("QA passed with no changes needed")
+            else:
+                log("QA returned something unusable - keeping the original")
+        else:
+            log(f"attempt {attempt} REJECTED by QA: {qa_history}")
+            probe.unlink(missing_ok=True)
+            continue
+        probe.unlink(missing_ok=True)
 
         full_meta = {**concept, "brand": brand}
         full_dir = write_app(full_meta, html, tier="full")
