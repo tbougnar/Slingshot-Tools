@@ -47,9 +47,6 @@ jobs:
           python-version: "3.12"
 
 
-      - name: Groq connectivity check
-        run: python groq_check.py
-
       - name: Install tools
         run: |
           python -m pip install --quiet pillow requests pyinstaller pywebview playwright
@@ -57,6 +54,9 @@ jobs:
           choco install nsis -y --no-progress
           if (Test-Path 'C:\ProgramData\chocolatey\lib\nsis\tools\makensis.exe') { & 'C:\ProgramData\chocolatey\lib\nsis\tools\makensis.exe' -VERSION }
           Write-Host 'nsis staged'
+
+      - name: Groq connectivity check
+        run: python groq_check.py
           python -c "import PyInstaller,webview;print('build deps ok')"
 
       - name: Research the next useful tool and build it
