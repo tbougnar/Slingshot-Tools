@@ -122,18 +122,10 @@ CATEGORIES = [
 
 
 def log(msg):
-    print(f"[slingshot] {msg}", flush=True)
     try:
         print(_safe(msg), flush=True)
     except Exception:  # noqa: BLE001
         pass
-
-
-# One builder, two debuggers. The other two models are reserved for debugging,
-# so the builder only falls back to them if its own model is unreachable.
-CHAT_MODEL = "openai/gpt-oss-120b"
-MODELS = ["openai/gpt-oss-120b", "qwen/qwen3.8-27b", "openai/gpt-oss-20b"]
-
 
 def groq(system, user, max_tokens=4000, temperature=0.8, tries=6):
     """Call Groq through the shared client.

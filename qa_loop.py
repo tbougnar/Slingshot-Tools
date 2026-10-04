@@ -90,9 +90,21 @@ def repair_until_clean(html_path: Path, max_rounds: int = MAX_ROUNDS,
 
         html_path.with_suffix(f".r{rnd}.bak").write_text(html, encoding="utf-8")
         html_path.write_text(repaired, encoding="utf-8")
-        log(f"[qa] round {rnd}: repair applied by {by or 'patcher'}; re-scanning")
+        # A patch that does not change the outcome is not a repair. If the same
+        # control is still dead afterwards, say so plainly and make the next
+        # round try something different instead of repeating itself.
+        after = app_scanner.scan(html_path)
+        still = {d.split("(")[0].strip() for d in after.get("dead", [])}
+        same = still & {c.split("(")[0].strip() for c in controls}
+        if same:
+            log(f"[qa] round {rnd}: patch did not help {sorted(same)}; "
+                f"the next round must change approach")
+        else:
+            log(f"[qa] round {rnd}: repair helped, {len(after.get('dead', []))} "
+                f"control(s) still dead")
         history.append({"round": rnd, "clean": False, "mode": mode,
-                        "patched_by": by or "patcher", "confirmed": confirmed})
+                        "patched_by": by or "patcher", "confirmed": confirmed,
+                        "unchanged": sorted(same)})
 
     final = app_scanner.scan(html_path)
     ok = app_scanner.verdict(final)

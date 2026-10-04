@@ -27,7 +27,18 @@ LEADERS = 3           # the three that reconcile the reports
 # Groq refuses a max_tokens larger than the model will produce, and the refusal
 # looks like an empty reply. 32k is safely inside every model we use and is
 # still four times the size of a complete app file.
-REPLY_BUDGET = 16000   # Groq refuses more than 16384
+# Limits differ per model and per tier, and asking for more than a model will
+# produce is refused outright as "Request too large". qwen is the stingiest.
+MODEL_LIMITS = {"qwen/qwen3.8-27b": 900, "openai/gpt-oss-20b": 8000,
+                "openai/gpt-oss-120b": 8000}
+DEFAULT_LIMIT = 4000
+
+
+def budget(model: str, want: int) -> int:
+    return max(200, min(want, MODEL_LIMITS.get(model, DEFAULT_LIMIT)))
+
+
+REPLY_BUDGET = 16000   # Groq refuses more than 16384 in any case
 MAX_ROUNDS = 3
 TIMEOUT = 180
 
@@ -202,7 +213,7 @@ def fix(leaders: list[str], scan: dict, confirmed: list[str],
         # tokens come out of the same budget and were silently eating it, which
         # is why repairs came back empty.
         raw = call(m, FIX, user, temperature=0.1 if mode == "rewrite" else 0.15,
-                   max_tokens=REPLY_BUDGET)
+                   max_tokens=budget(m, REPLY_BUDGET))
         if raw is None:
             print(f"[team] {m} produced nothing")
             continue

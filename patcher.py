@@ -28,6 +28,14 @@ HEADERS = {
 }
 # 16384 is the hard ceiling Groq accepts; asking for more is refused outright.
 MAX_TOKENS = 16000
+# qwen is limited to about 1000 output tokens a minute on this tier, and a
+# larger request is refused as "Request too large" rather than truncated.
+MODEL_LIMITS = {"qwen/qwen3.8-27b": 900, "openai/gpt-oss-20b": 8000,
+                "openai/gpt-oss-120b": 8000}
+
+
+def budget(model: str, want: int) -> int:
+    return max(200, min(want, MODEL_LIMITS.get(model, 4000)))
 
 
 def _headers() -> dict:
@@ -91,7 +99,8 @@ def plan_patches(html: str, controls: list[str], models: list[str]) -> list[dict
     user = PATCH_USER.format(controls=json.dumps(controls)[:2000], html=html[-26000:])
     for m in models:
         try:
-            raw = chat(m, PATCH_SYSTEM, user, max_tokens=2500)
+            raw = chat(m, PATCH_SYSTEM, user,
+                       max_tokens=budget(m, 2500))
         except Exception as e:  # noqa: BLE001
             print(f"[patch] {m}: {str(e)[:160]}")
             continue
