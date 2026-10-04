@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     timeout-minutes: 30
     env:
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
@@ -48,9 +48,9 @@ jobs:
 
       - name: Install tools
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends nsis
-          pip install --quiet pillow requests
+          python -m pip install --quiet pillow requests pyinstaller pywebview
+      choco install nsis -y --no-progress
+      python -c "import PyInstaller,webview;print('build deps ok')"
           curl -L -o /usr/local/bin/butler https://broth.itch.zone/butler/linux-amd64/Latest/butler
           chmod +x /usr/local/bin/butler
           butler --version || true

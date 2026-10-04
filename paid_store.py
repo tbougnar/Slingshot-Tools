@@ -12,6 +12,7 @@ import shutil
 import urllib.request
 
 import build_exe
+import build_installer_app
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -22,6 +23,21 @@ WORKER = os.environ.get("PAY_WORKER") or "https://slingshot-pay.bougnartaha2.wor
 CF_TOKEN = os.environ.get("CF_API_TOKEN") or ""
 NAMESPACE = os.environ.get("CF_BUILDS_NAMESPACE") or "3d55488f7d384ce3ad51c0ba34afeade"
 ACCOUNT = os.environ.get("CF_ACCOUNT_ID") or ""
+
+
+
+def _title_for(slug: str, dest: Path) -> str:
+    """The human product name, so the window title, shortcut and installer all
+    read nicely. Falls back to the slug when metadata is missing."""
+    for f in (dest / "concept.json", dest / "app" / "app.json"):
+        if f.exists():
+            try:
+                t = json.loads(f.read_text(encoding="utf-8-sig")).get("title")
+                if t:
+                    return str(t)
+            except Exception:  # noqa: BLE001
+                pass
+    return slug.replace("-", " ").title()
 
 
 def stage(app_dir: Path, slug: str, installer: Path | None = None) -> bool:
@@ -48,23 +64,28 @@ def stage(app_dir: Path, slug: str, installer: Path | None = None) -> bool:
                 out.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(p, out)
 
-    # Build a real standalone exe so the customer needs no Python or pywebview.
-    title = dest.name
-    exe = None
+    # The customer installs a normal Windows app: no Python, no pywebview, no
+    # console window, and the company logo embedded in the executable.
+    title = _title_for(slug, dest)
+    app_folder = None
+    installer = None
     try:
-        exe = build_exe.build_exe(dest, title)
+        app_folder = build_exe.build_app(dest, title)
     except Exception as e:  # noqa: BLE001
-        print(f"[paid] standalone build failed for {slug}: {str(e)[:120]}", flush=True)
-    if not exe:
-        print(f"[paid] WARNING: no exe for {slug}; buyers would get nothing",
+        print(f"[paid] app build failed for {slug}: {str(e)[:140]}", flush=True)
+    if app_folder:
+        try:
+            installer = build_installer_app.build_installer(app_folder, title, dest)
+        except Exception as e:  # noqa: BLE001
+            print(f"[paid] installer build failed for {slug}: {str(e)[:140]}", flush=True)
+    if not installer:
+        print(f"[paid] WARNING: no installer for {slug}; buyers would get nothing",
               flush=True)
         return False
-    # The standalone exe is ~28 MB, above the 25 MB limit of the store, so it
-    # ships as one zip that contains exactly one file: the exe.
-    print(f"[paid] staged {slug}: {exe.name} "
-          f"({exe.stat().st_size // 1024 // 1024} MB standalone exe)", flush=True)
+    print(f"[paid] staged {slug}: {installer.name} "
+          f"({installer.stat().st_size // 1024 // 1024} MB installer)", flush=True)
 
-    if upload(slug, exe, exe.name):
+    if upload(slug, installer, installer.name):
         return True
     print(f"[paid] WARNING: {slug} not published to the store", flush=True)
     return False
