@@ -73,21 +73,30 @@ def chat(model: str, system: str, user: str, max_tokens: int = 4000,
 
 PATCH_SYSTEM = """You fix broken controls in a single-file HTML app.
 
-You will be given the app's HTML and a list of controls that do nothing when
-clicked. Reply with JSON only:
+You get the app's HTML and a list of controls that do nothing when clicked.
+Reply with JSON only:
 {"patches": [{"control": "<label from the list>", "selector": "<css selector>",
-"code": "<the javascript statement(s) to run on click>"}]}
+"code": "<the javascript to run on click>"}]}
 
-Rules:
-- Keep each code fragment short. You are rate limited, so never reprint the file.
-- Match the app's existing patterns, variable names, ids and functions.
-- Reuse existing state functions if the app has them; do not reimplement logic.
-- Only touch the controls listed. Change nothing else.
-- The selector must match exactly one element.
+Hard rules:
+- Keep every code fragment SHORT. You are rate limited, so never reprint the file.
+- ONLY use things that already exist in the app. Before writing code, look at
+  the ids, class names, function names and element structure in the HTML you were
+  given, and call those. Never invent a function name you have not seen.
+- If the app has no suitable function, write self-contained code that uses the
+  element's own value and updates the DOM or localStorage directly.
+- Do not use innerHTML to rebuild the whole page, do not querySelectorAll, and do
+  not touch any class name or style.
+- Attach with addEventListener on the exact element, and guard for a missing
+  element so a null never throws.
+- One patch per broken control. Nothing else may change.
 """
 
 PATCH_USER = """BROKEN CONTROLS:
 {controls}
+
+EXISTING IDS AND FUNCTIONS IN THE APP:
+{inventory}
 
 THE APP:
 {html}
@@ -95,8 +104,22 @@ THE APP:
 Return JSON with one patch per broken control."""
 
 
+def inventory(html: str) -> str:
+    """List what the app already has, so a patch calls real things."""
+    ids = sorted(set(re.findall(r'id="([^"]+)"', html)))[:60]
+    fns = sorted(set(re.findall(r"function\s+([A-Za-z_$][\w$]*)", html)))[:40]
+    consts = sorted(set(re.findall(r"(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=",
+                                  html)))[:40]
+    keys = sorted(set(re.findall(r"localStorage\.([A-Za-z]+|['\"][^'\"]+['\"])",
+                                  html)))[:20]
+    return (f"ids: {ids}\nfunctions: {fns}\nvariables: {consts}\n"
+            f"storage keys: {keys}")
+
+
 def plan_patches(html: str, controls: list[str], models: list[str]) -> list[dict] | None:
-    user = PATCH_USER.format(controls=json.dumps(controls)[:2000], html=html[-26000:])
+    user = PATCH_USER.format(controls=json.dumps(controls)[:2000],
+                             inventory=inventory(html),
+                             html=html[-26000:])
     for m in models:
         try:
             raw = chat(m, PATCH_SYSTEM, user,

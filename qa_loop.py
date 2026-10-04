@@ -14,10 +14,12 @@ import app_scanner
 import debug_team
 import patcher
 
-MAX_ROUNDS = 6          # escalation ladder, not a single retry
+MAX_ROUNDS = 8          # escalation ladder, not a single retry
 HANDOFF = 3             # after this many rounds, widen the scope
 
-ESCALATION = ["minimal", "minimal", "targeted", "targeted", "rewrite", "rewrite"]
+# Each round now costs a few hundred tokens, so there is no reason to
+# escalate to a full rewrite: try again, differently.
+ESCALATION = ["minimal"] * 8
 
 
 def _n(value) -> int:
@@ -66,45 +68,43 @@ def repair_until_clean(html_path: Path, max_rounds: int = MAX_ROUNDS,
         html = html_path.read_text(encoding="utf-8", errors="replace")
         controls = [d.split("(")[0].strip() for d in scan.get("dead", [])]
 
+        # Patches are the only repair. Asking a model to reprint a 30 KB file
+        # cannot work on a 1000 token a minute tier, and every full rewrite
+        # restyled the app and was thrown out by the styling guard.
         repaired = None
-        by = None          # set only by the fallback branch
-        if mode in ("minimal", "targeted") and controls:
-            # a patch costs a few hundred tokens; reprinting the app costs
-            # thousands and the free tier only allows thousands per minute
+        by = "patcher"
+        for attempt in range(3):
             patches = patcher.plan_patches(html, controls, models)
-            if patches:
-                repaired = patcher.apply_patches(html, patches)
-
-        if repaired is None:
-            got = debug_team.fix(leaders, scan, confirmed, html, mode=mode)
-            if got:
-                repaired, by = got[0], got[1]
-            else:
-                by = None
+            if not patches:
+                break
+            candidate = patcher.apply_patches(html, patches)
+            if not candidate:
+                continue
+            if candidate == html:
+                continue
+            trial = html_path.with_suffix(".trial.html")
+            trial.write_text(candidate, encoding="utf-8")
+            check = app_scanner.scan(trial)
+            trial.unlink(missing_ok=True)
+            still = {d.split("(")[0].strip() for d in check.get("dead", [])}
+            if len(still) < len(scan.get("dead", [])):
+                repaired, by = candidate, f"patcher try {attempt + 1}"
+                break
+            print(f"[qa] patch try {attempt + 1} did not reduce the dead "
+                  f"controls ({len(still)} left); asking again differently")
 
         if not repaired:
-            log(f"[qa] round {rnd}: no usable repair")
+            log(f"[qa] round {rnd}: no patch improved on {len(controls)} broken "
+                f"control(s)")
             history.append({"round": rnd, "clean": False, "mode": mode,
-                            "reason": "no repair"})
+                            "reason": "no patch worked"})
             continue
 
         html_path.with_suffix(f".r{rnd}.bak").write_text(html, encoding="utf-8")
         html_path.write_text(repaired, encoding="utf-8")
-        # A patch that does not change the outcome is not a repair. If the same
-        # control is still dead afterwards, say so plainly and make the next
-        # round try something different instead of repeating itself.
-        after = app_scanner.scan(html_path)
-        still = {d.split("(")[0].strip() for d in after.get("dead", [])}
-        same = still & {c.split("(")[0].strip() for c in controls}
-        if same:
-            log(f"[qa] round {rnd}: patch did not help {sorted(same)}; "
-                f"the next round must change approach")
-        else:
-            log(f"[qa] round {rnd}: repair helped, {len(after.get('dead', []))} "
-                f"control(s) still dead")
+        log(f"[qa] round {rnd}: {by} reduced the broken controls; re-scanning")
         history.append({"round": rnd, "clean": False, "mode": mode,
-                        "patched_by": by or "patcher", "confirmed": confirmed,
-                        "unchanged": sorted(same)})
+                        "patched_by": by, "confirmed": confirmed})
 
     final = app_scanner.scan(html_path)
     ok = app_scanner.verdict(final)
