@@ -112,14 +112,25 @@ export default {
         const slug = unit.custom_id || unit.reference_id || "";
         if (!slug) return json({ error: "Order has no product reference." }, 400, req, env);
 
-        const key = `build:${slug}`;
-        const file = await env.BUILDS.get(key, "arrayBuffer");
-        if (!file) return json({ error: "Build not found for this order." }, 404, req, env);
+        // The build is stored in chunks because the store rejects a single large
+        // value. Join them back into one complete exe before replying.
+        const parts = [];
+        for (let n = 1; n <= 32; n++) {
+          const buf = await env.BUILDS.get(`build:${slug}:${n}`, "arrayBuffer");
+          if (!buf) break;
+          if (buf.byteLength === 0) break;
+          parts.push(new Uint8Array(buf));
+        }
+        if (!parts.length) return json({ error: "Build not found for this order." }, 404, req, env);
+        const total = parts.reduce((a, p) => a + p.length, 0);
+        const file = new Uint8Array(total);
+        let at = 0;
+        for (const p of parts) { file.set(p, at); at += p.length; }
 
         const name = slug.toLowerCase().replace(/[^a-z0-9-]/g, "-");
         return new Response(file, {
           headers: {
-            "Content-Type": "application/vnd.microsoft.portable-executable",
+            "Content-Type": "application/octet-stream",
             "Content-Disposition": `attachment; filename="SlingshotTool-${name}-Setup.exe"`,
             "Content-Length": String(file.byteLength),
             ...cors(req, env),

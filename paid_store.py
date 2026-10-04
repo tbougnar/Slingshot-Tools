@@ -9,7 +9,6 @@ import hashlib
 import json
 import os
 import shutil
-import zipfile
 import urllib.request
 
 import build_exe
@@ -62,38 +61,55 @@ def stage(app_dir: Path, slug: str, installer: Path | None = None) -> bool:
         return False
     # The standalone exe is ~28 MB, above the 25 MB limit of the store, so it
     # ships as one zip that contains exactly one file: the exe.
-    zpath = PAID / f"{slug}-app.zip"
-    with zipfile.ZipFile(zpath, "w", zipfile.ZIP_DEFLATED) as z:
-        z.write(exe, exe.name)
-    size = zpath.stat().st_size
-    print(f"[paid] staged {slug}: {exe.name} -> {zpath.name} "
-          f"({exe.stat().st_size // 1024 // 1024} MB exe, {size // 1024} KB zip)",
-          flush=True)
+    print(f"[paid] staged {slug}: {exe.name} "
+          f"({exe.stat().st_size // 1024 // 1024} MB standalone exe)", flush=True)
 
-    if upload(slug, zpath, zpath.name):
+    if upload(slug, exe, exe.name):
         return True
     print(f"[paid] WARNING: {slug} not published to the store", flush=True)
     return False
 
 
+CHUNK = 14 * 1024 * 1024  # KV rejects any single value above 25 MB
+
+
 def upload(slug: str, path: Path, name: str = "") -> bool:
-    """Put the installer in the Worker's private KV. Needs CF_API_TOKEN in CI."""
+    """Store the installer in the Worker's private KV, split into chunks.
+
+    The store rejects a single value above 25 MB and a standalone exe is larger
+    than that, so the file is cut into pieces. The Worker joins them back
+    together before replying, so the customer still gets one complete exe.
+    """
     if not (CF_TOKEN and NAMESPACE):
         print("[paid] no CF_API_TOKEN - skipping store upload", flush=True)
         return False
     url = (f"https://api.cloudflare.com/client/v4/accounts/{ACCOUNT}"
            f"/storage/kv/namespaces/{NAMESPACE}/values/build:{slug}")
-    req = urllib.request.Request(url, data=path.read_bytes(), method="PUT")
+    blob = path.read_bytes()
+    parts = [blob[i:i + CHUNK] for i in range(0, len(blob), CHUNK)] or [b""]
+
+    # clear any earlier copy so stale chunks cannot be joined in
+    for stale in range(1, len(parts) + 4):
+        _put(f"{url}:{stale}", b"")
+
+    for n, part in enumerate(parts, start=1):
+        if not _put(f"{url}:{n}", part):
+            print(f"[paid] store upload failed for {slug} chunk {n}", flush=True)
+            return False
+    print(f"[paid] published {slug}: {len(parts)} chunk(s), "
+          f"{len(blob) // 1024 // 1024} MB", flush=True)
+    return True
+
+
+def _put(url: str, data: bytes) -> bool:
+    req = urllib.request.Request(url, data=data, method="PUT")
     req.add_header("Authorization", f"Bearer {CF_TOKEN}")
     req.add_header("Content-Type", "application/octet-stream")
-    req.add_header("X-Build-Name", name or path.name)
     try:
-        with urllib.request.urlopen(req, timeout=300) as r:
-            ok = json.loads(r.read().decode()).get("success", False)
-        print(f"[paid] published {slug} to the store: {ok}", flush=True)
-        return bool(ok)
+        with urllib.request.urlopen(req, timeout=600) as r:
+            return bool(json.loads(r.read().decode()).get("success", False))
     except Exception as e:  # noqa: BLE001
-        print(f"[paid] store upload failed for {slug}: {str(e)[:120]}", flush=True)
+        print(f"[paid] put failed: {str(e)[:110]}", flush=True)
         return False
 
 
