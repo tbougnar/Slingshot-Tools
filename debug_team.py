@@ -27,7 +27,7 @@ LEADERS = 3           # the three that reconcile the reports
 # Groq refuses a max_tokens larger than the model will produce, and the refusal
 # looks like an empty reply. 32k is safely inside every model we use and is
 # still four times the size of a complete app file.
-REPLY_BUDGET = 32000
+REPLY_BUDGET = 16000   # Groq refuses more than 16384
 MAX_ROUNDS = 3
 TIMEOUT = 180
 

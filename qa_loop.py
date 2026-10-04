@@ -12,6 +12,7 @@ from pathlib import Path
 
 import app_scanner
 import debug_team
+import patcher
 
 MAX_ROUNDS = 6          # escalation ladder, not a single retry
 HANDOFF = 3             # after this many rounds, widen the scope
@@ -63,19 +64,34 @@ def repair_until_clean(html_path: Path, max_rounds: int = MAX_ROUNDS,
                 log(f"[qa] team confirmed {len(confirmed)} broken control(s)")
 
         html = html_path.read_text(encoding="utf-8", errors="replace")
-        got = debug_team.fix(leaders, scan, confirmed, html, mode=mode)
-        if not got:
-            log(f"[qa] round {rnd}: no model produced a usable repair")
+        controls = [d.split("(")[0].strip() for d in scan.get("dead", [])]
+
+        repaired = None
+        if mode in ("minimal", "targeted") and controls:
+            # a patch costs a few hundred tokens; reprinting the app costs
+            # thousands and the free tier only allows thousands per minute
+            patches = patcher.plan_patches(html, controls, models)
+            if patches:
+                repaired = patcher.apply_patches(html, patches)
+
+        if repaired is None:
+            got = debug_team.fix(leaders, scan, confirmed, html, mode=mode)
+            if got:
+                repaired, by = got[0], got[1]
+            else:
+                by = None
+
+        if not repaired:
+            log(f"[qa] round {rnd}: no usable repair")
             history.append({"round": rnd, "clean": False, "mode": mode,
                             "reason": "no repair"})
             continue
 
-        new_html, by = got
         html_path.with_suffix(f".r{rnd}.bak").write_text(html, encoding="utf-8")
-        html_path.write_text(new_html, encoding="utf-8")
-        log(f"[qa] round {rnd}: {by} applied a {mode} repair; re-scanning")
+        html_path.write_text(repaired, encoding="utf-8")
+        log(f"[qa] round {rnd}: repair applied by {by or 'patcher'}; re-scanning")
         history.append({"round": rnd, "clean": False, "mode": mode,
-                        "patched_by": by, "confirmed": confirmed})
+                        "patched_by": by or "patcher", "confirmed": confirmed})
 
     final = app_scanner.scan(html_path)
     ok = app_scanner.verdict(final)

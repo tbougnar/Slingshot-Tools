@@ -185,5 +185,19 @@
   ],
   "detects": "recurs if a repair log shows a model FAILED with a 400 status",
   "verified": false
+ },
+ {
+  "id": "B016",
+  "date": "2026-10-04",
+  "symptom": "repairs could never complete: every model call was rate limited or refused",
+  "cause": "a full 30 KB file is about 8k output tokens and the free tier allows 8000 tokens per minute, so asking for the whole app twice in a row is impossible; max_tokens above 16384 is also refused outright",
+  "fix": "repair with small patches instead of reprinting the app, cap max_tokens at 16000, and treat 429 as a wait-and-retry rather than a failure",
+  "files": [
+   "patcher.py",
+   "qa_loop.py",
+   "debug_team.py"
+  ],
+  "detects": "recurs if a repair log shows 429 rate limit errors",
+  "verified": false
  }
 ]
