@@ -33,6 +33,8 @@ def _find_makensis() -> str | None:
         return exe
     for p in (r"C:\Program Files (x86)\NSIS\makensis.exe",
               r"C:\Program Files\NSIS\makensis.exe",
+              r"C:\ProgramData\chocolatey\bin\makensis.exe",
+              r"C:\ProgramData\chocolatey\lib\nsis\tools\makensis.exe",
               r"C:\Users\Taha\AppData\Local\Temp\nsis_x\makensis.exe"):
         if Path(p).exists():
             return p
