@@ -102,14 +102,27 @@ def audit(models: list[str], scan: dict) -> dict:
     if not reports:
         return {"confirmed": [], "reports": {}}
 
+    # key on the whole control label, not just the tag, or every button
+    # collapses into a single vote
+    def key_of(label: str) -> str:
+        s = re.sub(r"\s+", " ", str(label)).strip().lower()
+        return s[:60]
+
     votes: dict[str, int] = {}
     for r in reports.values():
         for b in r.get("real_bugs", []) or []:
-            label = str(b.get("control", "")).split(":")[0][:40]
-            if label:
-                votes[label] = votes.get(label, 0) + 1
+            k = key_of(b.get("control", ""))
+            if k:
+                votes[k] = votes.get(k, 0) + 1
     need = max(2, (len(reports) // 2) + 1)
     confirmed = [lbl for lbl, n in votes.items() if n >= need]
+
+    # map a confirmed vote back onto the scanner's exact labels so the repair
+    # step is told about real controls and not just about "button"
+    exact: dict[str, str] = {}
+    for dcl in scan.get("dead", []) or []:
+        exact.setdefault(key_of(dcl.split("(")[0]), dcl.split("(")[0].strip())
+    confirmed = [exact.get(key_of(c), c) for c in confirmed]
     print(f"[team] {len(reports)}/{len(models)} models answered | "
           f"votes {votes} | need {need}")
     return {"confirmed": confirmed, "reports": reports}

@@ -11,7 +11,7 @@ from pathlib import Path
 
 PROBE = r"""
 (async () => {
-  const out = {dead: [], errors: [], missing: []};
+  const out = {dead: [], errors: [], missing: [], skipped: []};
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   window.addEventListener('error', e => out.errors.push('error: ' + (e.message || '')));
   window.addEventListener('unhandledrejection', e => out.errors.push('reject: ' + e.reason));
@@ -26,7 +26,8 @@ PROBE = r"""
   const nodes = [...document.querySelectorAll(sel)].filter(n => n.offsetParent !== null || n.tagName === 'SELECT');
   for (const n of nodes.slice(0, 120)) {
     const label = (n.tagName + ':' + (n.innerText || n.value || n.getAttribute('aria-label') || n.id || '')).slice(0, 60).trim();
-    if (/^(delete|remove|reset|clear)/i.test(label) && !window.__allowDestructive) continue;
+    const text = (n.innerText || n.value || n.getAttribute('aria-label') || '').trim();
+    if (/^(delete|remove|reset|clear|empty|wipe)\b/i.test(text)) { out.skipped.push(label); continue; }
     window.__mut = 0;
     const storeBefore = JSON.stringify(localStorage) + '|' + JSON.stringify(sessionStorage);
     const valsBefore = [...document.querySelectorAll('input,textarea')].map(i=>i.value).join(',');
@@ -37,6 +38,11 @@ PROBE = r"""
     try { n.click(); } catch (e) { out.errors.push(label + ' -> ' + e.message); }
     window.alert = origAlert;
     await sleep(140);
+    // a modal left open would swallow every later click and look like a bug
+    for (const dlg of [...document.querySelectorAll('dialog[open], .modal.open, [role=dialog][data-open=true], .overlay:not(.hidden)')]) {
+      try { dlg.querySelector('[data-close], .close, button')?.click(); } catch (e) {}
+    }
+    await sleep(40);
     const mutated = window.__mut || 0;
     const storeAfter = JSON.stringify(localStorage) + '|' + JSON.stringify(sessionStorage);
     const valsAfter = [...document.querySelectorAll('input,textarea')].map(i=>i.value).join(',');
