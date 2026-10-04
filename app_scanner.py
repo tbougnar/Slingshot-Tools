@@ -69,7 +69,7 @@ def scan(index_file: Path, timeout_ms: int = 25000) -> dict:
         from playwright.sync_api import sync_playwright
     except ImportError:
         return {"dead": [], "errors": ["playwright not installed"], "missing": [],
-                "controls": 0, "skipped": True}
+                "controls": 0, "skipped": [], "unavailable": True}
 
     url = index_file.resolve().as_uri()
     with sync_playwright() as pw:
@@ -95,7 +95,13 @@ def scan(index_file: Path, timeout_ms: int = 25000) -> dict:
 
 
 def verdict(result: dict) -> bool:
-    """True when the app looks healthy."""
+    """True when the app looks healthy.
+
+    If the scanner could not run at all, that is NOT healthy: it must never
+    report a pass just because it was unable to look.
+    """
+    if result.get("unavailable"):
+        return False
     return not (result.get("dead") or result.get("errors"))
 
 

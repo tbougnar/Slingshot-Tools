@@ -19,6 +19,11 @@ HANDOFF = 3             # after this many rounds, widen the scope
 ESCALATION = ["minimal", "minimal", "targeted", "targeted", "rewrite", "rewrite"]
 
 
+def _n(value) -> int:
+    """Scans are data from a browser probe; never assume a list came back."""
+    return len(value) if isinstance(value, (list, tuple, set)) else 0
+
+
 def repair_until_clean(html_path: Path, max_rounds: int = MAX_ROUNDS,
                        log=print) -> tuple[bool, dict]:
     """Return (clean, history). A false first value means 'needs a human'."""
@@ -39,10 +44,10 @@ def repair_until_clean(html_path: Path, max_rounds: int = MAX_ROUNDS,
             log("[qa] handing this build to you for testing")
             return True, history
 
-        log(f"[qa] round {rnd} ({mode}): {len(scan['dead'])} dead, "
-            f"{len(scan['errors'])} error(s), {len(scan.get('skipped', []))} skipped")
+        log(f"[qa] round {rnd} ({mode}): {_n(scan.get('dead'))} dead, "
+            f"{_n(scan.get('errors'))} error(s), {_n(scan.get('skipped'))} skipped")
 
-        if scan["errors"] and not scan["dead"]:
+        if _n(scan.get('errors')) and not _n(scan.get('dead')):
             confirmed = []
             log("[qa] only JS errors present - repairing without a vote")
         else:

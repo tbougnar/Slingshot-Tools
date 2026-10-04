@@ -94,11 +94,19 @@ def audit(models: list[str], scan: dict) -> dict:
     user = AUDIT.format(dead=json.dumps(scan.get("dead", []))[:3000],
                         missing=json.dumps(scan.get("missing", []))[:2000],
                         errors=json.dumps(scan.get("errors", []))[:2000])
+    # every model is asked at the same time; sequential calls made a single
+    # round take as long as nine round trips
+    from concurrent.futures import ThreadPoolExecutor
     reports: dict[str, dict] = {}
-    for m in models:
-        got = _json_of(call(m, AUDIT, user, temperature=0.1, max_tokens=2000))
-        if got:
-            reports[m] = got
+    with ThreadPoolExecutor(max_workers=min(9, len(models) or 1)) as pool:
+        futures = {pool.submit(call, m, AUDIT, user, 0.1, 2000): m for m in models}
+        for fut, m in futures.items():
+            try:
+                got = _json_of(fut.result())
+            except Exception:  # noqa: BLE001
+                got = None
+            if got:
+                reports[m] = got
     if not reports:
         return {"confirmed": [], "reports": {}}
 
