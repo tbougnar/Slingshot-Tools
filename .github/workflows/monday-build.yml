@@ -38,8 +38,6 @@ jobs:
       SIGNPATH_CERTIFICATE_THUMBPRINT: ${{ secrets.SIGNPATH_CERTIFICATE_THUMBPRINT }}
       GROQ_CHAT_MODEL: ${{ secrets.GROQ_CHAT_MODEL }}
       SITE_URL: ${{ vars.SITE_URL }}
-      PRICE_FLOOR: "1.00"
-      PRICE_CEILING: "9.00"
       PRICE_START: "3.00"
     steps:
       - uses: actions/checkout@v4
