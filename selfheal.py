@@ -119,30 +119,63 @@ def collect(attempt: int) -> dict:
 
 
 def ask(diag: dict) -> dict:
+    """The debugger team works to a fixed order.
+
+    Each debugger reads the fixbook first. If they agree, that fix is proposed.
+    If they disagree, every proposal is reported so each can be tried and
+    tested separately. If they all fail, the team researches together.
+    """
+    report = json.dumps(diag)[:12000]
     try:
-        import ai
+        import debug_team2 as team
     except ImportError:
-        return {"diagnosis": "ai module missing", "fixes": []}
+        return {"diagnosis": "debugger team unavailable", "fixes": []}
     if not os.environ.get("GROQ_API_KEY"):
         return {"diagnosis": "no GROQ_API_KEY available", "fixes": []}
+
+    props = team.proposals(report, team.DEBUGGERS)
+    if not props:
+        return {"diagnosis": "no debugger could answer", "fixes": []}
+
+    key, agree = team.agreement(props)
+    if len(agree) >= 2:
+        print(f"[selfheal] {len(agree)}/{len(props)} debuggers agreed")
+    else:
+        print(f"[selfheal] no agreement: {[d.get('fix','')[:40] for _, d in props]}")
+        return {"diagnosis": "debuggers disagreed: "
+                              + " | ".join(d.get("fix", "")[:120] for _, d in props),
+                "fixes": [], "disagreed": [d for _, d in props]}
+
+    chosen = next(d for _, d in props if d is props[0][1])
+    for model, d in props:
+        if re.sub(r"\s+", " ", d.get("fix", "").strip().lower())[:160] == key:
+            chosen = d
+            break
+
+    files = [f for f in (chosen.get("files") or []) if f in ALLOWED]
+    if not files:
+        return {"diagnosis": f"proposed fix touches no allowed file: "
+                              f"{chosen.get('files')}", "fixes": []}
+    return {"diagnosis": chosen.get("diagnosis") or "agreed fix",
+            "fixes": [{"file": files[0], "note": chosen.get("fix", ""),
+                       "content": None}],
+            "research": None}
+
+
+def research(diag: dict, tried: list[str]) -> dict:
+    """Every proposal failed, so the team researches instead of guessing."""
     try:
-        import buglog
-        known = buglog.brief(16)
-    except Exception:  # noqa: BLE001
-        known = "(none)"
-    diag["known_bugs"] = known
-    user = json.dumps(diag)[:16000]
-    try:
-        raw = ai.chat(MODEL, SYSTEM, user, temperature=0.1, max_tokens=6000)
-    except Exception as e:  # noqa: BLE001
-        return {"diagnosis": f"model call failed: {str(e)[:200]}", "fixes": []}
-    m = re.search(r"\{.*\}", raw, re.S)
-    if not m:
-        return {"diagnosis": "model did not return JSON", "fixes": []}
-    try:
-        return json.loads(m.group(0))
-    except Exception:  # noqa: BLE001
-        return {"diagnosis": "model returned malformed JSON", "fixes": []}
+        import debug_team2 as team
+    except ImportError:
+        return {"diagnosis": "debugger team unavailable", "fixes": []}
+    got = team.research(json.dumps(diag)[:10000], team.DEBUGGERS, tried)
+    if not got:
+        return {"diagnosis": "research found nothing usable", "fixes": []}
+    files = [f for f in (got.get("files") or []) if f in ALLOWED]
+    if not files:
+        return {"diagnosis": "research proposed no allowed file", "fixes": []}
+    return {"diagnosis": f"research: {got.get('found','')[:160]}",
+            "fixes": [{"file": files[0], "note": got.get("fix", ""), "content": None}]}
 
 
 def safe(plan: dict) -> list[dict]:
@@ -172,14 +205,21 @@ def apply(fixes: list[dict], attempt: int, diagnosis: str) -> bool:
         return False
     for f in fixes:
         target = ROOT / f["file"]
+        content = f.get("content")
+        if content is None:
+            print(f"[selfheal] proposal is guidance only, not a patch: "
+                  f"{f['note'][:90]}")
+            print("[selfheal] recording it in the fixbook instead")
+            remember(diagnosis, f)
+            return False
         backup = target.read_text(encoding="utf-8", errors="replace")
-        target.write_text(f["content"], encoding="utf-8")
+        target.write_text(content, encoding="utf-8")
         rc, out = run([sys.executable, "-m", "py_compile", f["file"]], timeout=180)
         if rc != 0:
             print(f"[selfheal] {f['file']} did not compile - reverting")
             target.write_text(backup, encoding="utf-8")
             return False
-    rc, _ = run(["git", "add", "-A"])
+    run(["git", "add", "-A"])
     msg = f"fix(attempt {attempt}): {diagnosis[:120]}"
     rc, out = run(["git", "-c", "user.name=slingshot-bot",
                    "-c", "user.email=bot@users.noreply.github.com",
@@ -189,35 +229,8 @@ def apply(fixes: list[dict], attempt: int, diagnosis: str) -> bool:
         return False
     print(f"[selfheal] committed: {msg}")
     for f in fixes:
-        print(f"           {f['file']}: {f['note']}")
+        print(f"           {f['file']}: {f['note'][:100]}")
     return True
-
-
-LESSONS = ROOT / "data" / "lessons.txt"
-
-
-def remember(diagnosis: str, fixes: list[dict]) -> None:
-    """Write the lesson into the fixbook so the builder is told next time.
-
-    Without this the same failure is rediscovered every month.
-    """
-    if not fixes:
-        return
-    try:
-        import buglog
-    except ImportError:
-        return
-    files = [f["file"] for f in fixes]
-    what = "; ".join(f["note"] or f["file"] for f in fixes)
-    entry = buglog.record(
-        symptom=diagnosis,
-        cause=(fixes[0].get("note") or diagnosis)[:300],
-        fix=what[:400],
-        files=files,
-        detects=f"recurs if {files[0]} changes this behaviour",
-        verified=False,
-    )
-    print(f"[selfheal] fixbook {entry['id']} recorded: {diagnosis[:80]}")
 
 
 def main() -> int:

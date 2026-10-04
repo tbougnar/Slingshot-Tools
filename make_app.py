@@ -129,6 +129,8 @@ def log(msg):
         pass
 
 
+# One builder, two debuggers. The other two models are reserved for debugging,
+# so the builder only falls back to them if its own model is unreachable.
 CHAT_MODEL = "openai/gpt-oss-120b"
 MODELS = ["openai/gpt-oss-120b", "qwen/qwen3.8-27b", "openai/gpt-oss-20b"]
 
