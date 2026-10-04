@@ -199,5 +199,17 @@
   ],
   "detects": "recurs if a repair log shows 429 rate limit errors",
   "verified": false
+ },
+ {
+  "id": "B017",
+  "date": "2026-10-04",
+  "symptom": "UnboundLocalError: by, right after a patch was produced successfully",
+  "cause": "the patch branch left the variable that names the repairing model unset, and the history line read it unconditionally",
+  "fix": "initialise by before the branch so both paths can record who repaired it",
+  "files": [
+   "qa_loop.py"
+  ],
+  "detects": "recurs if a qa round logs a repair without naming a patcher or model",
+  "verified": false
  }
 ]

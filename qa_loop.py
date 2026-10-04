@@ -67,6 +67,7 @@ def repair_until_clean(html_path: Path, max_rounds: int = MAX_ROUNDS,
         controls = [d.split("(")[0].strip() for d in scan.get("dead", [])]
 
         repaired = None
+        by = None          # set only by the fallback branch
         if mode in ("minimal", "targeted") and controls:
             # a patch costs a few hundred tokens; reprinting the app costs
             # thousands and the free tier only allows thousands per minute
