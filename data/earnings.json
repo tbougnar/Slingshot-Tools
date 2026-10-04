@@ -1,9 +1,31 @@
 {
-  "date": "2026-10-03",
+  "date": "2026-10-04",
   "revenue": 0.0,
   "net_profit": 0.0,
   "break_even": 0.32,
   "products": [
+    {
+      "slug": "invoice-maker-basic",
+      "title": "Bill Pay (Basic)",
+      "tier": "basic",
+      "sales": 0,
+      "views": 0,
+      "price": 0.0,
+      "revenue": 0.0,
+      "net": 0.0,
+      "per_sale": 0.0
+    },
+    {
+      "slug": "invoice-maker",
+      "title": "Bill Pay",
+      "tier": "full",
+      "sales": 0,
+      "views": 0,
+      "price": 3.0,
+      "revenue": 0.0,
+      "net": 0.0,
+      "per_sale": 2.553
+    },
     {
       "slug": "file-renamer-basic",
       "title": "RenameRig (Basic)",
@@ -159,28 +181,6 @@
       "per_sale": 2.553
     },
     {
-      "slug": "invoice-maker-basic",
-      "title": "Invoice Maker (Basic)",
-      "tier": "basic",
-      "sales": 0,
-      "views": 0,
-      "price": 0.0,
-      "revenue": 0.0,
-      "net": 0.0,
-      "per_sale": 0.0
-    },
-    {
-      "slug": "invoice-maker",
-      "title": "Invoice Maker",
-      "tier": "full",
-      "sales": 0,
-      "views": 0,
-      "price": 3.0,
-      "revenue": 0.0,
-      "net": 0.0,
-      "per_sale": 2.553
-    },
-    {
       "slug": "recipe-scaler-basic",
       "title": "Recipe Scaler (Basic)",
       "tier": "basic",
@@ -226,7 +226,7 @@
     }
   ],
   "directives": [
-    "10 paid product(s) have zero sales: file-renamer, habit-tracker, flashcard-maker, grade-calculator. Either cut the price to the break-even floor ($0.32), change the pitch, or stop building in that niche and build what sells.",
+    "10 paid product(s) have zero sales: invoice-maker, file-renamer, habit-tracker, flashcard-maker. Either cut the price to the break-even floor ($0.32), change the pitch, or stop building in that niche and build what sells.",
     "Nothing has netted positive yet. Do not build more apps: fix price and the itch.io page for what exists first."
   ]
 }
