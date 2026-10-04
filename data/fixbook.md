@@ -139,6 +139,38 @@ the change that fixed it. Check here before proposing anything.
 - **Check for recurrence:** recurs if a qa round logs a repair without naming a patcher or model
 - **Status:** UNTESTED
 
+## B018 - a patch was applied four rounds in a row and never fixed the control
+
+- **Cause:** the team never checked whether its own patch changed the outcome, so it repeated the same ineffective fix
+- **Fix:** re-scan after every patch and report which controls are unchanged, so the next round must change approach
+- **Files:** qa_loop.py
+- **Check for recurrence:** recurs if several consecutive rounds report the same dead control
+- **Status:** UNTESTED
+
+## B019 - qwen refused every request as Request too large
+
+- **Cause:** the free tier allows roughly 1000 output tokens a minute for that model and the request asked for 2500
+- **Fix:** cap max_tokens per model: qwen 900, the others 8000
+- **Files:** patcher.py, debug_team.py
+- **Check for recurrence:** recurs if a model is refused with an output-tokens-per-minute error
+- **Status:** UNTESTED
+
+## B020 - every log line appeared twice
+
+- **Cause:** the encoding guard added a second print inside log()
+- **Fix:** log() prints exactly once and can never raise
+- **Files:** make_app.py
+- **Check for recurrence:** recurs if a log line is duplicated in a run
+- **Status:** UNTESTED
+
+## B021 - an injected handler was attached but the button still did nothing
+
+- **Cause:** the patch called into the app without knowing whether that function existed, and nothing checked the outcome
+- **Fix:** the scanner separates no-handler from handler-present-but-nothing-happened, and a patch that changes nothing is reported as ineffective
+- **Files:** app_scanner.py, qa_loop.py
+- **Check for recurrence:** recurs if a scan reports a handler present but nothing happened
+- **Status:** UNTESTED
+
 ## How to use this
 
 1. If the symptom matches an entry, use that fix. Do not invent a new one.

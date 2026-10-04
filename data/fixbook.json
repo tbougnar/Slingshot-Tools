@@ -211,5 +211,55 @@
   ],
   "detects": "recurs if a qa round logs a repair without naming a patcher or model",
   "verified": false
+ },
+ {
+  "id": "B018",
+  "date": "2026-10-04",
+  "symptom": "a patch was applied four rounds in a row and never fixed the control",
+  "cause": "the team never checked whether its own patch changed the outcome, so it repeated the same ineffective fix",
+  "fix": "re-scan after every patch and report which controls are unchanged, so the next round must change approach",
+  "files": [
+   "qa_loop.py"
+  ],
+  "detects": "recurs if several consecutive rounds report the same dead control",
+  "verified": false
+ },
+ {
+  "id": "B019",
+  "date": "2026-10-04",
+  "symptom": "qwen refused every request as Request too large",
+  "cause": "the free tier allows roughly 1000 output tokens a minute for that model and the request asked for 2500",
+  "fix": "cap max_tokens per model: qwen 900, the others 8000",
+  "files": [
+   "patcher.py",
+   "debug_team.py"
+  ],
+  "detects": "recurs if a model is refused with an output-tokens-per-minute error",
+  "verified": false
+ },
+ {
+  "id": "B020",
+  "date": "2026-10-04",
+  "symptom": "every log line appeared twice",
+  "cause": "the encoding guard added a second print inside log()",
+  "fix": "log() prints exactly once and can never raise",
+  "files": [
+   "make_app.py"
+  ],
+  "detects": "recurs if a log line is duplicated in a run",
+  "verified": false
+ },
+ {
+  "id": "B021",
+  "date": "2026-10-04",
+  "symptom": "an injected handler was attached but the button still did nothing",
+  "cause": "the patch called into the app without knowing whether that function existed, and nothing checked the outcome",
+  "fix": "the scanner separates no-handler from handler-present-but-nothing-happened, and a patch that changes nothing is reported as ineffective",
+  "files": [
+   "app_scanner.py",
+   "qa_loop.py"
+  ],
+  "detects": "recurs if a scan reports a handler present but nothing happened",
+  "verified": false
  }
 ]
