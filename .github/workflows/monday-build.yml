@@ -81,3 +81,44 @@ jobs:
           git commit -m "feat: new Slingshot Tool - $(python -c "import json;print(json.load(open('site/apps.json'))[0]['title'])") [skip ci]" || echo "nothing to commit"
           git push || echo "push failed (will retry next week)"
 # payments run on the slingshot-pay Cloudflare Worker
+
+  # ------------------------------------------------------------------
+  # When the build fails, an AI debugger reads the log, patches the
+  # pipeline under strict limits, and the workflow is retried.
+  # It can never touch payments, pricing bounds, secrets or publish gating,
+  # and it stops after SELFHEAL_MAX attempts so it cannot thrash.
+  # ------------------------------------------------------------------
+  selfheal:
+    needs: build
+    if: ${{ failure() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      SELFHEAL_MAX: '3'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Fetch the failing log
+        if: ${{ github.run_id }}
+        run: |
+          mkdir -p selfheal
+          gh run view ${{ github.run_id }} --log-failed > selfheal/last_run.log 2>&1 || true
+          echo "attempt 1" > selfheal/attempt
+
+      - name: Let the model diagnose and patch
+        run: python selfheal.py 1
+
+      - name: Rerun the build with the patch
+        if: success()
+        run: |
+          git push
+          echo "patched and pushed - re-dispatching"
