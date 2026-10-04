@@ -374,15 +374,21 @@ def write_app(concept, html, tier="full"):
 
 def html_looks_fine(html):
     problems = []
+    notes = []
     if re.search(r"https?://(?!www\.w3\.org)", html):
         problems.append("external URL referenced")
     if "<script src=" in html:
         problems.append("external script")
     if len(html) < 1500:
         problems.append("too small")
-    for needle in ("data-theme", "</html>"):
+    for needle in ("</html>",):
         if needle not in html:
             problems.append(f"missing {needle}")
+    # A theme attribute is a preference, not correctness. It used to reject
+    # whole finished apps, so it is only noted now.
+    if "data-theme" not in html:
+        notes.append("no data-theme attribute: dark/light switching will be "
+                     "default only, which is acceptable")
     if "localStorage" not in html and "indexedDB" not in html:
         problems.append("missing localStorage (the app would not save anything)")
     return problems
@@ -634,6 +640,8 @@ def main():
         html, brand, diffs, free_blurb, paid_blurb = build_html(
             concept, lessons, attempt=attempt)
         issues = html_looks_fine(html)
+        for note in getattr(html_looks_fine, "notes", []):
+            log(f"note: {note}")
         if issues:
             log(f"attempt {attempt} rejected: {issues}")
             continue

@@ -112,6 +112,9 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Prepare the debugger
+        run: python -m pip install --quiet requests
+
       - name: Fetch the failing log
         if: ${{ github.run_id }}
         run: |

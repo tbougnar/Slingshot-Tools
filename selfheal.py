@@ -167,6 +167,32 @@ def apply(fixes: list[dict], attempt: int, diagnosis: str) -> bool:
     return True
 
 
+LESSONS = ROOT / "data" / "lessons.txt"
+
+
+def remember(diagnosis: str, fixes: list[dict]) -> None:
+    """Write the lesson down so the builder is told next time.
+
+    Without this the same failure is rediscovered every month.
+    """
+    if not fixes:
+        return
+    lines = [f"- {diagnosis}"]
+    for f in fixes:
+        lines.append(f"  ({f['file']}) {f['note']}")
+    entry = "\n".join(lines)
+    try:
+        LESSONS.parent.mkdir(parents=True, exist_ok=True)
+        if LESSONS.exists() and entry.splitlines()[0] in LESSONS.read_text(
+                encoding="utf-8"):
+            return                      # already known
+        with LESSONS.open("a", encoding="utf-8") as fh:
+            fh.write(entry + "\n")
+        print(f"[selfheal] lesson recorded: {diagnosis[:90]}")
+    except Exception as e:  # noqa: BLE001
+        print(f"[selfheal] could not record lesson: {str(e)[:100]}")
+
+
 def main() -> int:
     attempt = int(sys.argv[1]) if len(sys.argv) > 1 else 1
     if attempt > MAX_ATTEMPT:
@@ -182,6 +208,8 @@ def main() -> int:
     print(f"[selfheal] diagnosis: {diagnosis}")
     fixes = safe(plan)
     print(f"[selfheal] {len(fixes)} fix(es) allowed by policy")
+    if fixes:
+        remember(diagnosis, fixes)
     return 0 if apply(fixes, attempt, diagnosis) else 1
 
 

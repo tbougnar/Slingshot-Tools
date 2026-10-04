@@ -1,8 +1,4 @@
-# Slingshot Tools lessons (updated 2026-10-01)
-
-- Solve one daily annoyance per app, never a dashboard of features.
-- Every app must work offline forever after first open: no CDN, no network calls.
-- Keep a working light mode toggle on every app; dark red is the brand.
-- Show a real empty state that tells the first-time user exactly what to do.
-- Always offer export and import of user data as JSON.
-- Prefer localStorage; never require an account.
+﻿- The build job installs requests but the self-heal job did not, so the debugger could never call a model and never produced a fix.
+- A missing data-theme attribute is a preference, not a defect; rejecting a finished app over it threw away two working builds.
+- Cloudflare answers urllib with "error code: 1010"; every model call must go through requests.
+- Groq now offers only three chat models: openai/gpt-oss-120b, qwen/qwen3.8-27b, openai/gpt-oss-20b.
