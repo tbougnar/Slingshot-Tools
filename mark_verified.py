@@ -22,6 +22,11 @@ def main() -> int:
     after = len(buglog.open_entries())
     print(f"[fixbook] clean run: {len(entries)} entries, "
           f"{before - after} newly verified, {after} still unproven")
+    try:
+        import write_fixbook
+        write_fixbook.main()
+    except Exception as e:  # noqa: BLE001
+        print(f"[fixbook] could not refresh the markdown: {str(e)[:100]}")
     return 0
 
 

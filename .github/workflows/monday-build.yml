@@ -55,6 +55,9 @@ jobs:
           if (Test-Path 'C:\ProgramData\chocolatey\lib\nsis\tools\makensis.exe') { & 'C:\ProgramData\chocolatey\lib\nsis\tools\makensis.exe' -VERSION }
           Write-Host 'nsis staged'
 
+      - name: Refresh the fixbook the AI reads
+        run: python write_fixbook.py
+
       - name: Groq connectivity check
         run: python groq_check.py
           python -c "import PyInstaller,webview;print('build deps ok')"
