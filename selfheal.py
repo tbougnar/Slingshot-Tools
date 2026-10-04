@@ -25,6 +25,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 MAX_ATTEMPT = int(os.environ.get("SELFHEAL_MAX", "3"))
+MODEL = "llama-3.3-70b-versatile"
 
 ALLOWED = {
     "make_app.py",
@@ -98,22 +99,17 @@ def collect(attempt: int) -> dict:
 
 
 def ask(diag: dict) -> dict:
-    key = os.environ.get("GROQ_API_KEY", "")
-    if not key:
+    try:
+        import ai
+    except ImportError:
+        return {"diagnosis": "ai module missing", "fixes": []}
+    if not os.environ.get("GROQ_API_KEY"):
         return {"diagnosis": "no GROQ_API_KEY available", "fixes": []}
-    import urllib.request
-    body = {"model": "llama-3.3-70b-versatile",
-            "messages": [
-                {"role": "system", "content": SYSTEM},
-                {"role": "user", "content": json.dumps(diag)[:14000]}],
-            "temperature": 0.1, "max_tokens": 6000}
-    req = urllib.request.Request("https://api.groq.com/openai/v1/chat/completions",
-                                 data=json.dumps(body).encode(), method="POST")
-    req.add_header("Authorization", "Bearer " + key)
-    req.add_header("Content-Type", "application/json")
-    with urllib.request.urlopen(req, timeout=180) as r:
-        out = json.loads(r.read().decode())
-    raw = out["choices"][0]["message"]["content"]
+    user = json.dumps(diag)[:14000]
+    try:
+        raw = ai.chat(MODEL, SYSTEM, user, temperature=0.1, max_tokens=6000)
+    except Exception as e:  # noqa: BLE001
+        return {"diagnosis": f"model call failed: {str(e)[:200]}", "fixes": []}
     m = re.search(r"\{.*\}", raw, re.S)
     if not m:
         return {"diagnosis": "model did not return JSON", "fixes": []}

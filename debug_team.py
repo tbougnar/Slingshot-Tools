@@ -11,8 +11,7 @@ from __future__ import annotations
 import json
 import os
 import re
-import urllib.error
-import urllib.request
+import ai
 from pathlib import Path
 
 # Groq's catalogue changes often; unknown ids are skipped at runtime.
@@ -33,29 +32,17 @@ MAX_ROUNDS = 3
 TIMEOUT = 180
 
 
-def _key() -> str:
-    k = os.environ.get("GROQ_API_KEY", "")
-    if not k:
-        raise SystemExit("no GROQ_API_KEY")
-    return k
-
-
 def call(model: str, system: str, user: str, temperature: float = 0.2,
          max_tokens: int = 6000) -> str | None:
-    body = {"model": model, "temperature": temperature, "max_tokens": max_tokens,
-            "messages": [{"role": "system", "content": system},
-                         {"role": "user", "content": user}]}
-    req = urllib.request.Request(
-        "https://api.groq.com/openai/v1/chat/completions",
-        data=json.dumps(body).encode(), method="POST")
-    req.add_header("Authorization", "Bearer " + _key())
-    req.add_header("Content-Type", "application/json")
     try:
-        with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
-            d = json.loads(r.read().decode())
-        return d["choices"][0]["message"]["content"]
-    except (urllib.error.HTTPError, Exception):  # noqa: BLE001
+        import ai
+        return ai.chat(model, system, user, temperature, max_tokens)
+    except Exception as e:  # noqa: BLE001
+        last_error[0] = str(e)[:200]
         return None
+
+
+last_error = [""]
 
 
 def _json_of(raw: str | None) -> dict | None:

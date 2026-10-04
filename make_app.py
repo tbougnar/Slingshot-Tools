@@ -104,61 +104,33 @@ def log(msg):
     print(f"[slingshot] {msg}", flush=True)
 
 
+MODELS = ["llama-3.3-70b-versatile", "openai/gpt-oss-120b",
+          "moonshotai/kimi-k2-instruct", "llama-3.1-8b-instant"]
+
+
 def groq(system, user, max_tokens=4000, temperature=0.8, tries=6):
+    """Call Groq through the shared client.
+
+    Cloudflare answers urllib with "error code: 1010" no matter what User-Agent
+    is sent, because it looks at the TLS fingerprint. requests gets through, so
+    every model call goes via ai.py.
+    """
     global CHAT_MODEL
     if not GROQ_KEY:
         raise RuntimeError("GROQ_API_KEY missing")
-    body = {
-        "model": CHAT_MODEL,
-        "messages": [{"role": "system", "content": system},
-                     {"role": "user", "content": user}],
-        "max_tokens": max_tokens,
-        "temperature": temperature,
-    }
-    data = json.dumps(body).encode()
-    headers = {
-        "Authorization": f"Bearer {GROQ_KEY}",
-        "Content-Type": "application/json",
-        # Groq sits behind Cloudflare, which rejects urllib's default
-        # "Python-urllib" agent with error 1010. Send a browser UA.
-        "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                       "AppleWebKit/537.36 (KHTML, like Gecko) "
-                       "Chrome/124.0.0.0 Safari/537.36"),
-        "Accept": "application/json",
-    }
-    last = "unknown"
-    deadline = time.monotonic() + 1200
-    attempt = 0
-    while attempt < tries:
-        attempt += 1
-        try:
-            req = urllib.request.Request(f"{GROQ_BASE}/chat/completions",
-                                         data=data, headers=headers)
-            with urllib.request.urlopen(req, timeout=300) as r:
-                out = json.loads(r.read().decode())
-            return out["choices"][0]["message"]["content"]
-        except urllib.error.HTTPError as e:
-            body_txt = e.read().decode()[:300]
-            last = f"HTTP {e.code}: {body_txt}"
-            if e.code == 429:
-                if time.monotonic() > deadline:
-                    raise RuntimeError(f"rate limited too long: {last}")
-                time.sleep(20)
-                continue
-            if e.code == 404:
-                # rotate only to models this key actually has access to
-                if CHAT_FALLBACKS:
-                    CHAT_MODEL = CHAT_FALLBACKS.pop(0)
-                else:
-                    raise RuntimeError(f"model rejected and no fallback left: {last}")
-                body["model"] = CHAT_MODEL
-                data = json.dumps(body).encode()
-                time.sleep(2)
-            time.sleep(5)
-        except Exception as e:  # noqa: BLE001
-            last = str(e)[:200]
-            time.sleep(5)
-    raise RuntimeError(f"groq failed: {last}")
+    import ai
+    order = [CHAT_MODEL] + [m for m in MODELS if m != CHAT_MODEL]
+    last = ""
+    for model in order:
+        for attempt in range(2):
+            try:
+                raw = ai.chat(model, system, user, temperature, max_tokens)
+                if raw:
+                    return raw
+            except Exception as e:  # noqa: BLE001
+                last = str(e)[:200]
+                time.sleep(1.5 * (attempt + 1))
+    raise RuntimeError(f"groq unavailable: {last}")
 
 
 def _salvage_html(raw):
