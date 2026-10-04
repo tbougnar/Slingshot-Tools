@@ -578,6 +578,20 @@ def build_installer(app_dir: Path, concept):
     return out
 
 
+def stage_paid(app_dir: Path, slug: str, installer: Path | None = None) -> bool:
+    """Publish the paid edition to the private store.
+
+    The paid build is never written under site/. It is handed to the Worker,
+    which releases the installer only after PayPal confirms payment.
+    """
+    ok = paid_store.stage(app_dir, slug, installer)
+    if ok:
+        log(f"paid edition ready for {slug}")
+    else:
+        log(f"paid edition FAILED for {slug} - it must not be advertised")
+    return ok
+
+
 
 def publish(concept, app_dir, installer, tier="full", brand="", differences=None,
              free_blurb="", paid_blurb="", published=False):
