@@ -30,13 +30,21 @@ def stage(app_dir: Path, slug: str, installer: Path | None = None) -> bool:
     way to run the paid app without installing it.
     """
     dest = PAID / slug
+    # write_app already writes the paid build straight into paid/<slug>, so in
+    # the normal path source and destination are the same directory and there
+    # is nothing to copy.
+    same = dest.exists() and app_dir.resolve() == dest.resolve()
     dest.mkdir(parents=True, exist_ok=True)
-    for p in app_dir.rglob("*"):
-        if p.is_file():
-            rel = p.relative_to(app_dir)
-            out = dest / rel
-            out.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(p, out)
+    if same:
+        for p in list(dest.rglob("*Setup.exe")):
+            p.unlink()
+    else:
+        for p in app_dir.rglob("*"):
+            if p.is_file():
+                rel = p.relative_to(app_dir)
+                out = dest / rel
+                out.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(p, out)
 
     exe = installer or (ROOT / "dist" / f"SlingshotTool-{slug}-Setup.exe")
     if not exe.exists():
