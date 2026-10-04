@@ -73,9 +73,15 @@ def models() -> list[str]:
 
 
 def chat(model: str, system: str, user: str, temperature: float = 0.2,
-         max_tokens: int = 6000) -> str:
-    d = post("/chat/completions", {
+         max_tokens: int = 6000, reasoning: bool = False) -> str:
+    payload = {
         "model": model, "temperature": temperature, "max_tokens": max_tokens,
         "messages": [{"role": "system", "content": system},
-                     {"role": "user", "content": user}]})
-    return d["choices"][0]["message"]["content"]
+                     {"role": "user", "content": user}],
+    }
+    if not reasoning:
+        # reasoning models otherwise spend the budget thinking and return a
+        # file that stops mid-way
+        payload["reasoning_effort"] = "low"
+    d = post("/chat/completions", payload)
+    return d["choices"][0]["message"]["content"] or ""

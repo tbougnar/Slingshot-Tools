@@ -327,7 +327,7 @@ def build_html(concept, lessons, attempt=1):
         + ("\n\nIMPORTANT: keep the HTML compact - short CSS, short JS, no comments. "
            "It MUST be complete and end with </html>." if attempt > 1 else "")
         + f"\nLESSONS FROM REAL USERS (apply them):\n{lessons or '(none yet)'}",
-        max_tokens=16000, temperature=0.5,
+        max_tokens=32000, temperature=0.5,
     )
     html = d.get("html") or ""
     if "<!DOCTYPE" not in html and "<html" not in html:

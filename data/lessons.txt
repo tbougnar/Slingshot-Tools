@@ -2,3 +2,5 @@
 - A missing data-theme attribute is a preference, not a defect; rejecting a finished app over it threw away two working builds.
 - Cloudflare answers urllib with "error code: 1010"; every model call must go through requests.
 - Groq now offers only three chat models: openai/gpt-oss-120b, qwen/qwen3.8-27b, openai/gpt-oss-20b.
+- Repairs and app generation were being truncated before the HTML finished; the reply budget must exceed the whole file, and reasoning must be turned off or it eats that budget.
+- The self-heal job must read the build job log, not just --log-failed, or it diagnoses the wrong thing.

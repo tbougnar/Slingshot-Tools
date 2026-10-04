@@ -29,10 +29,11 @@ TIMEOUT = 180
 
 
 def call(model: str, system: str, user: str, temperature: float = 0.2,
-         max_tokens: int = 6000) -> str | None:
+         max_tokens: int = 6000, reasoning: bool = False) -> str | None:
     try:
         import ai
-        return ai.chat(model, system, user, temperature, max_tokens)
+        return ai.chat(model, system, user, temperature, max_tokens,
+                       reasoning=reasoning)
     except Exception as e:  # noqa: BLE001
         last_error[0] = str(e)[:200]
         return None
@@ -113,7 +114,7 @@ def audit(models: list[str], scan: dict) -> dict:
     from concurrent.futures import ThreadPoolExecutor
     reports: dict[str, dict] = {}
     with ThreadPoolExecutor(max_workers=min(9, len(models) or 1)) as pool:
-        futures = {pool.submit(call, m, AUDIT, user, 0.1, 2000): m for m in models}
+        futures = {pool.submit(call, m, AUDIT, user, 0.1, 2000, False): m for m in models}
         for fut, m in futures.items():
             try:
                 got = _json_of(fut.result())
@@ -190,8 +191,11 @@ def fix(leaders: list[str], scan: dict, confirmed: list[str],
                 seen.add(m); ordered.append(m)
         leaders = ordered
     for m in leaders:
+        # A full single-file app is ~30 KB, so the reply needs room. Reasoning
+        # tokens come out of the same budget and were silently eating it, which
+        # is why repairs came back empty.
         raw = call(m, FIX, user, temperature=0.1 if mode == "rewrite" else 0.15,
-                   max_tokens=24000)
+                   max_tokens=40000)
         if raw is None:
             print(f"[team] {m} call failed or returned nothing")
             continue

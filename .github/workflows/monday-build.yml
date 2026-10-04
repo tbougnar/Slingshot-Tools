@@ -119,8 +119,13 @@ jobs:
         if: ${{ github.run_id }}
         run: |
           mkdir -p selfheal
-          gh run view ${{ github.run_id }} --log-failed > selfheal/last_run.log 2>&1 || true
+          # the build step is the one that carries the real error, and
+          # --log-failed can miss it, so keep both the failed output and the
+          # whole build step
+          gh run view ${{ github.run_id }} --log-failed > selfheal/failure.txt 2>&1 || true
+          gh run view ${{ github.run_id }} --job ${{ github.job }} --log >> selfheal/failure.txt 2>&1 || true
           echo "attempt 1" > selfheal/attempt
+          Get-Content selfheal/failure.txt | Select-Object -Last 200
 
       - name: Let the model diagnose and patch
         run: python selfheal.py 1
