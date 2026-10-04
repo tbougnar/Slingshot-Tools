@@ -172,5 +172,18 @@
   ],
   "detects": "distinct buttons produce distinct votes",
   "verified": false
+ },
+ {
+  "id": "B015",
+  "date": "2026-10-04",
+  "symptom": "the two strongest models returned nothing during repairs",
+  "cause": "max_tokens was raised to 40000, above what those models will produce, so Groq refused the request and the failure was reported as an empty reply",
+  "fix": "cap the request at REPLY_BUDGET=32000 and print the error body from every failed call",
+  "files": [
+   "debug_team.py",
+   "ai.py"
+  ],
+  "detects": "recurs if a repair log shows a model FAILED with a 400 status",
+  "verified": false
  }
 ]

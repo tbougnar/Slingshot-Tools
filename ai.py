@@ -44,7 +44,9 @@ def post(path: str, payload: dict, timeout: int = 180) -> dict:
     r = requests.post(BASE + path, headers=_headers(), data=json.dumps(payload),
                       timeout=timeout)
     if r.status_code != 200:
-        raise RuntimeError(f"groq {path} -> {r.status_code}: {r.text[:400]}")
+        # Groq explains refusals in the body (token limits, rate limits,
+        # retired models). Losing that turns every fault into "nothing came back".
+        raise RuntimeError(f"groq {path} -> {r.status_code}: {r.text[:500]}")
     try:
         return r.json()
     except Exception:  # noqa: BLE001
@@ -57,7 +59,9 @@ def get(path: str, timeout: int = 60) -> dict:
     import requests
     r = requests.get(BASE + path, headers=_headers(), timeout=timeout)
     if r.status_code != 200:
-        raise RuntimeError(f"groq {path} -> {r.status_code}: {r.text[:400]}")
+        # Groq explains refusals in the body (token limits, rate limits,
+        # retired models). Losing that turns every fault into "nothing came back".
+        raise RuntimeError(f"groq {path} -> {r.status_code}: {r.text[:500]}")
     try:
         return r.json()
     except Exception:  # noqa: BLE001

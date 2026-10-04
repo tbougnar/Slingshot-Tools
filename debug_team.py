@@ -24,6 +24,10 @@ CANDIDATES = [
 ]
 
 LEADERS = 3           # the three that reconcile the reports
+# Groq refuses a max_tokens larger than the model will produce, and the refusal
+# looks like an empty reply. 32k is safely inside every model we use and is
+# still four times the size of a complete app file.
+REPLY_BUDGET = 32000
 MAX_ROUNDS = 3
 TIMEOUT = 180
 
@@ -35,7 +39,10 @@ def call(model: str, system: str, user: str, temperature: float = 0.2,
         return ai.chat(model, system, user, temperature, max_tokens,
                        reasoning=reasoning)
     except Exception as e:  # noqa: BLE001
-        last_error[0] = str(e)[:200]
+        # keep the reason: a silent failure here looks identical to "the models
+        # all refused", which is how a token limit hid for a whole run
+        last_error[0] = str(e)[:300]
+        print(f"[team] {model} FAILED: {last_error[0][:220]}")
         return None
 
 
@@ -195,9 +202,9 @@ def fix(leaders: list[str], scan: dict, confirmed: list[str],
         # tokens come out of the same budget and were silently eating it, which
         # is why repairs came back empty.
         raw = call(m, FIX, user, temperature=0.1 if mode == "rewrite" else 0.15,
-                   max_tokens=40000)
+                   max_tokens=REPLY_BUDGET)
         if raw is None:
-            print(f"[team] {m} call failed or returned nothing")
+            print(f"[team] {m} produced nothing")
             continue
         got = _json_of(raw)
         if not got or not isinstance(got.get("html"), str):
