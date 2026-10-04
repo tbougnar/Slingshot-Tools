@@ -48,5 +48,10 @@
     "slug": "file-renamer",
     "title": "RenameRig",
     "date": "2026-10-03"
+  },
+  {
+    "slug": "invoice-maker",
+    "title": "Bill Pay",
+    "date": "2026-10-04"
   }
 ]
