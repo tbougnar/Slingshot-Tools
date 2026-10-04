@@ -128,14 +128,22 @@ def audit(models: list[str], scan: dict) -> dict:
     return {"confirmed": confirmed, "reports": reports}
 
 
+SCOPE = {
+ "minimal":  "Change only the listed controls. Leave every other line alone.",
+ "targeted": "You may refactor the script block and any component the listed controls belong to. Keep the layout, styling and every other feature identical.",
+ "rewrite":  "The listed controls could not be fixed in place. Rewrite the whole script block so the entire app works end to end. Keep the same HTML structure, ids, styling and features.",
+}
+
 FIX = """You repair one self-contained HTML file for a Windows desktop app.
 
 Confirmed broken controls (a majority of reviewers agree these do nothing):
 {confirmed}
 
+Repair scope for this round: {scope}
+
 Repair rules:
 - Return the COMPLETE file as JSON: {{"html": "<!DOCTYPE html> ... </html>"}}
-- Smallest possible change. Do not redesign, restyle, or rename anything.
+- Stay inside the scope above. Do not redesign or restyle.
 - Wire up event handlers so each listed control does the obvious thing using
   the app's existing state, styling and patterns.
 - Do not remove controls. Do not add external scripts, fonts or images.
@@ -144,11 +152,21 @@ Repair rules:
 
 
 def fix(leaders: list[str], scan: dict, confirmed: list[str],
-        html: str) -> tuple[str, str] | None:
+        html: str, mode: str = "minimal") -> tuple[str, str] | None:
     """Three leaders propose; the first to return parseable, complete HTML wins."""
-    user = FIX.format(confirmed=json.dumps(confirmed)[:2000], html=html[:60000])
+    user = FIX.format(confirmed=json.dumps(confirmed)[:2000], html=html[:60000],
+                      scope=SCOPE.get(mode, SCOPE["minimal"]))
+    if mode == "rewrite":
+        # a full rewrite needs the biggest models first, not the first responder
+        order = [m for m in leaders if "120b" in m or "70b" in m or "kimi" in m] + list(leaders)
+        seen, ordered = set(), []
+        for m in order:
+            if m not in seen:
+                seen.add(m); ordered.append(m)
+        leaders = ordered
     for m in leaders:
-        raw = call(m, FIX, user, temperature=0.15, max_tokens=20000)
+        raw = call(m, FIX, user, temperature=0.1 if mode == "rewrite" else 0.15,
+                   max_tokens=24000)
         got = _json_of(raw)
         if got and isinstance(got.get("html"), str):
             out = got["html"]
