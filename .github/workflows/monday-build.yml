@@ -46,6 +46,28 @@ jobs:
         with:
           python-version: "3.12"
 
+
+      - name: Groq connectivity check
+        run: |
+          python - <<'PY'
+          import os, json, urllib.request, urllib.error
+          k = os.environ.get("GROQ_API_KEY", "")
+          print("key present:", bool(k), "len:", len(k), "prefix:", k[:6] + "..." if k else "none")
+          r = urllib.request.Request("https://api.groq.com/openai/v1/models",
+                                     headers={"Authorization": "Bearer " + k})
+          try:
+              with urllib.request.urlopen(r, timeout=60) as x:
+                  d = json.loads(x.read().decode())
+              ids = [m["id"] for m in d.get("data", [])]
+              print("models reachable:", len(ids))
+              print("available:", ", ".join(sorted(ids)))
+          except urllib.error.HTTPError as e:
+              print("HTTP", e.code, e.reason)
+              print("body:", e.read().decode()[:800])
+          except Exception as e:
+              print("network error:", type(e).__name__, str(e)[:200])
+          PY
+
       - name: Install tools
         run: |
           python -m pip install --quiet pillow requests pyinstaller pywebview playwright
