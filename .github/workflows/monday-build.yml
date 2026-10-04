@@ -78,6 +78,11 @@ jobs:
           print("catalog ok:", top["title"], "->", top["url"])
           PY
 
+
+      - name: Mark the fixbook
+        if: success()
+        run: python mark_verified.py
+
       - name: Commit and publish the site
         run: |
           git config user.name "slingshot-bot"

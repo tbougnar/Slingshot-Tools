@@ -21,6 +21,7 @@ from datetime import date
 from pathlib import Path
 
 import paid_store
+import buglog
 import qa_loop
 import build_exe
 
@@ -630,6 +631,8 @@ def main():
         log("no GROQ_API_KEY - nothing to do")
         return 0
     lessons = LESSONS.read_text(encoding="utf-8") if LESSONS.exists() else ""
+    lessons = (lessons + "\n\nPAST BUGS - do not repeat these:\n"
+               + buglog.brief(14))[:6000]
     money = ""
     earn_file = DATA / "earnings.json"
     if earn_file.exists():

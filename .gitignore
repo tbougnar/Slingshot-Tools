@@ -30,3 +30,6 @@ site/licenses/
 
 # Paid editions must never be published
 paid/
+
+# regenerated from the fixbook at build time
+data/lessons.txt

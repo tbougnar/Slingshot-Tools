@@ -1,0 +1,176 @@
+[
+ {
+  "id": "B001",
+  "date": "2026-10-04",
+  "symptom": "itch.io projects could not be created from CI",
+  "cause": "Cloudflare blocks headless browsers and plain HTTP on itch.io; there is no create-project API, and the API key alone cannot make one.",
+  "fix": "Removed itch.io entirely and replaced delivery with PayPal plus a private store behind the payment API.",
+  "files": [
+   "worker/worker.js"
+  ],
+  "detects": "no reference to itch remains in the code",
+  "verified": false
+ },
+ {
+  "id": "B002",
+  "date": "2026-10-04",
+  "symptom": "paid builds were publicly downloadable",
+  "cause": "Old paid files were still tracked in git after being moved on disk, and the build re-published them under site/apps.",
+  "fix": "site/ now receives only the basic edition; paid/ is gitignored and served only after payment.",
+  "files": [
+   "make_app.py",
+   ".gitignore"
+  ],
+  "detects": "apps/<slug> for a paid slug returns 404 while apps/<slug>-basic returns 200",
+  "verified": false
+ },
+ {
+  "id": "B003",
+  "date": "2026-10-04",
+  "symptom": "workflow could not be dispatched",
+  "cause": "Duplicate PRICE_FLOOR keys made the YAML invalid, so GitHub reported the workflow had no workflow_dispatch trigger.",
+  "fix": "Removed the duplicate keys and validated the file before pushing.",
+  "files": [
+   ".github/workflows/monday-build.yml"
+  ],
+  "detects": "the workflow file parses as YAML",
+  "verified": false
+ },
+ {
+  "id": "B004",
+  "date": "2026-10-04",
+  "symptom": "build crashed with NameError: stage_paid",
+  "cause": "A function was renamed during the itch removal but the call site was not.",
+  "fix": "Defined stage_paid and had it build the real app folder plus installer.",
+  "files": [
+   "make_app.py"
+  ],
+  "detects": "python -m py_compile passes and stage_paid exists",
+  "verified": false
+ },
+ {
+  "id": "B005",
+  "date": "2026-10-04",
+  "symptom": "SameFileError while staging the paid build",
+  "cause": "write_app already writes into paid/<slug>, so the copy step copied files onto themselves.",
+  "fix": "Detect that source and destination are the same and skip the copy.",
+  "files": [
+   "paid_store.py"
+  ],
+  "detects": "staging a build whose folder already exists is a no-op",
+  "verified": false
+ },
+ {
+  "id": "B006",
+  "date": "2026-10-04",
+  "symptom": "paid customers received nothing (HTTP 413)",
+  "cause": "A standalone Windows exe is about 28 MB and the store rejects any single value above 25 MB.",
+  "fix": "Split the file into chunks on upload and rejoin them in the worker before replying, so the customer still gets one complete file.",
+  "files": [
+   "paid_store.py",
+   "worker/worker.js"
+  ],
+  "detects": "the store holds every chunk and their sizes sum to the file size",
+  "verified": false
+ },
+ {
+  "id": "B007",
+  "date": "2026-10-04",
+  "symptom": "QA crashed with 'object of bool has no len'",
+  "cause": "Playwright was not installed on the runner, so the scanner returned a flag instead of a list.",
+  "fix": "Install Playwright on the runner, and make a scanner that cannot run report failure rather than pass.",
+  "files": [
+   "app_scanner.py",
+   ".github/workflows/monday-build.yml"
+  ],
+  "detects": "app_scanner.verdict is False when the scanner is unavailable",
+  "verified": false
+ },
+ {
+  "id": "B008",
+  "date": "2026-10-04",
+  "symptom": "every model call failed with HTTP 403 error 1010",
+  "cause": "Cloudflare refuses Python's urllib based on its fingerprint; a browser User-Agent alone does not help.",
+  "fix": "All model calls go through one client built on requests.",
+  "files": [
+   "ai.py"
+  ],
+  "detects": "groq_check.py reports HTTP 200",
+  "verified": false
+ },
+ {
+  "id": "B009",
+  "date": "2026-10-04",
+  "symptom": "models were configured that no longer exist",
+  "cause": "llama-3.3-70b, kimi-k2, deepseek, gemma2 and llama-4 are retired; only three chat models remain.",
+  "fix": "Use the three the live catalogue offers: gpt-oss-120b, qwen3.8-27b, gpt-oss-20b.",
+  "files": [
+   "debug_team.py",
+   "make_app.py"
+  ],
+  "detects": "the model list matches what the catalogue endpoint returns",
+  "verified": false
+ },
+ {
+  "id": "B010",
+  "date": "2026-10-04",
+  "symptom": "finished apps were thrown away over a missing data-theme",
+  "cause": "A theme attribute was treated as a correctness requirement.",
+  "fix": "It is recorded as a note, not a rejection.",
+  "files": [
+   "make_app.py"
+  ],
+  "detects": "html without data-theme is accepted with a note",
+  "verified": false
+ },
+ {
+  "id": "B011",
+  "date": "2026-10-04",
+  "symptom": "the self-heal debugger never produced a fix",
+  "cause": "Its runner had no requests installed, so every model call it made failed with ModuleNotFoundError.",
+  "fix": "Install requests in the self-heal job before it thinks.",
+  "files": [
+   ".github/workflows/monday-build.yml"
+  ],
+  "detects": "the self-heal log shows a diagnosis rather than a missing-module error",
+  "verified": false
+ },
+ {
+  "id": "B012",
+  "date": "2026-10-04",
+  "symptom": "the debugger diagnosed the wrong problem",
+  "cause": "It read --log-failed, which missed the build job, and concluded the pipeline had not actually failed.",
+  "fix": "Fetch the build job log as well as the failed output.",
+  "files": [
+   ".github/workflows/monday-build.yml"
+  ],
+  "detects": "selfheal/failure.txt contains the build step output",
+  "verified": false
+ },
+ {
+  "id": "B013",
+  "date": "2026-10-04",
+  "symptom": "repairs and app generation came back truncated",
+  "cause": "Reasoning tokens are drawn from the same max_tokens budget as the reply, so a 30 KB file stopped mid-way.",
+  "fix": "Raise the reply budget and turn reasoning off for repairs.",
+  "files": [
+   "ai.py",
+   "debug_team.py",
+   "make_app.py"
+  ],
+  "detects": "a generated file ends with </html> and contains localStorage",
+  "verified": false
+ },
+ {
+  "id": "B014",
+  "date": "2026-10-04",
+  "symptom": "votes collapsed every button into one control",
+  "cause": "Vote keys used only the tag, so all buttons counted as a single control and the majority test meant nothing.",
+  "fix": "Key votes on the whole label and map them back to the scanner's labels.",
+  "files": [
+   "debug_team.py"
+  ],
+  "detects": "distinct buttons produce distinct votes",
+  "verified": false
+ }
+]
