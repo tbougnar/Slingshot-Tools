@@ -21,7 +21,7 @@ HEADERS = {
     "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                    "(KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36"),
     "Accept-Language": "en-US,en;q=0.9",
-    "Accept-Encoding": "gzip, deflate, br",
+    "Accept-Encoding": "gzip, deflate",
     "Connection": "keep-alive",
     "Origin": "https://console.groq.com",
     "Referer": "https://console.groq.com/",
@@ -43,18 +43,29 @@ def post(path: str, payload: dict, timeout: int = 180) -> dict:
     import requests
     r = requests.post(BASE + path, headers=_headers(), data=json.dumps(payload),
                       timeout=timeout)
-    if r.status_code == 200:
+    if r.status_code != 200:
+        raise RuntimeError(f"groq {path} -> {r.status_code}: {r.text[:400]}")
+    try:
         return r.json()
-    body = r.text[:400]
-    raise RuntimeError(f"groq {path} -> {r.status_code}: {body}")
+    except Exception:  # noqa: BLE001
+        raise RuntimeError(
+            f"groq {path} returned non-JSON ({r.headers.get('Content-Type')}): "
+            f"{r.text[:200]}") from None
 
 
 def get(path: str, timeout: int = 60) -> dict:
     import requests
     r = requests.get(BASE + path, headers=_headers(), timeout=timeout)
-    if r.status_code == 200:
+    if r.status_code != 200:
+        raise RuntimeError(f"groq {path} -> {r.status_code}: {r.text[:400]}")
+    try:
         return r.json()
-    raise RuntimeError(f"groq {path} -> {r.status_code}: {r.text[:400]}")
+    except Exception:  # noqa: BLE001
+        # a body that is not JSON means something between us and the API
+        # rewrote it; say so instead of failing later with a confusing parse error
+        raise RuntimeError(
+            f"groq {path} returned non-JSON ({r.headers.get('Content-Type')}): "
+            f"{r.text[:200]}") from None
 
 
 def models() -> list[str]:
