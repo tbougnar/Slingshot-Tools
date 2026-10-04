@@ -108,25 +108,6 @@ def verdict(result: dict) -> bool:
 if __name__ == "__main__":
     import sys
 
-# Windows consoles default to a legacy code page, so any non-ASCII character in
-# model output used to raise UnicodeEncodeError and kill the run. Output that
-# cannot be encoded is replaced rather than fatal.
-for _stream in ("stdout", "stderr"):
-    _s = getattr(sys, _stream, None)
-    if _s is not None and hasattr(_s, "reconfigure"):
-        try:
-            _s.reconfigure(encoding="utf-8", errors="replace")
-        except Exception:  # noqa: BLE001
-            pass
-
-
-def _safe(text) -> str:
-    try:
-        return str(text).encode("utf-8", "replace").decode("utf-8", "replace")
-    except Exception:  # noqa: BLE001
-        return "<unprintable>"
-
-
     p = Path(sys.argv[1])
     r = scan(p)
     print(json.dumps(r, indent=1)[:3000])
