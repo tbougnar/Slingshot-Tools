@@ -187,6 +187,14 @@ the change that fixed it. Check here before proposing anything.
 - **Check for recurrence:** recurs if a single run both generates and verifies
 - **Status:** UNTESTED
 
+## B024 - twenty two runs failed because apps were too large to verify
+
+- **Cause:** generation consumed the entire per-minute model allowance, so the debugger team had nothing left and could never pass an app
+- **Fix:** cap apps at 9000 bytes with sizeguard, tell the builder to aim under 8 KB, and teach the working-handler pattern in PATTERNS.md so fewer repairs are needed
+- **Files:** sizeguard.py, PATTERNS.md, make_app.py, stage_app.py
+- **Check for recurrence:** recurs if a staged app exceeds the size ceiling
+- **Status:** UNTESTED
+
 ## How to use this
 
 1. If the symptom matches an entry, use that fix. Do not invent a new one.

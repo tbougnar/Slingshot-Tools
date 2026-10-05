@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 def main() -> int:
     import make_app
     import buglog
+    import sizeguard
 
     lessons = ""
     if make_app.LESSONS.exists():
@@ -39,6 +40,12 @@ def main() -> int:
         if issues:
             make_app.log(f"attempt {attempt} rejected: {issues}")
             continue
+        ok, why = sizeguard.verdict(len(html))
+        if not ok:
+            make_app.log(f"attempt {attempt} {why}")
+            continue
+        if why:
+            make_app.log(f"attempt {attempt} warning: {why}")
         make_app.log(f"attempt {attempt} ok ({len(html)} bytes, brand={brand!r})")
 
         basic_meta = {**concept, "brand": brand,

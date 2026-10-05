@@ -55,6 +55,7 @@ PAID_DIR = ROOT / "paid"
 CATALOG = SITE / "apps.json"
 DATA = ROOT / "data"
 LESSONS = DATA / "lessons.txt"
+PATTERNS = ROOT / "PATTERNS.md"
 BANNED = ROOT / "data" / "already_built.json"
 
 GROQ_BASE = "https://api.groq.com/openai/v1"
@@ -345,6 +346,11 @@ Return JSON only, exactly this shape:
 The html value must be a single JSON string with all quotes escaped. No commentary."""
 
 
+def patterns() -> str:
+    """The teaching material: patterns every app must get right."""
+    return PATTERNS.read_text(encoding="utf-8") if PATTERNS.exists() else ""
+
+
 def build_html(concept, lessons, attempt=1):
     d = groq_json(
         "You are a senior front-end engineer shipping a polished, genuinely useful "
@@ -354,8 +360,9 @@ def build_html(concept, lessons, attempt=1):
         + f"\n\nTHE APP: {json.dumps(concept, indent=2)}\n"
         + ("\n\nIMPORTANT: keep the HTML compact - short CSS, short JS, no comments. "
            "It MUST be complete and end with </html>." if attempt > 1 else "")
-        + f"\nLESSONS FROM REAL USERS (apply them):\n{lessons or '(none yet)'}",
-        max_tokens=32000, temperature=0.5,
+        + f"\nLESSONS FROM REAL USERS (apply them):\n{lessons or '(none yet)'}"
+        + f"\n\nPATTERNS YOU MUST FOLLOW:\n{patterns()}",
+        max_tokens=9000, temperature=0.35,
     )
     html = d.get("html") or ""
     if "<!DOCTYPE" not in html and "<html" not in html:
