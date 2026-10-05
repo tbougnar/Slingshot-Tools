@@ -131,30 +131,35 @@ def log(msg):
     except Exception:  # noqa: BLE001
         pass
 
-def groq(system, user, max_tokens=4000, temperature=0.8, tries=6):
-    """Call Groq through the shared client.
+def groq(system, user, max_tokens=4000, temperature=0.8, tries=3):
+    """Call whichever model provider is configured.
 
-    Cloudflare answers urllib with "error code: 1010" no matter what User-Agent
-    is sent, because it looks at the TLS fingerprint. requests gets through, so
-    every model call goes via ai.py.
+    Any provider is fine here, so the provider is chosen by whichever
+    credentials exist rather than being hard-wired. Every model is tried in
+    turn because a rate limit on one of them says nothing about the others.
     """
     global CHAT_MODEL
-    if not GROQ_KEY:
-        raise RuntimeError("GROQ_API_KEY missing")
-    import ai
-    order = [CHAT_MODEL] + [m for m in MODELS if m != CHAT_MODEL]
+    if not GROQ_KEY and not os.environ.get("GEMINI_API_KEY") \
+            and not os.environ.get("CEREBRAS_API_KEY") \
+            and not os.environ.get("OPENROUTER_API_KEY"):
+        raise RuntimeError("no model provider is configured")
+    import providers
+    order = [CHAT_MODEL] + [x for x in MODELS if x != CHAT_MODEL]
+    try:
+        order = providers.models("builder") + order
+    except Exception:  # noqa: BLE001
+        pass
     last = ""
     for model in order:
         for attempt in range(2):
             try:
-                raw = ai.chat(model, system, user, temperature, max_tokens)
-                if raw:
-                    return raw
+                out = providers.chat(model, system, user, temperature, max_tokens)
+                if out:
+                    return out
             except Exception as e:  # noqa: BLE001
                 last = str(e)[:200]
                 time.sleep(1.5 * (attempt + 1))
-    raise RuntimeError(f"groq unavailable: {last}")
-
+    raise RuntimeError(f"every model failed: {last}")
 
 def _salvage_html(raw):
     """The html value is what we actually need. Models truncate huge answers

@@ -46,9 +46,8 @@ TIMEOUT = 180
 def call(model: str, system: str, user: str, temperature: float = 0.2,
          max_tokens: int = 6000, reasoning: bool = False) -> str | None:
     try:
-        import ai
-        return ai.chat(model, system, user, temperature, max_tokens,
-                       reasoning=reasoning)
+        import providers
+        return providers.chat(model, system, user, temperature, max_tokens)
     except Exception as e:  # noqa: BLE001
         # keep the reason: a silent failure here looks identical to "the models
         # all refused", which is how a token limit hid for a whole run

@@ -47,27 +47,10 @@ def _headers() -> dict:
 
 def chat(model: str, system: str, user: str, max_tokens: int = 4000,
          temperature: float = 0.1, tries: int = 1) -> str:
-    """One model call, waiting out rate limits instead of failing."""
-    body = {"model": model, "temperature": temperature,
-            "max_tokens": min(max_tokens, MAX_TOKENS),
-            "reasoning_effort": "low",
-            "messages": [{"role": "system", "content": system},
-                         {"role": "user", "content": user}]}
-    last = ""
-    for attempt in range(tries):
-        r = requests.post(BASE + "/chat/completions", headers=_headers(),
-                          data=json.dumps(body), timeout=180)
-        if r.status_code == 200:
-            return r.json()["choices"][0]["message"]["content"] or ""
-        last = f"{r.status_code}: {r.text[:200]}"
-        if "429" in last or "Rate limit" in last:
-            # Move to the next model instead of waiting: the builder has the
-            # largest quota and is needed for generating the app.
-            print(f"[patch] {model} is rate limited, trying the next model")
-            break
-        print(f"[patch] {model} failed -> {last[:180]}")
-        break
-    raise RuntimeError(last or "no reply")
+    """Ask whichever provider is configured. One retry, then move on."""
+    import providers
+    return providers.chat(model, system, user, temperature,
+                          budget(model, max_tokens), tries)
 
 
 PATCH_SYSTEM = """You fix broken controls in a single-file HTML app.
