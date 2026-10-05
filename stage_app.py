@@ -57,6 +57,7 @@ def main() -> int:
             "free_blurb": free_blurb,
             "paid_blurb": paid_blurb,
             "candidate": str((basic_dir / "app" / "index.html").resolve()),
+            "paid_dir": str(full_dir.resolve()),
         }
         out = make_app.DATA / "candidate.json"
         out.parent.mkdir(parents=True, exist_ok=True)

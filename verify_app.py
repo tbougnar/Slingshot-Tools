@@ -85,6 +85,11 @@ def main() -> int:
                      free_blurb=stage["free_blurb"], paid_blurb=stage["paid_blurb"],
                      published=True, price_override=price)
 
+    # tell the installer job which paid build to package
+    import json as _json
+    (make_app.DATA / "published.json").write_text(_json.dumps(
+        {"slug": stage["slug"], "title": stage["title"]}, indent=1),
+        encoding="utf-8")
     print(f"[verify] published {stage['title']} at ${price:.2f}")
     try:
         import mark_verified
