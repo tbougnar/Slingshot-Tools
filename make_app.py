@@ -597,7 +597,7 @@ def stage_paid(app_dir: Path, slug: str, installer: Path | None = None) -> bool:
 
 
 def publish(concept, app_dir, installer, tier="full", brand="", differences=None,
-             free_blurb="", paid_blurb="", published=False):
+             free_blurb="", paid_blurb="", published=False, price_override=None):
     dest = SITE_APPS / concept["slug"]
     dest.mkdir(parents=True, exist_ok=True)
     shutil.copy2(app_dir / "app" / "index.html", dest / "index.html")
@@ -627,8 +627,9 @@ def publish(concept, app_dir, installer, tier="full", brand="", differences=None
         "url": (f"{SITE_URL.rstrip('/')}/apps/{concept['slug']}/" if tier == "basic"
                 else f"{SITE_URL.rstrip('/')}/apps/{concept['slug']}-basic/"),
         "download": "",
-        "price": 0.0 if tier == "basic"
-                else max(PRICE_FLOOR, min(PRICE_CEILING, PRICE_START)),
+        "price": (0.0 if tier == "basic" else
+                  max(PRICE_FLOOR, min(PRICE_CEILING,
+                      PRICE_START if price_override is None else price_override))),
         "free": tier == "basic",
         "differences": differences or [],
         "published": published,

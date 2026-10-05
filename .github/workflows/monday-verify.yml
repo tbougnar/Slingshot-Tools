@@ -1,0 +1,62 @@
+name: Slingshot - verify and publish (1st, 08:00)
+
+# Deliberately an hour after the generator. The model allowance is per minute
+# for the whole account, so verifying in the same minute as generating leaves
+# the debugger team with nothing and no app can ever pass QA.
+
+on:
+  schedule:
+    - cron: "0 8 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: slingshot-verify
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    env:
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+      CF_ACCOUNT_ID: 72d86a35ce85cf491146e9f10cc2caca
+      CF_BUILDS_NAMESPACE: 3d55488f7d384ce3ad51c0ba34afeade
+      PAY_WORKER: ${{ secrets.PAY_WORKER }}
+      SITE_URL: ${{ vars.SITE_URL }}
+      PRICE_FLOOR: '1.00'
+      PRICE_CEILING: '10.00'
+      PRICE_START: "3.00"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install tools
+        run: |
+          choco install nsis -y --no-progress
+          python -m pip install --quiet pillow requests pyinstaller pywebview playwright
+          python -m playwright install chromium
+          if (Test-Path 'C:\ProgramData\chocolatey\lib\nsis\tools\makensis.exe') { Write-Host 'nsis ok' }
+
+      - name: Refresh the fixbook the AI reads
+        run: python write_fixbook.py
+
+      - name: Verify in a real browser, repair, and publish only if clean
+        run: python verify_app.py
+
+      - name: Confirm nothing paid is public
+        run: python check_exposure.py
+
+      - name: Commit and publish the site
+        run: |
+          git config user.name "slingshot-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add -A
+          git commit -q -m "feat: verified new Slingshot Tool [skip ci]" || echo "nothing to commit"
+          git push || echo "push failed"

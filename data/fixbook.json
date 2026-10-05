@@ -274,5 +274,18 @@
   ],
   "detects": "recurs if a run is cancelled or hits its time limit inside QA",
   "verified": false
+ },
+ {
+  "id": "B023",
+  "date": "2026-10-05",
+  "symptom": "verifying in the same minute as generating starved the debugger team",
+  "cause": "the model allowance is per minute for the whole account, so by the time QA asked for patches the builder had already spent it and all three models were rate limited",
+  "fix": "generate at 07:00 and verify in a separate workflow at 08:00, so verification always starts on a fresh allowance",
+  "files": [
+   ".github/workflows/monday-build.yml",
+   ".github/workflows/monday-verify.yml"
+  ],
+  "detects": "recurs if a single run both generates and verifies",
+  "verified": false
  }
 ]

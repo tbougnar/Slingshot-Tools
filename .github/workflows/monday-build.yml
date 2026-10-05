@@ -1,4 +1,4 @@
-name: Slingshot — build a new app (monthly, 1st 07:00)
+name: Slingshot - generate an app (1st, 07:00)
 
 on:
   schedule:
@@ -9,35 +9,18 @@ permissions:
   contents: write
 
 concurrency:
-  group: slingshot-monday
+  group: slingshot-generate
   cancel-in-progress: false
 
 jobs:
-  build:
+  generate:
     runs-on: windows-latest
-    timeout-minutes: 90
+    timeout-minutes: 45
     env:
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-      PAYPAL_CLIENT_ID: ${{ secrets.PAYPAL_CLIENT_ID }}
-      PAYPAL_SECRET: ${{ secrets.PAYPAL_SECRET }}
-      PAYPAL_SANDBOX_CLIENT_ID: ${{ secrets.PAYPAL_SANDBOX_CLIENT_ID }}
-      PAYPAL_SANDBOX_SECRET: ${{ secrets.PAYPAL_SANDBOX_SECRET }}
-      PAYPAL_ENV: sandbox
-      LICENSE_SECRET: ${{ secrets.LICENSE_SECRET }}
-      CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
-      CF_ACCOUNT_ID: 72d86a35ce85cf491146e9f10cc2caca
-      CF_BUILDS_NAMESPACE: 3d55488f7d384ce3ad51c0ba34afeade
-      PAY_WORKER: ${{ secrets.PAY_WORKER }}
+      SITE_URL: ${{ vars.SITE_URL }}
       PRICE_FLOOR: '1.00'
       PRICE_CEILING: '10.00'
-      # SignPath Foundation (free signing for open source) signs releases here.
-      SIGNPATH_TOKEN: ${{ secrets.SIGNPATH_TOKEN }}
-      SIGNPATH_ORG: ${{ secrets.SIGNPATH_ORG }}
-      SIGNPATH_PROJECT_ID: ${{ secrets.SIGNPATH_PROJECT_ID }}
-      SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
-      SIGNPATH_CERTIFICATE_THUMBPRINT: ${{ secrets.SIGNPATH_CERTIFICATE_THUMBPRINT }}
-      GROQ_CHAT_MODEL: ${{ secrets.GROQ_CHAT_MODEL }}
-      SITE_URL: ${{ vars.SITE_URL }}
       PRICE_START: "3.00"
     steps:
       - uses: actions/checkout@v4
@@ -46,63 +29,26 @@ jobs:
         with:
           python-version: "3.12"
 
-
       - name: Install tools
         run: |
           python -m pip install --quiet pillow requests pyinstaller pywebview playwright
           python -m playwright install chromium
-          choco install nsis -y --no-progress
-          if (Test-Path 'C:\ProgramData\chocolatey\lib\nsis\tools\makensis.exe') { & 'C:\ProgramData\chocolatey\lib\nsis\tools\makensis.exe' -VERSION }
-          Write-Host 'nsis staged'
 
-      - name: Refresh the fixbook the AI reads
-        run: python write_fixbook.py
+      - name: Generate an app and stage it for verification
+        run: python stage_app.py
 
-      - name: Groq connectivity check
-        run: python groq_check.py
-          python -c "import PyInstaller,webview;print('build deps ok')"
-
-      - name: Research the next useful tool and build it
-        run: python make_app.py
-
-      - name: Set this week's price and free app
+      - name: Decide the price
         run: python pricing.py
 
-      - name: Sanity-check the catalog
+      - name: Save the candidate for the verifier
         run: |
-          python - <<'PY'
-          import json, pathlib
-          p = pathlib.Path("site/apps.json")
-          apps = json.loads(p.read_text(encoding="utf-8"))
-          assert isinstance(apps, list) and apps, "catalog empty"
-          top = apps[0]
-          assert top.get("url"), "newest app has no url"
-          assert pathlib.Path("site/apps/%s/index.html" % top["slug"]).exists(), "app file missing"
-          print("catalog ok:", top["title"], "->", top["url"])
-          PY
-
-
-      - name: Mark the fixbook
-        if: success()
-        run: python mark_verified.py
-
-      - name: Commit and publish the site
-        run: |
-          git config user.name "slingshot-bot"
-          git config user.email "bot@users.noreply.github.com"
           git add -A
-          git commit -m "feat: new Slingshot Tool - $(python -c "import json;print(json.load(open('site/apps.json'))[0]['title'])") [skip ci]" || echo "nothing to commit"
-          git push || echo "push failed (will retry next week)"
-# payments run on the slingshot-pay Cloudflare Worker
+          git -c user.name="slingshot-bot" -c user.email="bot@users.noreply.github.com" commit -q -m "candidate: staged for verification"
+          git push || echo "push failed"
 
-  # ------------------------------------------------------------------
-  # When the build fails, an AI debugger reads the log, patches the
-  # pipeline under strict limits, and the workflow is retried.
-  # It can never touch payments, pricing bounds, secrets or publish gating,
-  # and it stops after SELFHEAL_MAX attempts so it cannot thrash.
-  # ------------------------------------------------------------------
+      # If generation fails, the debugger team wakes up and diagnoses it.
   selfheal:
-    needs: build
+    needs: generate
     if: ${{ failure() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -124,22 +70,14 @@ jobs:
         run: python -m pip install --quiet requests
 
       - name: Fetch the failing log
-        if: ${{ github.run_id }}
         run: |
           mkdir -p selfheal
-          # the build step is the one that carries the real error, and
-          # --log-failed can miss it, so keep both the failed output and the
-          # whole build step
           gh run view ${{ github.run_id }} --log-failed > selfheal/failure.txt 2>&1 || true
           gh run view ${{ github.run_id }} --job ${{ github.job }} --log >> selfheal/failure.txt 2>&1 || true
-          echo "attempt 1" > selfheal/attempt
-          Get-Content selfheal/failure.txt | Select-Object -Last 200
 
       - name: Let the model diagnose and patch
         run: python selfheal.py 1
 
-      - name: Rerun the build with the patch
+      - name: Push the patch
         if: success()
-        run: |
-          git push
-          echo "patched and pushed - re-dispatching"
+        run: git push || echo "nothing to push"

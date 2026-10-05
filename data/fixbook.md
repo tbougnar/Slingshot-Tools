@@ -179,6 +179,14 @@ the change that fixed it. Check here before proposing anything.
 - **Check for recurrence:** recurs if a run is cancelled or hits its time limit inside QA
 - **Status:** UNTESTED
 
+## B023 - verifying in the same minute as generating starved the debugger team
+
+- **Cause:** the model allowance is per minute for the whole account, so by the time QA asked for patches the builder had already spent it and all three models were rate limited
+- **Fix:** generate at 07:00 and verify in a separate workflow at 08:00, so verification always starts on a fresh allowance
+- **Files:** .github/workflows/monday-build.yml, .github/workflows/monday-verify.yml
+- **Check for recurrence:** recurs if a single run both generates and verifies
+- **Status:** UNTESTED
+
 ## How to use this
 
 1. If the symptom matches an entry, use that fix. Do not invent a new one.
