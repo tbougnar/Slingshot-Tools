@@ -14,12 +14,12 @@ import app_scanner
 import debug_team
 import patcher
 
-MAX_ROUNDS = 8          # escalation ladder, not a single retry
+MAX_ROUNDS = 4          # escalation ladder, not a single retry
 HANDOFF = 3             # after this many rounds, widen the scope
 
 # Each round now costs a few hundred tokens, so there is no reason to
 # escalate to a full rewrite: try again, differently.
-ESCALATION = ["minimal"] * 8
+ESCALATION = ["minimal"] * 4
 
 
 def _n(value) -> int:
@@ -73,7 +73,7 @@ def repair_until_clean(html_path: Path, max_rounds: int = MAX_ROUNDS,
         # restyled the app and was thrown out by the styling guard.
         repaired = None
         by = "patcher"
-        for attempt in range(3):
+        for attempt in range(2):
             patches = patcher.plan_patches(html, controls, models)
             if not patches:
                 break

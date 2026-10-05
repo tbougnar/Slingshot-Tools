@@ -261,5 +261,18 @@
   ],
   "detects": "recurs if a scan reports a handler present but nothing happened",
   "verified": false
+ },
+ {
+  "id": "B022",
+  "date": "2026-10-05",
+  "symptom": "the run was cancelled after half an hour with only 2 dead controls left",
+  "cause": "patching asked the builder model first, which is rate limited, and then waited up to 80s four times per attempt, so most of the run was spent sleeping",
+  "fix": "ask the debugger models for patches, fall through on a rate limit instead of waiting, and use fewer rounds so a run always finishes",
+  "files": [
+   "patcher.py",
+   "qa_loop.py"
+  ],
+  "detects": "recurs if a run is cancelled or hits its time limit inside QA",
+  "verified": false
  }
 ]

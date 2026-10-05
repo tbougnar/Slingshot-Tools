@@ -171,6 +171,14 @@ the change that fixed it. Check here before proposing anything.
 - **Check for recurrence:** recurs if a scan reports a handler present but nothing happened
 - **Status:** UNTESTED
 
+## B022 - the run was cancelled after half an hour with only 2 dead controls left
+
+- **Cause:** patching asked the builder model first, which is rate limited, and then waited up to 80s four times per attempt, so most of the run was spent sleeping
+- **Fix:** ask the debugger models for patches, fall through on a rate limit instead of waiting, and use fewer rounds so a run always finishes
+- **Files:** patcher.py, qa_loop.py
+- **Check for recurrence:** recurs if a run is cancelled or hits its time limit inside QA
+- **Status:** UNTESTED
+
 ## How to use this
 
 1. If the symptom matches an entry, use that fix. Do not invent a new one.
