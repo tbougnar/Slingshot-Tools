@@ -229,71 +229,26 @@ def groq_json(system, user, **kw):
             raw = groq(system, user, **kw)
         except RuntimeError:
             continue
-        got = _as_json(raw)
-        if got:
-            return got
-    raise RuntimeError("no usable JSON")
-
-
-def _as_json(raw):
-    if not raw:
-        return None
-    try:
-        return json.loads(raw)
-    except json.JSONDecodeError:
-        pass
-    m = re.search(r"\{[\s\S]*\}", raw)
-    if m:
-        try:
-            return json.loads(m.group())
-        except json.JSONDecodeError:
-            pass
-    salvaged = _salvage_json(raw)
-    if salvaged:
-        return salvaged
-    html = _salvage_html(raw)
-    if html:
-        log("recovered html from truncated JSON")
-        return {"html": html}
-    return None
-
-
-def groq_json_any(system, user, models=None, **kw):
-    """Try each model in turn for a small structured reply.
-
-    Pinning one model made the whole build fail when that model would not answer
-    a short JSON question, which is a far easier task than writing an app.
-    """
-    import providers
-    order = []
-    try:
-        order = providers.models("debug")
-    except Exception:  # noqa: BLE001
-        pass
-    for m in MODELS:
-        if m not in order:
-            order.append(m)
-    if models:
-        order = [x for x in models if x] + order
-    last = ""
-    for model in order:
-        try:
-            raw = providers.chat(model, system, user,
-                                 kw.pop("temperature", 0.4) if not kw else 0.4,
-                                 kw.get("max_tokens", 3000))
-        except TypeError:
-            raw = None
-        except Exception as e:  # noqa: BLE001
-            last = str(e)[:160]
-            raw = None
         if not raw:
             continue
-        got = _as_json(raw)
-        if got:
-            log(f"concept chosen by {model}")
-            return got
-    raise RuntimeError(f"no model returned usable JSON ({last})")
-
+        try:
+            return json.loads(raw)
+        except json.JSONDecodeError:
+            pass
+        m = re.search(r"\{[\s\S]*\}", raw)
+        if m:
+            try:
+                return json.loads(m.group())
+            except json.JSONDecodeError:
+                pass
+        salvaged = _salvage_json(raw)
+        if salvaged:
+            return salvaged
+        html = _salvage_html(raw)
+        if html:
+            log("recovered html from truncated JSON")
+            return {"html": html}
+    raise RuntimeError("groq returned no usable JSON")
 
 def load_built():
     if BANNED.exists():
@@ -314,7 +269,7 @@ def pick_concept(money=""):
     if LESSONS.exists():
         lessons = LESSONS.read_text(encoding="utf-8")[:3000]
     log(f"choosing from {len(pool)} unused concepts (built: {len(built)})")
-    d = groq_json_any(
+    d = groq_json(
         "You pick the next tiny web app to build. You return JSON only.",
         f"Already built (never repeat): {json.dumps(sorted(taken))}\n\n"
         f"Lessons learned from real users so far:\n{lessons or '(none yet)'}\n\n"

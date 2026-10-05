@@ -195,6 +195,14 @@ the change that fixed it. Check here before proposing anything.
 - **Check for recurrence:** recurs if a staged app exceeds the size ceiling
 - **Status:** UNTESTED
 
+## B025 - generation failed on the very first call, choosing which app to build
+
+- **Cause:** the concept picker was pinned to a single model and that model would not return usable JSON for a short structured question
+- **Fix:** the concept picker now tries each model in turn and asks for a small reply, and verification waits for a candidate instead of silently doing nothing
+- **Files:** make_app.py, verify_app.py
+- **Check for recurrence:** recurs if a run fails at pick_concept, or verify reports nothing to do
+- **Status:** UNTESTED
+
 ## How to use this
 
 1. If the symptom matches an entry, use that fix. Do not invent a new one.

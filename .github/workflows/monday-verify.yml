@@ -1,4 +1,4 @@
-name: Slingshot - verify and publish (1st, 08:00)
+name: Slingshot - verify and publish (1st, 08:00, after generate)
 
 # Deliberately an hour after the generator. The model allowance is per minute
 # for the whole account, so verifying in the same minute as generating leaves

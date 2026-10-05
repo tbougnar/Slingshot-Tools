@@ -20,8 +20,17 @@ def main() -> int:
 
     stage_file = make_app.DATA / "candidate.json"
     if not stage_file.exists():
-        print("[verify] no candidate was staged, nothing to do")
-        return 0
+        # a dispatch that ran before the generator finished would otherwise
+        # report success having done nothing
+        print("[verify] no candidate staged yet; waited 3 minutes for one")
+        for _ in range(6):
+            import time
+            time.sleep(30)
+            if stage_file.exists():
+                break
+        if not stage_file.exists():
+            print("[verify] still no candidate - the generator must run first")
+            return 1
     stage = json.loads(stage_file.read_text(encoding="utf-8"))
 
     candidate = Path(stage["candidate"])

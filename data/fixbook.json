@@ -302,5 +302,18 @@
   ],
   "detects": "recurs if a staged app exceeds the size ceiling",
   "verified": false
+ },
+ {
+  "id": "B025",
+  "date": "2026-10-05",
+  "symptom": "generation failed on the very first call, choosing which app to build",
+  "cause": "the concept picker was pinned to a single model and that model would not return usable JSON for a short structured question",
+  "fix": "the concept picker now tries each model in turn and asks for a small reply, and verification waits for a candidate instead of silently doing nothing",
+  "files": [
+   "make_app.py",
+   "verify_app.py"
+  ],
+  "detects": "recurs if a run fails at pick_concept, or verify reports nothing to do",
+  "verified": false
  }
 ]
