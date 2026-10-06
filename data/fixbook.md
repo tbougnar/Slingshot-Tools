@@ -267,6 +267,14 @@ the change that fixed it. Check here before proposing anything.
 - **Check for recurrence:** recurs if the inventory reports an empty ids list for an app that clearly has ids
 - **Status:** UNTESTED
 
+## B034 - the self-heal debugger called remember() which did not exist
+
+- **Cause:** remember was defined once, then replaced with a buglog-based version that lost the definition, so the debugger raised NameError at the exact moment it tried to record what it had learned
+- **Fix:** define remember in selfheal.py writing to the fixbook, and check every call site with a whole-code audit that parses all files
+- **Files:** selfheal.py, selftest_audit.py
+- **Check for recurrence:** recurs if the audit reports any undefined name
+- **Status:** UNTESTED
+
 ## How to use this
 
 1. If the symptom matches an entry, use that fix. Do not invent a new one.

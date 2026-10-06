@@ -199,6 +199,33 @@ def safe(plan: dict) -> list[dict]:
     return keep
 
 
+LESSONS = ROOT / "data" / "lessons.txt"
+
+
+def remember(diagnosis: str, fixes: list[dict]) -> None:
+    """Write the lesson down so the builder is told next time.
+
+    This was called twice and never defined, so the debugger crashed with a
+    NameError at the exact moment it tried to record what it had learned.
+    """
+    if not fixes:
+        return
+    try:
+        import buglog
+    except ImportError:
+        return
+    files = [f.get("file", "?") for f in fixes]
+    what = "; ".join(str(f.get("note", ""))[:200] for f in fixes)
+    entry = buglog.record(
+        symptom=diagnosis,
+        cause=(fixes[0].get("note") or diagnosis)[:300],
+        fix=what[:400],
+        files=files,
+        detects=f"recurs if {files[0]} changes this behaviour",
+        verified=False)
+    print(f"[selfheal] fixbook {entry['id']} recorded: {diagnosis[:80]}")
+
+
 def apply(fixes: list[dict], attempt: int, diagnosis: str) -> bool:
     if not fixes:
         print("[selfheal] no changes proposed - stopping here")

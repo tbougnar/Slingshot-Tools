@@ -415,5 +415,18 @@
   ],
   "detects": "recurs if the inventory reports an empty ids list for an app that clearly has ids",
   "verified": false
+ },
+ {
+  "id": "B034",
+  "date": "2026-10-06",
+  "symptom": "the self-heal debugger called remember() which did not exist",
+  "cause": "remember was defined once, then replaced with a buglog-based version that lost the definition, so the debugger raised NameError at the exact moment it tried to record what it had learned",
+  "fix": "define remember in selfheal.py writing to the fixbook, and check every call site with a whole-code audit that parses all files",
+  "files": [
+   "selfheal.py",
+   "selftest_audit.py"
+  ],
+  "detects": "recurs if the audit reports any undefined name",
+  "verified": false
  }
 ]

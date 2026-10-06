@@ -40,6 +40,9 @@ jobs:
       - name: Adversarial self-test
         run: python selftest_deep.py
 
+      - name: Whole-code audit
+        run: python selftest_audit.py
+
       - name: Generate an app and stage it for verification
         run: python stage_app.py
 
