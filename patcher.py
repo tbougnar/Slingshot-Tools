@@ -103,7 +103,9 @@ def focus(html: str) -> str:
 
 def inventory(html: str) -> str:
     """List what the app already has, so a patch calls real things."""
-    ids = sorted(set(re.findall(r'id="([^"]+)"', html)))[:60]
+    # both quote styles: generated markup uses single quotes at least as often
+    ids = sorted(set(re.findall(r'id="([^"]+)"', html))
+                 | set(re.findall(r"id='([^']+)'", html)))[:60]
     fns = sorted(set(re.findall(r"function\s+([A-Za-z_$][\w$]*)", html)))[:40]
     consts = sorted(set(re.findall(r"(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=",
                                   html)))[:40]
@@ -112,7 +114,9 @@ def inventory(html: str) -> str:
     # A patch targets an id, a class or a visible label, and the markup itself
     # is trimmed away to save tokens, so all three ways of finding an element
     # have to be listed or the patch has nothing to point at.
-    classes = sorted({c for m in re.findall(r'class="([^"]*)"', html)
+    classes = sorted({c
+                      for m in (re.findall(r'class="([^"]*)"', html)
+                                + re.findall(r"class='([^']*)'", html))
                       for c in m.split()})[:40]
     controls = []
     for m in re.finditer(r"<(button|select|a)\b[^>]*>([^<]{1,40})<", html):
@@ -123,6 +127,20 @@ def inventory(html: str) -> str:
     return (f"ids: {ids}\nclasses: {classes}\ncontrols: {controls}\n"
             f"functions: {fns}\nvariables: {consts}\n"
             f"storage keys: {keys}")
+
+
+BANNED_CALLS = ("document.write", "outerHTML", "insertAdjacentHTML",
+                "location.href", "location.replace", "eval(",
+                "new Function(", "fetch(", "XMLHttpRequest", "import(")
+
+
+def code_is_safe(code: str) -> bool:
+    """Refuse anything that rewrites the page or reaches the network."""
+    flat = " ".join(str(code).split())
+    for bad in BANNED_CALLS:
+        if bad in flat:
+            return False
+    return True
 
 
 PATCH_MODELS = ["openai/gpt-oss-20b", "qwen/qwen3.8-27b", "openai/gpt-oss-120b"]
@@ -179,6 +197,9 @@ def apply_patches(html: str, patches: list[dict]) -> str | None:
             "if(__n&&!__n.dataset.slFixed){__n.dataset.slFixed='1';"
             "__n.addEventListener('click',function(ev){" + code + "});}}"
             "catch(__e){console.error(__e);}")
+        if not code_is_safe(code):
+            print(f"[patch] refused dangerous code for {sel!r}")
+            continue
         if re.search(r"\bquerySelectorAll\b", code):
             print(f"[patch] refused bulk selector code for {sel!r}")
             continue

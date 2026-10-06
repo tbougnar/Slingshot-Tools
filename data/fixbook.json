@@ -403,5 +403,17 @@
   ],
   "detects": "recurs if a run reports no usable JSON",
   "verified": false
+ },
+ {
+  "id": "B033",
+  "date": "2026-10-06",
+  "symptom": "the element inventory missed single-quoted ids, so patches had nothing to target",
+  "cause": "generated markup uses single quotes at least as often as double, and the inventory only looked for id=\\\"...\\\", so on many real apps it reported no ids at all",
+  "fix": "read ids and classes in both quote styles, and refuse page-rewriting or network code such as document.write, location.href, fetch and eval",
+  "files": [
+   "patcher.py"
+  ],
+  "detects": "recurs if the inventory reports an empty ids list for an app that clearly has ids",
+  "verified": false
  }
 ]

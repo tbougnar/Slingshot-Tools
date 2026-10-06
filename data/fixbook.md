@@ -259,6 +259,14 @@ the change that fixed it. Check here before proposing anything.
 - **Check for recurrence:** recurs if a run reports no usable JSON
 - **Status:** UNTESTED
 
+## B033 - the element inventory missed single-quoted ids, so patches had nothing to target
+
+- **Cause:** generated markup uses single quotes at least as often as double, and the inventory only looked for id=\"...\", so on many real apps it reported no ids at all
+- **Fix:** read ids and classes in both quote styles, and refuse page-rewriting or network code such as document.write, location.href, fetch and eval
+- **Files:** patcher.py
+- **Check for recurrence:** recurs if the inventory reports an empty ids list for an app that clearly has ids
+- **Status:** UNTESTED
+
 ## How to use this
 
 1. If the symptom matches an entry, use that fix. Do not invent a new one.
