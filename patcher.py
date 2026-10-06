@@ -56,6 +56,8 @@ def chat(model: str, system: str, user: str, max_tokens: int = 4000,
 PATCH_SYSTEM = """You fix broken controls in a single-file HTML app.
 
 You get the app's HTML and a list of controls that do nothing when clicked.
+Read the inventory and target elements by id, class or visible label.
+
 Reply with JSON only:
 {"patches": [{"control": "<label from the list>", "selector": "<css selector>",
 "code": "<the javascript to run on click>"}]}
@@ -107,7 +109,19 @@ def inventory(html: str) -> str:
                                   html)))[:40]
     keys = sorted(set(re.findall(r"localStorage\.([A-Za-z]+|['\"][^'\"]+['\"])",
                                   html)))[:20]
-    return (f"ids: {ids}\nfunctions: {fns}\nvariables: {consts}\n"
+    # A patch targets an id, a class or a visible label, and the markup itself
+    # is trimmed away to save tokens, so all three ways of finding an element
+    # have to be listed or the patch has nothing to point at.
+    classes = sorted({c for m in re.findall(r'class="([^"]*)"', html)
+                      for c in m.split()})[:40]
+    controls = []
+    for m in re.finditer(r"<(button|select|a)\b[^>]*>([^<]{1,40})<", html):
+        txt = m.group(2).strip()
+        if txt:
+            controls.append(f"{m.group(1)}:{txt}")
+    controls = sorted(set(controls))[:25]
+    return (f"ids: {ids}\nclasses: {classes}\ncontrols: {controls}\n"
+            f"functions: {fns}\nvariables: {consts}\n"
             f"storage keys: {keys}")
 
 
@@ -117,9 +131,17 @@ PATCH_MODELS = ["openai/gpt-oss-20b", "qwen/qwen3.8-27b", "openai/gpt-oss-120b"]
 def plan_patches(html: str, controls: list[str],
                  models: list[str] | None = None) -> list[dict] | None:
     models = models or PATCH_MODELS
+    known = ""
+    try:
+        import buglog
+        known = buglog.match(" ".join(controls) + " " + html[-3000:])
+    except Exception:  # noqa: BLE001
+        known = ""
+    known_block = (f"\n\nFIXES FOR THIS FAULT (use them if they fit):\n{known}\n"
+                   if known else "")
     user = PATCH_USER.format(controls=json.dumps(controls)[:2000],
                              inventory=inventory(html),
-                             html=focus(html))
+                             html=focus(html)) + known_block
     for m in models:
         try:
             raw = chat(m, PATCH_SYSTEM, user,

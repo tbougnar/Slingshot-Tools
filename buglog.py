@@ -8,6 +8,7 @@ marked verified once a run completes without that failure.
 from __future__ import annotations
 
 import json
+import re
 from datetime import date
 from pathlib import Path
 
@@ -81,6 +82,27 @@ def brief(limit: int = 14) -> str:
         mark = "verified" if e.get("verified") else "unverified"
         out.append(f"[{e['id']} {mark}] {e['symptom']} -> {e['fix']}")
     return "\n".join(out)
+
+
+def match(text: str, limit: int = 3) -> str:
+    """Fixes for entries whose symptom or files appear in this text.
+
+    Costs nothing when nothing matches, which is the common case, so the
+    builder can still read the answer to a fault it recognises without the
+    whole fixbook being sent every time.
+    """
+    if not text:
+        return ""
+    t = text.lower()
+    hits = []
+    for e in load():
+        hay = f"{e.get('symptom','')} {e.get('cause','')}".lower()
+        words = [w for w in re.findall(r"[a-z']{5,}", hay)][:8]
+        if words and sum(1 for w in words if w in t) >= 3:
+            hits.append(f"[{e['id']}] {e['fix'][:160]}")
+        if len(hits) >= limit:
+            break
+    return "\n".join(hits)
 
 
 def open_entries() -> list[str]:
