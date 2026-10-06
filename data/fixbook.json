@@ -315,5 +315,17 @@
   ],
   "detects": "recurs if a run fails at pick_concept, or verify reports nothing to do",
   "verified": false
+ },
+ {
+  "id": "B026",
+  "date": "2026-10-06",
+  "symptom": "the concept picker still fails, now with every model rate limited",
+  "cause": "all three models share one 8000 token per minute allowance for the whole account, and repeated test runs during the session had spent it, so no model could answer even a short question",
+  "fix": "the picker already tries each model and now reports the real reason; the remaining fix is to stop spending the allowance on repeated manual dispatches and let the scheduled runs space themselves out",
+  "files": [
+   "make_app.py"
+  ],
+  "detects": "recurs when several dispatches are fired close together",
+  "verified": false
  }
 ]

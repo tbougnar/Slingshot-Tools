@@ -203,6 +203,14 @@ the change that fixed it. Check here before proposing anything.
 - **Check for recurrence:** recurs if a run fails at pick_concept, or verify reports nothing to do
 - **Status:** UNTESTED
 
+## B026 - the concept picker still fails, now with every model rate limited
+
+- **Cause:** all three models share one 8000 token per minute allowance for the whole account, and repeated test runs during the session had spent it, so no model could answer even a short question
+- **Fix:** the picker already tries each model and now reports the real reason; the remaining fix is to stop spending the allowance on repeated manual dispatches and let the scheduled runs space themselves out
+- **Files:** make_app.py
+- **Check for recurrence:** recurs when several dispatches are fired close together
+- **Status:** UNTESTED
+
 ## How to use this
 
 1. If the symptom matches an entry, use that fix. Do not invent a new one.
