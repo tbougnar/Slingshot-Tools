@@ -392,9 +392,15 @@ Return JSON only, exactly this shape:
 The html value must be a single JSON string with all quotes escaped. No commentary."""
 
 
+_CARD_FILE = ROOT / "PATTERN_CARD.txt"
+PATTERN_CARD = _CARD_FILE.read_text(encoding="utf-8") if _CARD_FILE.exists() else ""
+
+
 def patterns() -> str:
-    """The teaching material: patterns every app must get right."""
-    return PATTERNS.read_text(encoding="utf-8") if PATTERNS.exists() else ""
+    """The short card. The full curriculum is in PATTERNS.md for humans and for
+    the debugger team; sending all of it to the builder every month would cost
+    more tokens than the app itself."""
+    return PATTERN_CARD
 
 
 def build_html(concept, lessons, attempt=1):
@@ -712,8 +718,8 @@ def main():
         log("no GROQ_API_KEY - nothing to do")
         return 0
     lessons = LESSONS.read_text(encoding="utf-8") if LESSONS.exists() else ""
-    lessons = (lessons + "\n\nPAST BUGS - do not repeat these:\n"
-               + buglog.brief(14))[:6000]
+    lessons = (lessons + "\n\nPAST BUGS (id + symptom only):\n"
+               + buglog.digest(14))[:1800]
     money = ""
     earn_file = DATA / "earnings.json"
     if earn_file.exists():

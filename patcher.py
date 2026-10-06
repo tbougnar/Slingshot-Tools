@@ -86,6 +86,19 @@ THE APP:
 Return JSON with one patch per broken control."""
 
 
+def focus(html: str) -> str:
+    """Only the part a patch needs: the script block and the tail of the markup.
+
+    Sending the whole document costs thousands of tokens per patch, which is
+    most of the per-minute allowance for a file this size.
+    """
+    import re as _re
+    head = _re.sub(r"<style.*?</style>", "", html, flags=_re.S | _re.I)
+    script = "".join(_re.findall(r"<script.*?</script>", html, _re.S | _re.I))
+    return ("STYLE REMOVED. MARKUP AND SCRIPT:\n"
+            + head[-4000:] + "\n" + script[-4000:])
+
+
 def inventory(html: str) -> str:
     """List what the app already has, so a patch calls real things."""
     ids = sorted(set(re.findall(r'id="([^"]+)"', html)))[:60]
@@ -106,11 +119,11 @@ def plan_patches(html: str, controls: list[str],
     models = models or PATCH_MODELS
     user = PATCH_USER.format(controls=json.dumps(controls)[:2000],
                              inventory=inventory(html),
-                             html=html[-26000:])
+                             html=focus(html))
     for m in models:
         try:
             raw = chat(m, PATCH_SYSTEM, user,
-                       max_tokens=budget(m, 2500))
+                       max_tokens=budget(m, 1200))
         except Exception as e:  # noqa: BLE001
             print(f"[patch] {m}: {str(e)[:160]}")
             continue

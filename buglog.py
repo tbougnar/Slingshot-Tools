@@ -65,6 +65,12 @@ def verify(ids: list[str]) -> None:
         save(entries)
 
 
+def digest(limit: int = 14) -> str:
+    """Id plus symptom only. Enough to recognise a known fault, cheap to send."""
+    entries = load()[-limit:]
+    return "\n".join(f"{e['id']} {e['symptom'][:60]}" for e in entries)
+
+
 def brief(limit: int = 14) -> str:
     """Compact form for prompts."""
     entries = load()
