@@ -37,6 +37,9 @@ jobs:
       - name: Behaviour self-test
         run: python selftest.py
 
+      - name: Adversarial self-test
+        run: python selftest_deep.py
+
       - name: Generate an app and stage it for verification
         run: python stage_app.py
 

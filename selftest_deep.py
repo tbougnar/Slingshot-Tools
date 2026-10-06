@@ -44,7 +44,7 @@ def integration_roundtrip():
     got = make_app._salvage_html("here you go:\n```html\n" + DOC + "\n```")
     assert got, "salvage failed on a wrapped doc"
     inv = patcher.inventory(got)
-    assert "add" in inv and "go" in inv, inv[:160], f"inventory lost the ids: {inv[:120]}"
+    assert "add" in inv and "go" in inv, "inventory lost the ids: " + inv[:120]
     out = patcher.apply_patches(got, [{"selector": "#add", "code": "go()"}])
     assert out, "valid patch rejected"
     assert ".b{color:red}" in out, "styles changed"
