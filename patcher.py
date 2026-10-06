@@ -50,7 +50,7 @@ def chat(model: str, system: str, user: str, max_tokens: int = 4000,
     """Ask whichever provider is configured. One retry, then move on."""
     import providers
     return providers.chat(model, system, user, temperature,
-                          budget(model, max_tokens), tries)
+                          budget(model, max_tokens), tries, role="debug")
 
 
 PATCH_SYSTEM = """You fix broken controls in a single-file HTML app.

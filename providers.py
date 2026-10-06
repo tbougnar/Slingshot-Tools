@@ -156,6 +156,10 @@ def cerebras_chat(model: str, system: str, user: str, temperature: float,
 
 
 # ------------------------------------------------------------------ registry
+# The debugger team stays on Groq so it keeps that allowance to itself. Set
+# DEBUG_PROVIDER to move it.
+DEBUG_PROVIDER = (os.environ.get("DEBUG_PROVIDER") or "groq").strip().lower()
+
 # Order matters: the first provider with credentials wins.
 PROVIDERS = [
     ("gemini", gemini_available, gemini_models, gemini_chat),
@@ -183,8 +187,33 @@ def provider_name() -> str:
     return active()[0]
 
 
+def for_role(role: str) -> tuple:
+    """Provider for a job, kept strictly separate.
+
+    The builder and the debugger team must not share an allowance. The builder
+    takes the best coder available elsewhere; debugging keeps Groq to itself,
+    because patching is many small calls and the builder's job is one large
+    one. Sharing them is what starved the debugger team and stopped any app
+    from ever passing QA.
+    """
+    if role == "builder":
+        # anything that is not the debugger's provider, best coder first
+        for name, avail, models_fn, send in PROVIDERS:
+            if name == DEBUG_PROVIDER:
+                continue
+            if avail():
+                return name, models_fn, send
+        return active()
+
+    # debugging: prefer the dedicated provider, then anything else
+    for name, avail, models_fn, send in PROVIDERS:
+        if name == DEBUG_PROVIDER and avail():
+            return name, models_fn, send
+    return active()
+
+
 def models(role: str = "debug") -> list[str]:
-    name, list_models, _ = active()
+    name, list_models, _ = for_role(role)
     try:
         found = list_models()
     except Exception as e:  # noqa: BLE001
@@ -196,8 +225,8 @@ def models(role: str = "debug") -> list[str]:
 
 
 def chat(model: str, system: str, user: str, temperature: float = 0.2,
-         max_tokens: int = 4000, tries: int = 2) -> str:
-    _, _, send = active()
+         max_tokens: int = 4000, tries: int = 2, role: str = "debug") -> str:
+    _, _, send = for_role(role)
     last = ""
     for attempt in range(tries):
         try:

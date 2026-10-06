@@ -154,7 +154,8 @@ def groq(system, user, max_tokens=4000, temperature=0.8, tries=3):
     for model in order:
         for attempt in range(2):
             try:
-                out = providers.chat(model, system, user, temperature, max_tokens)
+                out = providers.chat(model, system, user, temperature,
+                                   max_tokens, role="builder")
                 if out:
                     return out
             except Exception as e:  # noqa: BLE001
