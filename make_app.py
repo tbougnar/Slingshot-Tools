@@ -336,6 +336,11 @@ def pick_concept(money=""):
     return concept
 
 
+_CARD_FILE = ROOT / "PATTERN_CARD.txt"
+PATTERN_CARD = (_CARD_FILE.read_text(encoding="utf-8")
+                if _CARD_FILE.exists() else "")
+
+
 def patterns() -> str:
     """The short card. The full curriculum is in PATTERNS.md for humans and for
     the debugger team; sending all of it to the builder every month would cost
