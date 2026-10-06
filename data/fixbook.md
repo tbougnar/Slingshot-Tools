@@ -219,6 +219,22 @@ the change that fixed it. Check here before proposing anything.
 - **Check for recurrence:** recurs if a run dies partway through with a rate limit
 - **Status:** UNTESTED
 
+## B028 - patches had nothing to target once the markup was trimmed
+
+- **Cause:** the inventory listed ids and functions but not classes or visible labels, and those are how a button without an id gets found
+- **Fix:** list ids, classes and control labels in the inventory, and inject the matching fixbook entry only when a known fault is recognised so it costs nothing otherwise
+- **Files:** patcher.py, buglog.py
+- **Check for recurrence:** recurs if a patch proposes a selector that matches nothing in the app
+- **Status:** UNTESTED
+
+## B029 - the self-heal debugger could not read the failing run
+
+- **Cause:** gh is not authenticated inside the job, so the log it needs came back empty and it was diagnosing the wrong thing
+- **Fix:** pass the built-in GITHUB_TOKEN to the self-heal job as GH_TOKEN
+- **Files:** .github/workflows/monday-build.yml
+- **Check for recurrence:** recurs if the self-heal log shows gh authentication errors
+- **Status:** UNTESTED
+
 ## How to use this
 
 1. If the symptom matches an entry, use that fix. Do not invent a new one.

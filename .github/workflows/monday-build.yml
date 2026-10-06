@@ -57,6 +57,9 @@ jobs:
     env:
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
       SELFHEAL_MAX: '3'
+      # gh cannot read the failing run without this, which is the whole input
+      # the debugger has
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
         with:

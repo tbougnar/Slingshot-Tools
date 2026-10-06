@@ -341,5 +341,30 @@
   ],
   "detects": "recurs if a run dies partway through with a rate limit",
   "verified": false
+ },
+ {
+  "id": "B028",
+  "date": "2026-10-06",
+  "symptom": "patches had nothing to target once the markup was trimmed",
+  "cause": "the inventory listed ids and functions but not classes or visible labels, and those are how a button without an id gets found",
+  "fix": "list ids, classes and control labels in the inventory, and inject the matching fixbook entry only when a known fault is recognised so it costs nothing otherwise",
+  "files": [
+   "patcher.py",
+   "buglog.py"
+  ],
+  "detects": "recurs if a patch proposes a selector that matches nothing in the app",
+  "verified": false
+ },
+ {
+  "id": "B029",
+  "date": "2026-10-06",
+  "symptom": "the self-heal debugger could not read the failing run",
+  "cause": "gh is not authenticated inside the job, so the log it needs came back empty and it was diagnosing the wrong thing",
+  "fix": "pass the built-in GITHUB_TOKEN to the self-heal job as GH_TOKEN",
+  "files": [
+   ".github/workflows/monday-build.yml"
+  ],
+  "detects": "recurs if the self-heal log shows gh authentication errors",
+  "verified": false
  }
 ]
