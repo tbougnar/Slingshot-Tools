@@ -7,7 +7,9 @@ The verifier runs an hour later on a fresh allowance.
 from __future__ import annotations
 
 import json
+import os
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -16,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 def main() -> int:
     import make_app
     import buglog
+    import tokenmeter
     import sizeguard
 
     lessons = ""
@@ -27,6 +30,20 @@ def main() -> int:
     earn = make_app.DATA / "earnings.json"
     if earn.exists():
         money = earn.read_text(encoding="utf-8")[:2500]
+
+    # Wait for room rather than firing into a wall. The allowance is shared per
+    # minute across the whole account, so starting too early wastes the run.
+    limit = int(os.environ.get("TOKEN_LIMIT") or 8000)
+    need = 4000                       # concept + a fresh app + one patch
+    waited = 0
+    while tokenmeter.spent() > 0 and waited < 300:
+        if waited == 0:
+            print(f"[stage] allowance already partly used "
+                  f"({tokenmeter.spent()} tokens); waiting for it to reset")
+        time.sleep(30)
+        waited += 30
+    if waited:
+        print(f"[stage] waited {waited}s for the allowance to reset")
 
     concept = make_app.pick_concept(money)
     make_app.log(f"concept: {concept['title']} ({concept['slug']})")
