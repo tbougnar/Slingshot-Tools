@@ -308,10 +308,10 @@ def load_built():
 def pick_concept(money=""):
     """Choose the next app locally.
 
-    This used to ask a model to pick from the unused concepts, which spent
-    tokens on the first call of every run and was the single most common place
-    a run died on a rate limit. The choice needs no intelligence: the pool is
-    already here, so it is scored on earnings and recency instead.
+    This used to ask a model to pick from the unused concepts, which spent the
+    first call of every run on something the code already knew. That call was
+    where runs died on a rate limit, so it is gone: the pool is in CATEGORIES
+    and the choice needs no intelligence.
     """
     built = load_built()
     taken = {b["slug"] for b in built}
@@ -320,25 +320,77 @@ def pick_concept(money=""):
         pool = list(CATEGORIES)
 
     def parts(c):
-        # each entry is (slug, description) and some carry extra fields
         slug, desc = c[0], c[1]
-        return {"title": desc[:1].upper() + desc[1:].split(" with ")[0].split(" for ")[0],
-                "slug": slug,
+        title = desc.split(" with ")[0].split(" for ")[0].split(" that ")[0]
+        return {"slug": slug,
+                "title": title[:1].upper() + title[1:],
                 "tag": slug.split("-")[0],
                 "blurb": desc,
                 "tags": [w.strip(",.") for w in desc.split()[:4]]}
 
-    concept = parts(max(pool, key=lambda c: (len(c[1]), c[0])))
+    chosen = max(pool, key=lambda c: (len(c[1]), c[0]))
+    concept = parts(chosen)
     log(f"choosing from {len(pool)} unused concepts (built: {len(built)})")
-    log(f"concept: {concept['title']} ({concept['slug']}) [chosen locally, "
-        f"no model call]")
+    log(f"concept: {concept['title']} ({concept['slug']}) "
+        f"[chosen locally, no model call]")
     return concept
+
 
 def patterns() -> str:
     """The short card. The full curriculum is in PATTERNS.md for humans and for
     the debugger team; sending all of it to the builder every month would cost
     more tokens than the app itself."""
     return PATTERN_CARD
+
+
+APP_SPEC = """Build a COMPLETE single-file HTML app that ships in TWO editions from ONE file.
+This is the entire deliverable.
+
+TIER SYSTEM (critical - the file must contain this)
+Near the very top of the <script>, define:
+const TIER = "full";                 // "basic" or "full"
+const LIMITS = { maxItems: 0, export: true, themes: "all", bulk: true, history: true };
+Then read every limit from LIMITS instead of hardcoding numbers. When
+TIER === "basic": use the values in BASIC_LIMITS below; when TIER === "full":
+treat all limits as unlimited. The same code must work correctly in both editions.
+
+BASIC_LIMITS must be chosen by you for this app and must be genuinely limiting
+but still useful - e.g. { maxItems: 3, export: false, themes: "one", bulk: false, history: false }.
+Never make the basic edition useless; it must genuinely solve the problem for a
+few items so the user hits the wall and wants the full edition.
+
+Also return these, and they must NOT sound the same:
+- "free_blurb": what the FREE basic edition is honestly good for, in one short
+  sentence. Friendly, useful on its own, no apologising.
+- "paid_blurb": why someone should pay, in one punchy sentence. Lead with the
+  outcome they get (unlimited, no walls, exports, history) - never vague.
+- "differences": 4-6 short concrete sentences a customer would understand, each
+  starting with "Full edition:", naming exactly what the paid version adds.
+
+HARD RULES
+- ONE file: valid HTML5 with inline CSS and inline JavaScript. No build step, no
+  external CDN, no external fonts, no network calls, no frameworks.
+- Works offline forever after first open. Data in localStorage.
+- Theme follows Slingshot Tools: dark mode is dark red (#14100F background,
+  #C1272D red, #F6EFEC text) with a working light mode toggle, remembered.
+- Modern and genuinely good looking: rounded cards, soft shadows, clear hierarchy,
+  generous spacing, header with the app name, footer. Must look like a paid app.
+- Fully responsive on phone and desktop. Accessible: real labels, keyboard operable.
+- Useful for real: sensible defaults, validation, helpful empty states. No
+  placeholder buttons, no "coming soon".
+- Never nag or guilt the user about upgrading. One calm line is enough.
+- The full edition has no limits and shows no upgrade prompts at all.
+- Add "export my data" and "import my data" (JSON) controls in the full edition.
+- No analytics, no tracking, no network.
+
+CONTENT RULES
+- Invent a short, friendly brand name for the app.
+- Include one empty state explaining what to do first.
+
+OUTPUT
+Return JSON only, exactly this shape:
+{"filename":"index.html","brand":"App Name","html":"<the entire file>","differences":["Full edition: ...","..."]}
+The html value must be a single JSON string with all quotes escaped. No commentary."""
 
 
 def build_html(concept, lessons, attempt=1):

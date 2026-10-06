@@ -235,6 +235,14 @@ the change that fixed it. Check here before proposing anything.
 - **Check for recurrence:** recurs if the self-heal log shows gh authentication errors
 - **Status:** UNTESTED
 
+## B030 - an edit to pick_concept deleted the whole APP_SPEC and every run died with NameError
+
+- **Cause:** the function was replaced by slicing up to the next top-level def, and the module level APP_SPEC constant sat inside that slice
+- **Fix:** restore APP_SPEC from the previous commit and verify every module level symbol is present after any structural edit
+- **Files:** make_app.py
+- **Check for recurrence:** recurs if a run fails with NameError on a module level name
+- **Status:** UNTESTED
+
 ## How to use this
 
 1. If the symptom matches an entry, use that fix. Do not invent a new one.
