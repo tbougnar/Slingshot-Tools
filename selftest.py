@@ -4,10 +4,13 @@ This is the check that catches what an import test cannot: code that compiles,
 is defined, and still produces nothing.
 """
 import sys
+from pathlib import Path as _P
+HERE = _P(__file__).resolve().parent
 from pathlib import Path
 
-sys.path.insert(0, r"C:\Users\Taha\AI\slingshot_tools")
-R = Path(r"C:\Users\Taha\AI\slingshot_tools")
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+R = HERE
 
 results = []
 

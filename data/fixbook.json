@@ -428,5 +428,19 @@
   ],
   "detects": "recurs if the audit reports any undefined name",
   "verified": false
+ },
+ {
+  "id": "B035",
+  "date": "2026-10-06",
+  "symptom": "the new self-tests hardcoded a Windows path and could not run on the Linux runner",
+  "cause": "they were written on this machine with an absolute path, so every build died before it started even though the checks themselves were sound",
+  "fix": "resolve every path from the script's own location and install pyyaml on the runner",
+  "files": [
+   "selftest.py",
+   "selftest_deep.py",
+   "selftest_audit.py"
+  ],
+  "detects": "recurs if a self-test reports a missing file that clearly exists",
+  "verified": false
  }
 ]

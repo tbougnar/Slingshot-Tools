@@ -5,10 +5,13 @@ in the order a run uses them, and sweeps ranges rather than single values.
 """
 import subprocess
 import sys
+from pathlib import Path as _P
+HERE = _P(__file__).resolve().parent
 import tempfile
 from pathlib import Path
 
-sys.path.insert(0, r"C:\Users\Taha\AI\slingshot_tools")
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
 
 fails = []
 
@@ -116,7 +119,7 @@ def sweep_guard_rejects():
 
 def scanner_on_known_app():
     """A real generated app must scan without crashing the process."""
-    p = R = Path(r"C:\Users\Taha\AI\slingshot_tools")
+    p = R = HERE
     f = p / "PATTERNS.md"
     assert f.exists(), "patterns file missing"
     n = len(f.read_text(encoding="utf-8"))
@@ -135,7 +138,7 @@ def fixbook_integrity():
 
 def selftest_still_passes():
     r = subprocess.run([sys.executable, "selftest.py"],
-                       cwd=r"C:\Users\Taha\AI\slingshot_tools",
+                       cwd=str(HERE),
                        capture_output=True, text=True)
     assert r.returncode == 0, f"selftest failing: {r.stdout[-300:]}"
 

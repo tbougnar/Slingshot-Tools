@@ -275,6 +275,14 @@ the change that fixed it. Check here before proposing anything.
 - **Check for recurrence:** recurs if the audit reports any undefined name
 - **Status:** UNTESTED
 
+## B035 - the new self-tests hardcoded a Windows path and could not run on the Linux runner
+
+- **Cause:** they were written on this machine with an absolute path, so every build died before it started even though the checks themselves were sound
+- **Fix:** resolve every path from the script's own location and install pyyaml on the runner
+- **Files:** selftest.py, selftest_deep.py, selftest_audit.py
+- **Check for recurrence:** recurs if a self-test reports a missing file that clearly exists
+- **Status:** UNTESTED
+
 ## How to use this
 
 1. If the symptom matches an entry, use that fix. Do not invent a new one.

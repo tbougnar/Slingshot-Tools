@@ -8,9 +8,11 @@ steps call scripts that do not exist.
 import ast
 import builtins
 import sys
+from pathlib import Path as _P
+HERE = _P(__file__).resolve().parent
 from pathlib import Path
 
-R = Path(r"C:\Users\Taha\AI\slingshot_tools")
+R = HERE
 problems = []
 
 py_files = sorted(p for p in R.rglob("*.py")
