@@ -378,5 +378,17 @@
   ],
   "detects": "recurs if a run fails with NameError on a module level name",
   "verified": false
+ },
+ {
+  "id": "B031",
+  "date": "2026-10-06",
+  "symptom": "every run died with no usable JSON even though the model returned a working app",
+  "cause": "_salvage_html only understood a JSON string value, so a reply wrapped in prose, markdown fences or a truncated document was discarded entirely",
+  "fix": "salvage now strips fences, ignores prose, cuts from the first document tag to the last closing tag, and closes a truncated document",
+  "files": [
+   "make_app.py"
+  ],
+  "detects": "recurs if a run reports no usable JSON",
+  "verified": false
  }
 ]

@@ -243,6 +243,14 @@ the change that fixed it. Check here before proposing anything.
 - **Check for recurrence:** recurs if a run fails with NameError on a module level name
 - **Status:** UNTESTED
 
+## B031 - every run died with no usable JSON even though the model returned a working app
+
+- **Cause:** _salvage_html only understood a JSON string value, so a reply wrapped in prose, markdown fences or a truncated document was discarded entirely
+- **Fix:** salvage now strips fences, ignores prose, cuts from the first document tag to the last closing tag, and closes a truncated document
+- **Files:** make_app.py
+- **Check for recurrence:** recurs if a run reports no usable JSON
+- **Status:** UNTESTED
+
 ## How to use this
 
 1. If the symptom matches an entry, use that fix. Do not invent a new one.

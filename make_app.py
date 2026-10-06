@@ -164,31 +164,49 @@ def groq(system, user, max_tokens=4000, temperature=0.8, tries=3):
     raise RuntimeError(f"every model failed: {last}")
 
 def _salvage_html(raw):
-    """The html value is what we actually need. Models truncate huge answers
-    mid-string, so grab everything after "html":" up to the end and clean it."""
+    """Pull the document out of whatever the model actually returned.
+
+    Models wrap a long reply in prose, in markdown fences, in a JSON string, or
+    in some combination of those, and often truncate it. Every one of those
+    shapes used to return None, which is why a perfectly good app was thrown
+    away with "no usable JSON".
+    """
     if not raw:
         return None
-    m = re.search(r'"html"\s*:\s*"(.*)$', raw, re.S)
-    if not m:
-        return None
-    body = m.group(1)
-    # a complete value ends with a closing quote; a truncated one does not
-    if body.endswith('"') and not body.endswith('\\"'):
-        body = body[:-1]
-    try:
-        return json.loads('"' + body + '"')
-    except json.JSONDecodeError:
-        pass
-    # cut back to the last complete escape so json can parse what is left
-    for cut in range(len(body), 0, -1):
-        if body[cut - 1] != "\\":
-            continue
-        try:
-            return json.loads('"' + body[: cut - 1] + '"')
-        except json.JSONDecodeError:
-            continue
-    return body.replace('\\"', '"')
+    text = raw
 
+    # 1. a JSON string value, which may be cut off mid-document
+    m = re.search(r'"html"\s*:\s*"(.*)$', text, re.S)
+    if m:
+        text = m.group(1)
+        text = text.replace('\\"', '"').replace("\\n", "\n")
+        if text.endswith('"'):
+            text = text[:-1]
+
+    # 2. drop markdown fences if they survived
+    text = re.sub(r"```(?:html|HTML)?", "", text)
+    text = text.replace("```", "")
+
+    # 3. take from the first document tag to the last closing one
+    low = text.lower()
+    starts = [low.find("<!doctype html"), low.find("<html")]
+    starts = [i for i in starts if i != -1]
+    if not starts:
+        return None
+    i = min(starts)
+    end_tag = low.rfind("</html>")
+    body = text[i:end_tag + 7] if end_tag != -1 and end_tag > i else text[i:]
+
+    body = body.strip()
+    if len(body) < 500:
+        return None
+    # a truncated document is still usable once closed
+    if "</html>" not in body.lower():
+        if "</body>" in body.lower():
+            body = body[:body.lower().rindex("</body>")] + "</body></html>"
+        else:
+            body += "</html>"
+    return body
 
 def _salvage_json(raw):
     """Trim to the last balanced closing brace and retry."""
@@ -404,6 +422,46 @@ OUTPUT
 Return JSON only, exactly this shape:
 {"filename":"index.html","brand":"App Name","html":"<the entire file>","differences":["Full edition: ...","..."]}
 The html value must be a single JSON string with all quotes escaped. No commentary."""
+
+
+def build_html_raw(concept, lessons, attempt=1):
+    """Ask for the file itself, not JSON containing a file.
+
+    Wrapping a 30 KB document in JSON is what kept failing: the reply arrives
+    as prose, or fenced, or truncated mid-object. Asking for the HTML directly
+    removes the parse step entirely, which is the whole failure mode.
+    """
+    system = (
+        "You write one complete, self-contained HTML file. You reply with the "
+        "HTML and nothing else. No commentary before it, no explanation after "
+        "it, no markdown fences."
+    )
+    user = (
+        "Build this app.\n\n"
+        + APP_SPEC
+        + f"\n\nTHE APP: {json.dumps(concept, indent=2)}\n"
+        + "\n\nPATTERNS YOU MUST FOLLOW:\n" + patterns()
+        + f"\n\nKNOWN BUGS TO AVOID:\n{lessons or '(none yet)'}"
+        + "\n\nReply with the HTML file only, starting with <!DOCTYPE html> "
+          "and ending with </html>."
+    )
+    if attempt > 1:
+        user += ("\n\nKeep it COMPACT and make sure it is complete: short CSS, "
+                 "no comments, and it must end with </html>.")
+    last = ""
+    for model in [CHAT_MODEL] + [m for m in MODELS if m != CHAT_MODEL]:
+        try:
+            raw = groq(system, user, max_tokens=16000, temperature=0.35)
+        except Exception as e:  # noqa: BLE001
+            last = str(e)[:160]
+            continue
+        doc = _salvage_html(raw)
+        if doc:
+            if raw.strip().startswith("<!DOCTYPE") or raw.strip().startswith("<html"):
+                return doc, "raw", []
+            return doc, "trimmed", []
+        last = "reply contained no html"
+    raise RuntimeError(f"no usable html ({last})")
 
 
 def build_html(concept, lessons, attempt=1):
