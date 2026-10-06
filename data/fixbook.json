@@ -327,5 +327,19 @@
   ],
   "detects": "recurs when several dispatches are fired close together",
   "verified": false
+ },
+ {
+  "id": "B027",
+  "date": "2026-10-06",
+  "symptom": "runs die because the model allowance is spent before repair can finish",
+  "cause": "nothing tracked how much of the per-minute allowance had been used, so retries kept firing into a wall",
+  "fix": "record token usage from every provider call and check what is left before spending more; regenerate the app when repair fails and allowance remains, rather than patching forever",
+  "files": [
+   "tokenmeter.py",
+   "providers.py",
+   "verify_app.py"
+  ],
+  "detects": "recurs if a run dies partway through with a rate limit",
+  "verified": false
  }
 ]

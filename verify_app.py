@@ -46,13 +46,22 @@ def main() -> int:
     if app_scanner.verdict(first):
         print("[verify] first scan clean, no repair needed")
     else:
-        print(f"[verify] {len(first.get('dead', []))} dead control(s), "
-              f"handing to the debugger team")
+        print(f"[verify] {len(first.get('dead', []))} dead control(s), handing to the debugger team")
         clean, history = qa_loop.repair_until_clean(candidate, log=print)
         if not clean:
-            print("[verify] still broken after every round; publishing nothing")
-            print(json.dumps(history, indent=1)[-1500:])
-            return 1
+            # A fresh app costs about the same as several repair rounds and is
+            # far more likely to be correct, so regenerate rather than keep
+            # patching something that resists fixing.
+            import tokenmeter
+            left = tokenmeter.remaining(8000)
+            print(f"[verify] repair failed; {left} tokens left this minute")
+            if left < 4000:
+                print("[verify] not enough allowance left to regenerate safely; "
+                      "publishing nothing and leaving the fix for the next run")
+                print(json.dumps(history, indent=1)[-1200:])
+                return 1
+            print("[verify] regenerating instead of patching further")
+            return 2
 
     html = candidate.read_text(encoding="utf-8", errors="replace")
     concept = {"slug": stage["slug"], "brand": stage["brand"],

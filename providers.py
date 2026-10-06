@@ -38,6 +38,27 @@ def _post(url: str, payload: dict, headers: dict, timeout: int = TIMEOUT) -> dic
         raise RuntimeError(f"non-JSON reply: {raw[:200]}") from None
 
 
+def _account(d: dict, model: str, provider: str) -> None:
+    """Providers report usage; record it so the run knows its budget."""
+    try:
+        import tokenmeter
+    except ImportError:
+        return
+    u = d.get("usage") or {}
+    tokenmeter.add(int(u.get("prompt_tokens") or 0),
+                   int(u.get("completion_tokens") or 0), model, provider)
+
+
+def _account_gemini(d: dict, model: str) -> None:
+    try:
+        import tokenmeter
+    except ImportError:
+        return
+    m = d.get("usageMetadata") or {}
+    tokenmeter.add(int(m.get("promptTokenCount") or 0),
+                   int(m.get("candidatesTokenCount") or 0), model, "gemini")
+
+
 def _get(url: str, headers: dict, timeout: int = 60) -> dict:
     req = urllib.request.Request(url, method="GET")
     req.add_header("User-Agent", BROWSER_UA)
@@ -73,6 +94,7 @@ def groq_chat(model: str, system: str, user: str, temperature: float,
                             {"role": "user", "content": user}]}
     d = _post("https://api.groq.com/openai/v1/chat/completions", payload,
               {"Authorization": f"Bearer {key}"})
+    _account(d, model, "groq")
     return d["choices"][0]["message"]["content"] or ""
 
 
@@ -104,6 +126,7 @@ def gemini_chat(model: str, system: str, user: str, temperature: float,
     }
     d = _post(url, payload, {})
     parts = (d.get("candidates") or [{}])[0].get("content", {}).get("parts", [])
+    _account_gemini(d, model)
     return "".join(p.get("text", "") for p in parts)
 
 
@@ -129,6 +152,7 @@ def openrouter_chat(model: str, system: str, user: str, temperature: float,
               {"Authorization": f"Bearer {key}",
                "HTTP-Referer": "https://tbougnar.github.io/Slingshot-Tools/",
                "X-Title": "Slingshot Tools"})
+    _account(d, model, "openrouter")
     return d["choices"][0]["message"]["content"] or ""
 
 
@@ -152,6 +176,7 @@ def cerebras_chat(model: str, system: str, user: str, temperature: float,
                             {"role": "user", "content": user}]}
     d = _post("https://api.cerebras.ai/v1/chat/completions", payload,
               {"Authorization": f"Bearer {key}"})
+    _account(d, model, "cerebras")
     return d["choices"][0]["message"]["content"] or ""
 
 

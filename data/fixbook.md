@@ -211,6 +211,14 @@ the change that fixed it. Check here before proposing anything.
 - **Check for recurrence:** recurs when several dispatches are fired close together
 - **Status:** UNTESTED
 
+## B027 - runs die because the model allowance is spent before repair can finish
+
+- **Cause:** nothing tracked how much of the per-minute allowance had been used, so retries kept firing into a wall
+- **Fix:** record token usage from every provider call and check what is left before spending more; regenerate the app when repair fails and allowance remains, rather than patching forever
+- **Files:** tokenmeter.py, providers.py, verify_app.py
+- **Check for recurrence:** recurs if a run dies partway through with a rate limit
+- **Status:** UNTESTED
+
 ## How to use this
 
 1. If the symptom matches an entry, use that fix. Do not invent a new one.
