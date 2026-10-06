@@ -482,19 +482,32 @@ def build_html_raw(concept, lessons, attempt=1):
         user += ("\n\nKeep it COMPACT and make sure it is complete: short CSS, "
                  "no comments, and it must end with </html>.")
     last = ""
-    for model in [CHAT_MODEL] + [m for m in MODELS if m != CHAT_MODEL]:
-        try:
-            raw = groq(system, user, max_tokens=16000, temperature=0.35)
-        except Exception as e:  # noqa: BLE001
-            last = str(e)[:160]
+    # The free allowance is per minute and it does refill, so waiting is the
+    # difference between a failed run and a slow one. The local meter is empty
+    # at the start of a run, so the wait has to be driven by the error itself.
+    for attempt in range(8):
+        for model in [CHAT_MODEL] + [m for m in MODELS if m != CHAT_MODEL]:
+            try:
+                raw = groq(system, user, max_tokens=16000, temperature=0.35)
+            except Exception as e:  # noqa: BLE001
+                last = str(e)[:200]
+                raw = None
+            if not raw:
+                continue
+            doc = _salvage_html(raw)
+            if doc:
+                if raw.strip().startswith("<!DOCTYPE") or raw.strip().startswith("<html"):
+                    return doc, "raw", []
+                return doc, "trimmed", []
+            last = "the reply contained no html"
+        if "429" in last or "Rate limit" in last or "still processing" in last:
+            wait = min(90, 30 + attempt * 15)
+            log(f"model allowance is full ({last[:60]}); waiting {wait}s "
+                f"for it to refill, attempt {attempt + 1}/8")
+            time.sleep(wait)
             continue
-        doc = _salvage_html(raw)
-        if doc:
-            if raw.strip().startswith("<!DOCTYPE") or raw.strip().startswith("<html"):
-                return doc, "raw", []
-            return doc, "trimmed", []
-        last = "reply contained no html"
-    raise RuntimeError(f"no usable html ({last})")
+        break
+    raise RuntimeError(f"no usable html after waiting - {last}")
 
 
 def build_html(concept, lessons, attempt=1):

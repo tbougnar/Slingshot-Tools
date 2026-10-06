@@ -283,6 +283,14 @@ the change that fixed it. Check here before proposing anything.
 - **Check for recurrence:** recurs if a self-test reports a missing file that clearly exists
 - **Status:** UNTESTED
 
+## B036 - a run failed on a rate limit even though the allowance refills within a minute
+
+- **Cause:** the wait guard checked a local token meter that is empty at the start of a fresh runner, so it never waited, and the build gave up on the first refusal
+- **Fix:** retry the model call up to eight times with a growing wait whenever the reply is a rate limit, since the allowance does refill
+- **Files:** make_app.py
+- **Check for recurrence:** recurs if a run reports no usable html after waiting
+- **Status:** UNTESTED
+
 ## How to use this
 
 1. If the symptom matches an entry, use that fix. Do not invent a new one.

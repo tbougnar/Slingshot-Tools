@@ -442,5 +442,17 @@
   ],
   "detects": "recurs if a self-test reports a missing file that clearly exists",
   "verified": false
+ },
+ {
+  "id": "B036",
+  "date": "2026-10-06",
+  "symptom": "a run failed on a rate limit even though the allowance refills within a minute",
+  "cause": "the wait guard checked a local token meter that is empty at the start of a fresh runner, so it never waited, and the build gave up on the first refusal",
+  "fix": "retry the model call up to eight times with a growing wait whenever the reply is a rate limit, since the allowance does refill",
+  "files": [
+   "make_app.py"
+  ],
+  "detects": "recurs if a run reports no usable html after waiting",
+  "verified": false
  }
 ]
