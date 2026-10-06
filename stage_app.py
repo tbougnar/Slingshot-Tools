@@ -49,8 +49,12 @@ def main() -> int:
     make_app.log(f"concept: {concept['title']} ({concept['slug']})")
 
     for attempt in range(1, 4):
-        html, brand, diffs, free_blurb, paid_blurb = make_app.build_html(
-            concept, lessons, attempt=attempt)
+        # Ask for the file itself. The JSON path asks a model to wrap a large
+        # document in an object, and that parse is the single thing every run
+        # has been dying on, even though a working raw path already existed.
+        html, mode, _ = make_app.build_html_raw(concept, lessons, attempt=attempt)
+        brand = ""
+        diffs, free_blurb, paid_blurb = [], "", ""
         issues = make_app.html_looks_fine(html)
         for note in getattr(make_app.html_looks_fine, "notes", []):
             make_app.log(f"note: {note}")

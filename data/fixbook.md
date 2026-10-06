@@ -251,6 +251,14 @@ the change that fixed it. Check here before proposing anything.
 - **Check for recurrence:** recurs if a run reports no usable JSON
 - **Status:** UNTESTED
 
+## B032 - a working raw app builder existed but every run used the JSON one
+
+- **Cause:** stage_app called build_html, which asks the model to wrap a large document in a JSON object; that parse is what every run died on, and the raw path that asks for the file directly was never called by anything
+- **Fix:** stage_app uses build_html_raw, so there is no JSON to parse, and groq_json now names the real cause and captures the raw reply
+- **Files:** stage_app.py, make_app.py
+- **Check for recurrence:** recurs if a run reports no usable JSON
+- **Status:** UNTESTED
+
 ## How to use this
 
 1. If the symptom matches an entry, use that fix. Do not invent a new one.

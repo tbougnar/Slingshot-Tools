@@ -242,16 +242,32 @@ def _salvage_json(raw):
 
 
 def groq_json(system, user, **kw):
-    """JSON-mode with tolerance for truncated model output."""
-    for use_json in (True, False):
+    """Parse a JSON reply, saying what actually went wrong when it cannot.
+
+    This used to loop twice over a flag it never used, so it repeated the same
+    call and swallowed the exception. Every failure therefore reported the same
+    unhelpful message no matter the real cause.
+    """
+    last = ""
+    for attempt in range(2):
         try:
             raw = groq(system, user, **kw)
-        except RuntimeError:
+        except Exception as e:  # noqa: BLE001
+            last = f"{type(e).__name__}: {str(e)[:300]}"
+            log(f"model call failed ({last})")
+            time.sleep(2)
+            continue
+        if raw is None:
+            last = "the model returned nothing at all"
+            log(last)
             continue
         got = _as_json(raw)
         if got:
             return got
-    raise RuntimeError("no usable JSON")
+        last = "the reply was not parseable JSON"
+        capture(raw)
+        log(f"{last}; first 200 chars: {raw[:200]!r}")
+    raise RuntimeError(f"no usable JSON - {last}")
 
 
 def _as_json(raw):

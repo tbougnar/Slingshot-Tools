@@ -390,5 +390,18 @@
   ],
   "detects": "recurs if a run reports no usable JSON",
   "verified": false
+ },
+ {
+  "id": "B032",
+  "date": "2026-10-06",
+  "symptom": "a working raw app builder existed but every run used the JSON one",
+  "cause": "stage_app called build_html, which asks the model to wrap a large document in a JSON object; that parse is what every run died on, and the raw path that asks for the file directly was never called by anything",
+  "fix": "stage_app uses build_html_raw, so there is no JSON to parse, and groq_json now names the real cause and captures the raw reply",
+  "files": [
+   "stage_app.py",
+   "make_app.py"
+  ],
+  "detects": "recurs if a run reports no usable JSON",
+  "verified": false
  }
 ]
