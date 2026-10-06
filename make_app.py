@@ -374,6 +374,23 @@ def patterns() -> str:
     return PATTERN_CARD
 
 
+# Every raw model reply is written here. Guessing what a model returned has
+# wasted more runs than any other mistake in this project, so it is always
+# captured on disk.
+LAST_REPLY = ROOT / "data" / "last_reply.txt"
+
+
+def capture(text) -> str:
+    """Write the reply verbatim so a failure can be read instead of guessed."""
+    try:
+        LAST_REPLY.parent.mkdir(parents=True, exist_ok=True)
+        LAST_REPLY.write_text(text if isinstance(text, str) else repr(text),
+                              encoding="utf-8")
+    except Exception:  # noqa: BLE001
+        pass
+    return text if isinstance(text, str) else repr(text)
+
+
 APP_SPEC = """Build a COMPLETE single-file HTML app that ships in TWO editions from ONE file.
 This is the entire deliverable.
 
