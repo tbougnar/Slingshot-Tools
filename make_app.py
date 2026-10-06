@@ -239,10 +239,18 @@ def groq_json(system, user, **kw):
 def _as_json(raw):
     if not raw:
         return None
-    try:
-        return json.loads(raw)
-    except json.JSONDecodeError:
-        pass
+    text = raw.strip()
+    # a reasoning model may wrap its answer in prose or a fenced block
+    if text.startswith("```"):
+        text = text.split("```")[1] if text.count("```") > 1 else text
+        text = text[4:] if text.lower().startswith("json") else text
+    for candidate in (text, text[text.find("{"):] if "{" in text else ""):
+        if not candidate:
+            continue
+        try:
+            return json.loads(candidate)
+        except json.JSONDecodeError:
+            pass
     m = re.search(r"\{[\s\S]*\}", raw)
     if m:
         try:
@@ -409,7 +417,7 @@ def build_html(concept, lessons, attempt=1):
            "It MUST be complete and end with </html>." if attempt > 1 else "")
         + f"\nLESSONS FROM REAL USERS (apply them):\n{lessons or '(none yet)'}"
         + f"\n\nPATTERNS YOU MUST FOLLOW:\n{patterns()}",
-        max_tokens=9000, temperature=0.35,
+        max_tokens=14000, temperature=0.35,
     )
     html = d.get("html") or ""
     if "<!DOCTYPE" not in html and "<html" not in html:
