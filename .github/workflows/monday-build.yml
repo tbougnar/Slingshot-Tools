@@ -34,6 +34,9 @@ jobs:
           python -m pip install --quiet pillow requests pyinstaller pywebview playwright
           python -m playwright install chromium
 
+      - name: Behaviour self-test
+        run: python selftest.py
+
       - name: Generate an app and stage it for verification
         run: python stage_app.py
 
