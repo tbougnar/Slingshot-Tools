@@ -1,1 +1,71 @@
-<html><body><script>localStorage.a=1</script></body></html>
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<title>VaultLite – Offline Password Manager</title>
+<style>
+:root{--bg:#F6EFEC;--fg:#14100F;--accent:#C1272D;--card:#fff;--shadow:rgba(0,0,0,0.1)}
+[data-theme="dark"]{--bg:#14100F;--fg:#F6EFEC;--accent:#C1272D;--card:#1e1a1a;--shadow:rgba(0,0,0,0.5)}
+body{margin:0;font-family:sans-serif;background:var(--bg);color:var(--fg);display:flex;flex-direction:column;min-height:100vh;}
+header,footer{padding:1rem;background:var(--accent);color:var(--bg);text-align:center;}
+main{flex:1;padding:1rem;max-width:800px;margin:auto;}
+.card{background:var(--card);border-radius:8px;padding:1rem;margin:1rem 0;box-shadow:0 2px 4px var(--shadow);}
+button{background:var(--accent);color:var(--bg);border:none;padding:.5rem 1rem;border-radius:4px;cursor:pointer;}
+button:disabled{opacity:.5;cursor:not-allowed;}
+input,select{padding:.5rem;border:1px solid #ccc;border-radius:4px;width:100%;margin-bottom:.5rem;}
+.toggle{position:fixed;top:1rem;right:1rem;cursor:pointer;}
+.empty{text-align:center;color:#777;}
+</style>
+</head>
+<body>
+<header><h1>VaultLite</h1></header>
+<div class="toggle" id="themeToggle">🌓</div>
+<main>
+<div id="emptyState" class="empty card">Add your first password entry using the form below.</div>
+<div id="list"></div>
+<div class="card">
+<h2>Add Entry</h2>
+<form id="addForm">
+<label>Site<input type="text" id="site" required></label>
+<label>Username<input type="text" id="user" required></label>
+<label>Password<input type="text" id="pass" required></label>
+<button type="submit">Save</button>
+</form>
+</div>
+<div class="card" id="exportImport" style="display:none;">
+<h2>Data</h2>
+<button id="exportBtn">Export My Data</button>
+<input type="file" id="importFile" accept="application/json" style="display:none;">
+<button id="importBtn">Import My Data</button>
+</div>
+<p id="upgradeNotice" style="text-align:center;color:#555;display:none;">Upgrade for unlimited entries, export, themes and history.</p>
+</main>
+<footer>© 2026 VaultLite</footer>
+<script>
+const TIER="basic"; // "basic" or "full"
+const BASIC_LIMITS={maxItems:3,export:false,themes:"one",bulk:false,history:false};
+const LIMITS=TIER==="basic"?BASIC_LIMITS:{maxItems:Infinity,export:true,themes:"all",bulk:true,history:true};
+const K='vaultlite.v1';
+const load=()=>{try{return JSON.parse(localStorage.getItem(K))||[];}catch(e){return [];}};
+const save=v=>localStorage.setItem(K,JSON.stringify(v));
+function render(){const data=load();const list=document.getElementById('list');list.innerHTML='';if(data.length===0){document.getElementById('emptyState').style.display='block';}else{document.getElementById('emptyState').style.display='none';data.forEach((it,i)=>{const card=document.createElement('div');card.className='card';card.innerHTML=`<strong>${it.site}</strong><br>User: ${it.user}<br>Pass: ${it.pass}<br><button data-idx="${i}">Delete</button>`;list.appendChild(card);});}
+if(LIMITS.export){document.getElementById('exportImport').style.display='block';}else{document.getElementById('exportImport').style.display='none';}
+if(TIER==='basic'){document.getElementById('upgradeNotice').style.display='block';}else{document.getElementById('upgradeNotice').style.display='none';}
+}
+function addEntry(e){e.preventDefault();const site=document.getElementById('site').value.trim();const user=document.getElementById('user').value.trim();const pass=document.getElementById('pass').value.trim();const data=load();if(data.length>=LIMITS.maxItems){alert('Item limit reached.');return;}data.push({site,user,pass});save(data);e.target.reset();render();}
+function deleteEntry(e){if(e.target.tagName!=='BUTTON')return;const idx=e.target.dataset.idx;const data=load();data.splice(idx,1);save(data);render();}
+function exportData(){const data=load();const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='vaultlite-data.json';a.click();URL.revokeObjectURL(url);}
+function importData(){const file=document.getElementById('importFile').files[0];if(!file)return;const reader=new FileReader();reader.onload=function(){try{const arr=JSON.parse(reader.result);if(Array.isArray(arr)){save(arr);render();}else{alert('Invalid file');}}catch{alert('Invalid JSON');};reader.readAsText(file);}
+function toggleTheme(){const cur=document.documentElement.dataset.theme||'light';const next=cur==='light'?'dark':'light';document.documentElement.dataset.theme=next;localStorage.setItem('theme',next);}
+function initTheme(){const saved=localStorage.getItem('theme');if(saved){document.documentElement.dataset.theme=saved;}else{document.documentElement.dataset.theme='light';}}
+document.getElementById('addForm').addEventListener('submit',addEntry);
+document.getElementById('list').addEventListener('click',deleteEntry);
+if(LIMITS.export){document.getElementById('exportBtn').addEventListener('click',exportData);
+document.getElementById('importBtn').addEventListener('click',()=>document.getElementById('importFile').click());
+document.getElementById('importFile').addEventListener('change',importData);}
+document.getElementById('themeToggle').addEventListener('click',toggleTheme);
+initTheme();
+render();
+</script>
+</body>
+</html>

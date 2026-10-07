@@ -2,8 +2,14 @@
   "slug": "password-manager-basic",
   "title": "Offline password manager",
   "tag": "password",
-  "blurb": "x",
-  "tags": [],
+  "blurb": "offline password manager with vault encryption and a generator",
+  "tags": [
+    "offline",
+    "password",
+    "manager",
+    "with"
+  ],
+  "brand": "",
   "tier": "basic",
   "base_slug": "password-manager"
 }
