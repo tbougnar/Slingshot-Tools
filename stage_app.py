@@ -85,8 +85,8 @@ def main() -> int:
             "differences": diffs,
             "free_blurb": free_blurb,
             "paid_blurb": paid_blurb,
-            "candidate": str((basic_dir / "app" / "index.html")
-                           .relative_to(make_app.ROOT)),
+            "candidate": (basic_dir / "app" / "index.html")
+                           .relative_to(make_app.ROOT).as_posix(),
             "paid_dir": str(full_dir.resolve()),
         }
         out = make_app.DATA / "candidate.json"

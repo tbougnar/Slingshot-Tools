@@ -480,5 +480,17 @@
   ],
   "detects": "recurs if verify reports a staged file is gone, or a slug ends in -basic-basic",
   "verified": false
+ },
+ {
+  "id": "B039",
+  "date": "2026-10-07",
+  "symptom": "verify still could not find the staged file on the Linux runner",
+  "cause": "the path was relative now but kept Windows backslash separators, which are not separators on Linux",
+  "fix": "store the relative path with as_posix so it is identical on every operating system",
+  "files": [
+   "stage_app.py"
+  ],
+  "detects": "recurs if verify reports a staged file is gone",
+  "verified": false
  }
 ]

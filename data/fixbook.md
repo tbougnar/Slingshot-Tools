@@ -307,6 +307,14 @@ the change that fixed it. Check here before proposing anything.
 - **Check for recurrence:** recurs if verify reports a staged file is gone, or a slug ends in -basic-basic
 - **Status:** UNTESTED
 
+## B039 - verify still could not find the staged file on the Linux runner
+
+- **Cause:** the path was relative now but kept Windows backslash separators, which are not separators on Linux
+- **Fix:** store the relative path with as_posix so it is identical on every operating system
+- **Files:** stage_app.py
+- **Check for recurrence:** recurs if verify reports a staged file is gone
+- **Status:** UNTESTED
+
 ## How to use this
 
 1. If the symptom matches an entry, use that fix. Do not invent a new one.
