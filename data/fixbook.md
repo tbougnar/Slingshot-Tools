@@ -291,6 +291,14 @@ the change that fixed it. Check here before proposing anything.
 - **Check for recurrence:** recurs if a run reports no usable html after waiting
 - **Status:** UNTESTED
 
+## B037 - every model call failed with a utf-8 decode error that looked like a rate limit
+
+- **Cause:** the API replies gzipped and urllib never decompresses it, so the first byte 0x8b broke decoding; the wait logic then reported it as an allowance problem
+- **Fix:** decode gzip and deflate responses explicitly and ask for identity encoding so nothing arrives compressed
+- **Files:** providers.py, ai.py
+- **Check for recurrence:** recurs if a log shows a codec decode error from a model call
+- **Status:** UNTESTED
+
 ## How to use this
 
 1. If the symptom matches an entry, use that fix. Do not invent a new one.

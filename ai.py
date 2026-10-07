@@ -39,6 +39,27 @@ def _headers() -> dict:
     return {k: v.format(key=key()) if "{key}" in v else v for k, v in HEADERS.items()}
 
 
+def _read(resp) -> bytes:
+    """urllib does not decompress, so a gzipped reply has to be handled here.
+
+    Without this the API answers with gzip (byte 0x8b) and every call dies with
+    a decode error that looks nothing like the real problem.
+    """
+    import gzip as _gz
+    import zlib as _zl
+    raw = resp.read()
+    enc = (resp.headers.get("Content-Encoding") or "").lower()
+    if "gzip" in enc or raw[:2] == b"\x1f\x8b":
+        try:
+            raw = _gz.decompress(raw)
+        except Exception:  # noqa: BLE001
+            try:
+                raw = _zl.decompress(raw, 16 + _zl.MAX_WBITS)
+            except Exception:  # noqa: BLE001
+                pass
+    return raw
+
+
 def post(path: str, payload: dict, timeout: int = 180) -> dict:
     import requests
     r = requests.post(BASE + path, headers=_headers(), data=json.dumps(payload),

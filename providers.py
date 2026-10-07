@@ -21,17 +21,38 @@ BROWSER_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
               "(KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36")
 
 
+def _read(resp) -> bytes:
+    """urllib does not decompress, so a gzipped reply has to be handled here.
+
+    Without this the API answers with gzip (byte 0x8b) and every call dies with
+    a decode error that looks nothing like the real problem.
+    """
+    import gzip as _gz
+    import zlib as _zl
+    raw = resp.read()
+    enc = (resp.headers.get("Content-Encoding") or "").lower()
+    if "gzip" in enc or raw[:2] == b"\x1f\x8b":
+        try:
+            raw = _gz.decompress(raw)
+        except Exception:  # noqa: BLE001
+            try:
+                raw = _zl.decompress(raw, 16 + _zl.MAX_WBITS)
+            except Exception:  # noqa: BLE001
+                pass
+    return raw
+
+
 def _post(url: str, payload: dict, headers: dict, timeout: int = TIMEOUT) -> dict:
     req = urllib.request.Request(url, data=json.dumps(payload).encode(),
                                  method="POST")
     req.add_header("Content-Type", "application/json")
     req.add_header("User-Agent", BROWSER_UA)
     req.add_header("Accept", "application/json")
-    req.add_header("Accept-Encoding", "gzip, deflate")
+    req.add_header("Accept-Encoding", "identity")
     for k, v in headers.items():
         req.add_header(k, v)
     with urllib.request.urlopen(req, timeout=timeout) as r:
-        raw = r.read().decode()
+        raw = _read(r).decode("utf-8", "replace")
     try:
         return json.loads(raw)
     except Exception:  # noqa: BLE001
@@ -66,7 +87,7 @@ def _get(url: str, headers: dict, timeout: int = 60) -> dict:
     for k, v in headers.items():
         req.add_header(k, v)
     with urllib.request.urlopen(req, timeout=timeout) as r:
-        return json.loads(r.read().decode())
+        return json.loads(_read(r).decode("utf-8", "replace"))
 
 
 # ----------------------------------------------------------------- providers
