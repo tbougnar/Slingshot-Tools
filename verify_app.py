@@ -75,9 +75,6 @@ def main() -> int:
                           f"tolerance of {TOLERATED}; publishing nothing")
                     print(json.dumps(history, indent=1)[-1200:])
                     return 1
-            print("[verify] regenerating instead of patching further")
-            return 2
-
     html = candidate.read_text(encoding="utf-8", errors="replace")
     concept = {"slug": stage["slug"], "brand": stage["brand"],
                "title": stage["title"], "tag": stage["tag"]}

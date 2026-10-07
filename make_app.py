@@ -64,7 +64,7 @@ GROQ_KEY = (os.environ.get("GROQ_API_KEY") or "").strip()
 # it writes the app; the other two are reserved for debugging and are only used
 # here if the builder's own model is unreachable.
 CHAT_MODEL = (os.environ.get("GROQ_CHAT_MODEL") or "").strip() or "openai/gpt-oss-120b"
-MODELS = ["openai/gpt-oss-120b", "qwen/qwen3.8-27b", "openai/gpt-oss-20b"]
+MODELS = ["openai/gpt-oss-120b", "openai/gpt-oss-20b"]
 CHAT_FALLBACKS = ["openai/gpt-oss-120b", "openai/gpt-oss-20b",
                      "qwen/qwen3.8-27b"]
 SITE_URL = (os.environ.get("SITE_URL") or "").strip() or "https://tbougnar.github.io/Slingshot-Tools"

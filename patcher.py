@@ -16,7 +16,7 @@ import urllib.error
 import requests
 
 BASE = "https://api.groq.com/openai/v1"
-CHAT_MODELS = ["openai/gpt-oss-120b", "qwen/qwen3.8-27b", "openai/gpt-oss-20b"]
+CHAT_MODELS = ["openai/gpt-oss-120b", "openai/gpt-oss-20b"]
 HEADERS = {
     "Authorization": "Bearer {key}",
     "Content-Type": "application/json",

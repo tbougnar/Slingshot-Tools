@@ -323,6 +323,14 @@ the change that fixed it. Check here before proposing anything.
 - **Check for recurrence:** recurs if no product reaches the catalogue
 - **Status:** UNTESTED
 
+## B041 - the tolerance decision never published, it just gave up with exit code 2
+
+- **Cause:** after allowing one dead control the code fell straight through to the give-up line instead of continuing to publish, so the allowance was announced as acceptable and then nothing shipped
+- **Fix:** let the tolerance branch fall through to the publish path, and use the CHAT_MODELS list rather than a second unused one so qwen is actually dropped
+- **Files:** verify_app.py, patcher.py, make_app.py
+- **Check for recurrence:** recurs if verify logs that it will publish but the run ends without a release
+- **Status:** UNTESTED
+
 ## How to use this
 
 1. If the symptom matches an entry, use that fix. Do not invent a new one.

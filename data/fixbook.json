@@ -505,5 +505,19 @@
   ],
   "detects": "recurs if no product reaches the catalogue",
   "verified": false
+ },
+ {
+  "id": "B041",
+  "date": "2026-10-07",
+  "symptom": "the tolerance decision never published, it just gave up with exit code 2",
+  "cause": "after allowing one dead control the code fell straight through to the give-up line instead of continuing to publish, so the allowance was announced as acceptable and then nothing shipped",
+  "fix": "let the tolerance branch fall through to the publish path, and use the CHAT_MODELS list rather than a second unused one so qwen is actually dropped",
+  "files": [
+   "verify_app.py",
+   "patcher.py",
+   "make_app.py"
+  ],
+  "detects": "recurs if verify logs that it will publish but the run ends without a release",
+  "verified": false
  }
 ]
