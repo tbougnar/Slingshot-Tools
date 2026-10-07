@@ -339,6 +339,22 @@ the change that fixed it. Check here before proposing anything.
 - **Check for recurrence:** recurs if a run logs that the paid build could not be produced
 - **Status:** UNTESTED
 
+## B043 - publishing the free edition crashed on KeyError: blurb
+
+- **Cause:** an empty free_blurb and paid_blurb fell through to concept['blurb'], which the verification path never supplies
+- **Fix:** read the fallback with .get and pass a blurb through from the staged candidate
+- **Files:** make_app.py, verify_app.py
+- **Check for recurrence:** recurs if a run ends with KeyError while publishing
+- **Status:** UNTESTED
+
+## B044 - qwen was still being called after being removed from the patch list
+
+- **Cause:** the voting team and the second debugger list were separate and still named qwen, whose 1000 token output ceiling refuses every real call
+- **Fix:** remove qwen from the team roster and the debugger list as well, not only the patch list
+- **Files:** debug_team.py, debug_team2.py
+- **Check for recurrence:** recurs if a log shows qwen being called
+- **Status:** UNTESTED
+
 ## How to use this
 
 1. If the symptom matches an entry, use that fix. Do not invent a new one.

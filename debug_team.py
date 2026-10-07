@@ -19,7 +19,6 @@ from pathlib import Path
 # and whisper is audio, so only three of the eleven can be asked for a repair.
 CANDIDATES = [
     "openai/gpt-oss-120b",
-    "qwen/qwen3.8-27b",
     "openai/gpt-oss-20b",
 ]
 

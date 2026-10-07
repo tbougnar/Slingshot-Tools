@@ -793,7 +793,7 @@ def publish(concept, app_dir, installer, tier="full", brand="", differences=None
         "tag": concept["tag"],
         "blurb": (free_blurb if tier == "basic" and free_blurb
                   else paid_blurb if tier == "full" and paid_blurb
-                  else concept["blurb"]),
+                  else concept.get("blurb", "")),
         "tags": concept["tags"],
         "url": (f"{SITE_URL.rstrip('/')}/apps/{concept['slug']}/" if tier == "basic"
                 else f"{SITE_URL.rstrip('/')}/apps/{concept['slug']}-basic/"),

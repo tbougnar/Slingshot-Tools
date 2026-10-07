@@ -77,7 +77,8 @@ def main() -> int:
                     return 1
     html = candidate.read_text(encoding="utf-8", errors="replace")
     concept = {"slug": stage["slug"], "brand": stage["brand"],
-               "title": stage["title"], "tag": stage["tag"]}
+               "title": stage["title"], "tag": stage["tag"],
+               "blurb": stage.get("blurb") or stage.get("free_blurb") or ""}
 
     full_dir = make_app.write_app({**concept}, html, tier="full")
     basic_dir = make_app.write_app({**concept, "slug": f"{stage['slug']}-basic"},

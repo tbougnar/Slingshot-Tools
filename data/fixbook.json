@@ -532,5 +532,31 @@
   ],
   "detects": "recurs if a run logs that the paid build could not be produced",
   "verified": false
+ },
+ {
+  "id": "B043",
+  "date": "2026-10-07",
+  "symptom": "publishing the free edition crashed on KeyError: blurb",
+  "cause": "an empty free_blurb and paid_blurb fell through to concept['blurb'], which the verification path never supplies",
+  "fix": "read the fallback with .get and pass a blurb through from the staged candidate",
+  "files": [
+   "make_app.py",
+   "verify_app.py"
+  ],
+  "detects": "recurs if a run ends with KeyError while publishing",
+  "verified": false
+ },
+ {
+  "id": "B044",
+  "date": "2026-10-07",
+  "symptom": "qwen was still being called after being removed from the patch list",
+  "cause": "the voting team and the second debugger list were separate and still named qwen, whose 1000 token output ceiling refuses every real call",
+  "fix": "remove qwen from the team roster and the debugger list as well, not only the patch list",
+  "files": [
+   "debug_team.py",
+   "debug_team2.py"
+  ],
+  "detects": "recurs if a log shows qwen being called",
+  "verified": false
  }
 ]

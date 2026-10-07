@@ -27,7 +27,7 @@ BASE = "https://api.groq.com/openai/v1"
 
 # Builders get the strongest model; the debuggers share what is left.
 BUILDERS = ["openai/gpt-oss-120b"]
-DEBUGGERS = ["qwen/qwen3.8-27b", "openai/gpt-oss-20b"]
+DEBUGGERS = ["openai/gpt-oss-20b", "openai/gpt-oss-120b"]
 
 HEADERS = {
     "Authorization": "Bearer {key}",
