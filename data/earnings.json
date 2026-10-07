@@ -1,3 +1,10 @@
 {
- "history": []
+  "date": "2026-10-07",
+  "revenue": 0,
+  "net_profit": 0,
+  "break_even": 0.32,
+  "products": [],
+  "directives": [
+    "No paid product yet - the priority is getting the first full edition listed, then the free basic edition as the funnel."
+  ]
 }
