@@ -8,6 +8,11 @@ on:
   schedule:
     - cron: "0 8 1 * *"
   workflow_dispatch:
+  # Runs by itself the moment a build finishes, so verification is never a
+  # manual step. Only a successful generate is worth checking.
+  workflow_run:
+    workflows: ["Slingshot - generate an app (1st, 07:00)"]
+    types: [completed]
 
 permissions:
   contents: write
@@ -18,6 +23,8 @@ concurrency:
 
 jobs:
   verify:
+    # only after a generate that actually produced a candidate
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
