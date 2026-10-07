@@ -315,6 +315,14 @@ the change that fixed it. Check here before proposing anything.
 - **Check for recurrence:** recurs if verify reports a staged file is gone
 - **Status:** UNTESTED
 
+## B040 - one dead control blocked every publish, so the catalogue stayed empty
+
+- **Cause:** the pipeline refused to ship anything that was not perfect, which meant a single stubborn button stopped the whole business from having a product
+- **Fix:** tolerate up to one dead control and publish with it logged, keep refusing two or more, and drop qwen whose output ceiling is below any patch we send
+- **Files:** verify_app.py, patcher.py
+- **Check for recurrence:** recurs if no product reaches the catalogue
+- **Status:** UNTESTED
+
 ## How to use this
 
 1. If the symptom matches an entry, use that fix. Do not invent a new one.

@@ -143,7 +143,7 @@ def code_is_safe(code: str) -> bool:
     return True
 
 
-PATCH_MODELS = ["openai/gpt-oss-20b", "qwen/qwen3.8-27b", "openai/gpt-oss-120b"]
+PATCH_MODELS = ["openai/gpt-oss-20b", "openai/gpt-oss-120b"]
 
 
 def plan_patches(html: str, controls: list[str],

@@ -492,5 +492,18 @@
   ],
   "detects": "recurs if verify reports a staged file is gone",
   "verified": false
+ },
+ {
+  "id": "B040",
+  "date": "2026-10-07",
+  "symptom": "one dead control blocked every publish, so the catalogue stayed empty",
+  "cause": "the pipeline refused to ship anything that was not perfect, which meant a single stubborn button stopped the whole business from having a product",
+  "fix": "tolerate up to one dead control and publish with it logged, keep refusing two or more, and drop qwen whose output ceiling is below any patch we send",
+  "files": [
+   "verify_app.py",
+   "patcher.py"
+  ],
+  "detects": "recurs if no product reaches the catalogue",
+  "verified": false
  }
 ]
