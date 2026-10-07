@@ -467,5 +467,18 @@
   ],
   "detects": "recurs if a log shows a codec decode error from a model call",
   "verified": false
+ },
+ {
+  "id": "B038",
+  "date": "2026-10-07",
+  "symptom": "verify could not find the staged file, and the slug was doubled",
+  "cause": "stage_app stored an absolute path from the machine that generated it, and passed a slug that already ended in -basic into a helper that appends it again",
+  "fix": "store the candidate path relative to the repo and let write_app own the basic suffix",
+  "files": [
+   "stage_app.py",
+   "verify_app.py"
+  ],
+  "detects": "recurs if verify reports a staged file is gone, or a slug ends in -basic-basic",
+  "verified": false
  }
 ]

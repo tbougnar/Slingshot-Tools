@@ -69,9 +69,10 @@ def main() -> int:
             make_app.log(f"attempt {attempt} warning: {why}")
         make_app.log(f"attempt {attempt} ok ({len(html)} bytes, brand={brand!r})")
 
-        basic_meta = {**concept, "brand": brand,
-                      "slug": f"{concept['slug']}-basic"}
-        basic_dir = make_app.write_app(basic_meta, html, tier="basic")
+        # write_app appends "-basic" itself for the basic tier, so passing an
+        # already-suffixed slug produced "password-manager-basic-basic"
+        basic_dir = make_app.write_app({**concept, "brand": brand},
+                                       html, tier="basic")
         full_dir = make_app.write_app({**concept, "brand": brand}, html, tier="full")
 
         # The verifier needs the candidate on disk plus enough context to judge
@@ -84,7 +85,8 @@ def main() -> int:
             "differences": diffs,
             "free_blurb": free_blurb,
             "paid_blurb": paid_blurb,
-            "candidate": str((basic_dir / "app" / "index.html").resolve()),
+            "candidate": str((basic_dir / "app" / "index.html")
+                           .relative_to(make_app.ROOT)),
             "paid_dir": str(full_dir.resolve()),
         }
         out = make_app.DATA / "candidate.json"

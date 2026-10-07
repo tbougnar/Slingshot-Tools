@@ -1,0 +1,9 @@
+{
+  "slug": "password-manager-basic",
+  "title": "Offline password manager",
+  "tag": "password",
+  "blurb": "x",
+  "tags": [],
+  "tier": "basic",
+  "base_slug": "password-manager"
+}

@@ -33,7 +33,8 @@ def main() -> int:
             return 1
     stage = json.loads(stage_file.read_text(encoding="utf-8"))
 
-    candidate = Path(stage["candidate"])
+    # stored relative so it resolves on whichever machine runs this
+    candidate = make_app.ROOT / stage["candidate"]
     if not candidate.exists():
         print(f"[verify] staged file is gone: {candidate}")
         return 1

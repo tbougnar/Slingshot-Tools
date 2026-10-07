@@ -299,6 +299,14 @@ the change that fixed it. Check here before proposing anything.
 - **Check for recurrence:** recurs if a log shows a codec decode error from a model call
 - **Status:** UNTESTED
 
+## B038 - verify could not find the staged file, and the slug was doubled
+
+- **Cause:** stage_app stored an absolute path from the machine that generated it, and passed a slug that already ended in -basic into a helper that appends it again
+- **Fix:** store the candidate path relative to the repo and let write_app own the basic suffix
+- **Files:** stage_app.py, verify_app.py
+- **Check for recurrence:** recurs if verify reports a staged file is gone, or a slug ends in -basic-basic
+- **Status:** UNTESTED
+
 ## How to use this
 
 1. If the symptom matches an entry, use that fix. Do not invent a new one.
