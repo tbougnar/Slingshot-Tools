@@ -331,6 +331,14 @@ the change that fixed it. Check here before proposing anything.
 - **Check for recurrence:** recurs if verify logs that it will publish but the run ends without a release
 - **Status:** UNTESTED
 
+## B042 - the Linux job tried to build a Windows exe and refused to publish anything
+
+- **Cause:** PyInstaller does not exist on the Linux runner, so staging the paid edition always failed and the free app was thrown away with it
+- **Fix:** publish the free edition on Linux, keep the paid tier hidden until the Windows job uploads a real installer, then reveal it
+- **Files:** verify_app.py, build_paid_only.py
+- **Check for recurrence:** recurs if a run logs that the paid build could not be produced
+- **Status:** UNTESTED
+
 ## How to use this
 
 1. If the symptom matches an entry, use that fix. Do not invent a new one.

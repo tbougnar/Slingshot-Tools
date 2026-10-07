@@ -100,27 +100,32 @@ def main() -> int:
         print(f"[verify] pricing unavailable ({str(e)[:60]}), using {price}")
     price = max(make_app.PRICE_FLOOR, min(make_app.PRICE_CEILING, price))
 
-    # the paid build has to exist and be in the store before we advertise it
-    ok = make_app.stage_paid(full_dir, stage["slug"], None)
-    if not ok:
-        print("[verify] the paid build could not be produced; publishing nothing")
-        return 1
-
+    # A Windows .exe cannot be built on the Linux runner, so this job only
+    # publishes the free edition. The paid tier is listed but stays hidden
+    # until the Windows installer has really uploaded it, which means we
+    # never take money for a download that does not exist yet.
     make_app.publish({**concept}, basic_dir, None, tier="basic",
                      brand=stage["brand"], differences=stage["differences"],
                      free_blurb=stage["free_blurb"], paid_blurb=stage["paid_blurb"],
                      published=True, price_override=0.0)
+
     make_app.publish({**concept, "slug": stage["slug"]}, full_dir, None, tier="full",
                      brand=stage["brand"], differences=stage["differences"],
                      free_blurb=stage["free_blurb"], paid_blurb=stage["paid_blurb"],
-                     published=True, price_override=price)
+                     published=False, price_override=price)
 
-    # tell the installer job which paid build to package
+    # hand the paid source to the Windows installer job
+    import shutil as _sh
     import json as _json
+    paid_src = make_app.PAID_DIR / stage["slug"]
+    if paid_src.exists():
+        _sh.rmtree(paid_src, ignore_errors=True)
+    _sh.copytree(full_dir, paid_src)
     (make_app.DATA / "published.json").write_text(_json.dumps(
-        {"slug": stage["slug"], "title": stage["title"]}, indent=1),
+        {"slug": stage["slug"], "title": stage["title"], "price": price}, indent=1),
         encoding="utf-8")
-    print(f"[verify] published {stage['title']} at ${price:.2f}")
+    print(f"[verify] published the free edition of {stage['title']}; "
+          f"paid tier at ${price:.2f} waits for the Windows installer")
     try:
         import mark_verified
         mark_verified.main()

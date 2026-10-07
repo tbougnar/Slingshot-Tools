@@ -519,5 +519,18 @@
   ],
   "detects": "recurs if verify logs that it will publish but the run ends without a release",
   "verified": false
+ },
+ {
+  "id": "B042",
+  "date": "2026-10-07",
+  "symptom": "the Linux job tried to build a Windows exe and refused to publish anything",
+  "cause": "PyInstaller does not exist on the Linux runner, so staging the paid edition always failed and the free app was thrown away with it",
+  "fix": "publish the free edition on Linux, keep the paid tier hidden until the Windows job uploads a real installer, then reveal it",
+  "files": [
+   "verify_app.py",
+   "build_paid_only.py"
+  ],
+  "detects": "recurs if a run logs that the paid build could not be produced",
+  "verified": false
  }
 ]

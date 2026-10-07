@@ -27,7 +27,24 @@ def main() -> int:
         return 1
     ok = paid_store.stage(paid, stage["slug"], None)
     print(f"[installer] store upload: {'ok' if ok else 'FAILED'}")
-    return 0 if ok else 1
+    if not ok:
+        # the paid tier stays hidden, so nobody can pay for a missing file
+        return 1
+
+    # the installer is really in the store now, so the paid tier may be shown
+    catalog = json.loads(make_app.CATALOG.read_text(encoding="utf-8"))
+    flipped = False
+    for entry in catalog:
+        if entry.get("slug") == stage["slug"] and entry.get("tier") == "full":
+            entry["published"] = True
+            flipped = True
+    if flipped:
+        make_app.CATALOG.write_text(json.dumps(catalog, indent=2) + "\n",
+                                    encoding="utf-8")
+        print(f"[installer] paid tier for {stage['slug']} is now live")
+    else:
+        print(f"[installer] WARNING: no hidden full entry for {stage['slug']}")
+    return 0
 
 
 if __name__ == "__main__":
