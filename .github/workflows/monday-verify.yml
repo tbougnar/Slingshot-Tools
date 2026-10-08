@@ -66,7 +66,7 @@ jobs:
       # The installer job runs on a fresh Windows checkout, so everything this
       # job produced (catalog, free edition, paid source, published manifest)
       # has to be pushed to main before the next job can see it.
-- name: Commit verification results
+      - name: Commit verification results
         run: |
           git config user.name "slingshot-bot"
           git config user.email "bot@users.noreply.github.com"
