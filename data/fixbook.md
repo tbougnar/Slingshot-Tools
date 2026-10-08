@@ -395,6 +395,14 @@ the change that fixed it. Check here before proposing anything.
 - **Check for recurrence:** recurs if the exposure check reports a duplicated slug
 - **Status:** UNTESTED
 
+## B050 - the free edition published but the installer job had nothing to build
+
+- **Cause:** verification committed its changes only on a later step the installer could not see, so the Windows job checked out a clean tree with no published.json
+- **Fix:** commit and push the verified results from the verify job before the installer job starts
+- **Files:** monday-verify.yml
+- **Check for recurrence:** recurs if the installer job logs that nothing was published to build from
+- **Status:** UNTESTED
+
 ## How to use this
 
 1. If the symptom matches an entry, use that fix. Do not invent a new one.
