@@ -30,6 +30,10 @@ is never held in this repository or on any machine we control.
 - SignPath Foundation publishes the artifact for verification.
 - Signing is limited to our own projects and our own binaries.
 
+## Status
+
+Signing integration is not yet enabled in CI (SignPath application not submitted). Artifacts remain unsigned until SignPath is configured.
+
 ## Verification
 
 Users can verify a download by checking the file properties in Windows and
