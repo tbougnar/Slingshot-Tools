@@ -642,6 +642,6 @@
    "monday-verify.yml"
   ],
   "detects": "recurs if the installer logs a rejected push",
-  "verified": false
+  "verified": true
  }
 ]

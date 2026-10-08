@@ -403,6 +403,14 @@ the change that fixed it. Check here before proposing anything.
 - **Check for recurrence:** recurs if the installer job logs that nothing was published to build from
 - **Status:** PROVEN
 
+## B051 - the paid installer uploaded but the catalog commit was rejected
+
+- **Cause:** the Windows job pushed without fetching first, so a concurrent runner's commit rejected it and the paid tier stayed marked unpublished
+- **Fix:** fetch and rebase before every push in both installer commit steps
+- **Files:** monday-verify.yml
+- **Check for recurrence:** recurs if the installer logs a rejected push
+- **Status:** PROVEN
+
 ## How to use this
 
 1. If the symptom matches an entry, use that fix. Do not invent a new one.
