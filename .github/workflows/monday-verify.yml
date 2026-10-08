@@ -116,6 +116,17 @@ jobs:
           choco install nsis -y --no-progress
           python -m pip install --quiet pillow requests pyinstaller pywebview
       - name: Build the Windows installer and publish it to the store
+      # - name: Submit installer for signing (SignPath)
+      #   uses: signpath/github-action-submit-signing-request@v1
+      #   with:
+      #     api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+      #     organization-id: ${{ secrets.SIGNPATH_ORGANIZATION_ID }}
+      #     project-slug: slingshot-tools
+      #     signing-policy-slug: release-signing
+      #     artifact-configuration-slug: windows-installer
+      #     github-artifact-id: ${{ steps.upload-artifact.outputs.artifact-id }}
+      #     github-token: ${{ secrets.GITHUB_TOKEN }}
+
         run: python build_paid_only.py
       - name: Commit the store manifest
         run: |
