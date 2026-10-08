@@ -143,12 +143,14 @@
     "price": 3.0,
     "tier": "full",
     "sales": 0,
-    "views": 0
+    "views": 0,
+    "itch_url": "https://slingshot-tools.itch.io/"
   },
   "password-manager-basic": {
     "price": 0.0,
     "tier": "basic",
     "sales": 0,
-    "views": 0
+    "views": 0,
+    "itch_url": "https://slingshot-tools.itch.io/"
   }
 }
