@@ -363,6 +363,14 @@ the change that fixed it. Check here before proposing anything.
 - **Check for recurrence:** recurs if a run ends with KeyError while publishing
 - **Status:** UNTESTED
 
+## B046 - publishing deleted the paid folder and then tried to copy it
+
+- **Cause:** write_app for the full tier already writes into paid/, so the extra copytree deleted its own source with rmtree first
+- **Fix:** remove the copy entirely and just record which paid build exists
+- **Files:** verify_app.py
+- **Check for recurrence:** recurs if verify ends with FileNotFoundError on a path under paid/
+- **Status:** UNTESTED
+
 ## How to use this
 
 1. If the symptom matches an entry, use that fix. Do not invent a new one.

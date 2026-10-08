@@ -115,13 +115,8 @@ def main() -> int:
                      free_blurb=stage["free_blurb"], paid_blurb=stage["paid_blurb"],
                      published=False, price_override=price)
 
-    # hand the paid source to the Windows installer job
-    import shutil as _sh
+    # write_app already put the full tier under paid/, so just record it
     import json as _json
-    paid_src = make_app.PAID_DIR / stage["slug"]
-    if paid_src.exists():
-        _sh.rmtree(paid_src, ignore_errors=True)
-    _sh.copytree(full_dir, paid_src)
     (make_app.DATA / "published.json").write_text(_json.dumps(
         {"slug": stage["slug"], "title": stage["title"], "price": price}, indent=1),
         encoding="utf-8")

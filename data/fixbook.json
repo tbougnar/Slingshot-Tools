@@ -570,5 +570,17 @@
   ],
   "detects": "recurs if a run ends with KeyError while publishing",
   "verified": false
+ },
+ {
+  "id": "B046",
+  "date": "2026-10-08",
+  "symptom": "publishing deleted the paid folder and then tried to copy it",
+  "cause": "write_app for the full tier already writes into paid/, so the extra copytree deleted its own source with rmtree first",
+  "fix": "remove the copy entirely and just record which paid build exists",
+  "files": [
+   "verify_app.py"
+  ],
+  "detects": "recurs if verify ends with FileNotFoundError on a path under paid/",
+  "verified": false
  }
 ]
