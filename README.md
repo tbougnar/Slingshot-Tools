@@ -73,7 +73,8 @@ python pricing.py            # recalculate prices from sales
 ## Code signing policy
 
 Free code signing provided by SignPath.io, certificate by SignPath Foundation.
-See [CODE_SIGNING_POLICY.md](CODE_SIGNING_POLICY.md).
+**Note:** SignPath integration is pending (application not yet submitted). Installers are currently unsigned until signing is configured.
+See [CODE_SIGNING_POLICY.md](CODE_SIGNING_POLICY.md) and [SIGNPATH_SETUP.md](SIGNPATH_SETUP.md).
 
 ## License
 
