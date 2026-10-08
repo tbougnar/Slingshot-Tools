@@ -66,13 +66,24 @@ jobs:
       # The installer job runs on a fresh Windows checkout, so everything this
       # job produced (catalog, free edition, paid source, published manifest)
       # has to be pushed to main before the next job can see it.
-      - name: Commit verification results
+- name: Commit verification results
         run: |
           git config user.name "slingshot-bot"
           git config user.email "bot@users.noreply.github.com"
           git add -A
           git commit -q -m "feat: verified new Slingshot Tool [skip ci]" || echo "nothing to commit"
+          git fetch origin main
+          git rebase origin/main || git -c rebase.autoStash=true pull --rebase origin main
           git push || echo "push failed"
+
+      # paid/ is gitignored on purpose, so the paid build can never be public.
+      # Pass it to the Windows job as a private artifact instead of through git.
+      - name: Upload the paid build for the Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: paid-build
+          path: paid/
+          if-no-files-found: error
 
   # Only the Windows installer needs Windows, so it gets its own job.
   installer:
@@ -92,6 +103,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      # Restore the paid build the verify job produced (it is gitignored and
+      # never committed, so it must travel as an artifact between jobs).
+      - name: Download the paid build
+        uses: actions/download-artifact@v4
+        with:
+          name: paid-build
+          path: paid/
+
       - name: Install build tools
         run: |
           choco install nsis -y --no-progress
