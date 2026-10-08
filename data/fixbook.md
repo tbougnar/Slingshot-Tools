@@ -371,6 +371,14 @@ the change that fixed it. Check here before proposing anything.
 - **Check for recurrence:** recurs if verify ends with FileNotFoundError on a path under paid/
 - **Status:** UNTESTED
 
+## B047 - after publishing, the exposure check refused the run with two violations
+
+- **Cause:** publish() copied the paid tier into the public site/apps/ folder, and a stale password-manager-basic-basic directory from earlier broken runs was still tracked in git
+- **Fix:** keep the paid tier out of site/ entirely and delete the stale trackned directory
+- **Files:** make_app.py, check_exposure.py
+- **Check for recurrence:** recurs if check_exposure reports a paid edition or a duplicated slug
+- **Status:** UNTESTED
+
 ## How to use this
 
 1. If the symptom matches an entry, use that fix. Do not invent a new one.

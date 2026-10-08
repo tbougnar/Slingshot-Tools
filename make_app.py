@@ -770,10 +770,16 @@ def stage_paid(app_dir: Path, slug: str, installer: Path | None = None) -> bool:
 def publish(concept, app_dir, installer, tier="full", brand="", differences=None,
              free_blurb="", paid_blurb="", published=False, price_override=None):
     dest = SITE_APPS / concept["slug"]
-    dest.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(app_dir / "app" / "index.html", dest / "index.html")
-    if (ROOT / "site" / "icon-512.png").exists():
-        shutil.copy2(ROOT / "site" / "icon-512.png", dest / "icon.png")
+    if tier == "full":
+        # the paid build is never copied into the public site; it is kept in
+        # paid/ and handed to the Worker, which releases it after payment
+        print(f"[publish] paid tier kept private; no files copied into site/",
+              flush=True)
+    else:
+        dest.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(app_dir / "app" / "index.html", dest / "index.html")
+        if (ROOT / "site" / "icon-512.png").exists():
+            shutil.copy2(ROOT / "site" / "icon-512.png", dest / "icon.png")
 
     apps = []
     if CATALOG.exists():
