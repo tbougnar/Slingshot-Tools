@@ -1,0 +1,6 @@
+﻿{
+  "organizationId": "YOUR_ORG_ID",
+  "projectSlug": "slingshot-tools",
+  "signingPolicySlug": "release-signing",
+  "artifactConfigurationSlug": "windows-installer"
+}
