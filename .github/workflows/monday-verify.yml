@@ -128,6 +128,11 @@ jobs:
       #     github-token: ${{ secrets.GITHUB_TOKEN }}
 
         run: python build_paid_only.py
+      # Only fires once the paid tier is genuinely on sale, and stays silent
+      # when no webhook is configured, so it can never block a publish.
+      - name: Announce the new tool in Discord
+        run: python discord_announce.py
+        continue-on-error: true
       - name: Commit the store manifest
         run: |
           git config user.name "slingshot-bot"
