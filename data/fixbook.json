@@ -595,5 +595,17 @@
   ],
   "detects": "recurs if check_exposure reports a paid edition or a duplicated slug",
   "verified": false
+ },
+ {
+  "id": "B048",
+  "date": "2026-10-08",
+  "symptom": "the exposure check rejected the run because the catalog slug did not match the folder on disk",
+  "cause": "write_app names the public folder <slug>-basic but publish wrote the catalog entry under the bare slug, so the site checker did not recognise it",
+  "fix": "use the folder's own name for the catalog entry so the two always match",
+  "files": [
+   "verify_app.py"
+  ],
+  "detects": "recurs if the exposure check reports a folder that is not a known basic edition",
+  "verified": false
  }
 ]

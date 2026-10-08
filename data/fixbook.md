@@ -379,6 +379,14 @@ the change that fixed it. Check here before proposing anything.
 - **Check for recurrence:** recurs if check_exposure reports a paid edition or a duplicated slug
 - **Status:** UNTESTED
 
+## B048 - the exposure check rejected the run because the catalog slug did not match the folder on disk
+
+- **Cause:** write_app names the public folder <slug>-basic but publish wrote the catalog entry under the bare slug, so the site checker did not recognise it
+- **Fix:** use the folder's own name for the catalog entry so the two always match
+- **Files:** verify_app.py
+- **Check for recurrence:** recurs if the exposure check reports a folder that is not a known basic edition
+- **Status:** UNTESTED
+
 ## How to use this
 
 1. If the symptom matches an entry, use that fix. Do not invent a new one.

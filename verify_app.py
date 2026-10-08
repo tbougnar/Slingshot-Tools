@@ -105,7 +105,10 @@ def main() -> int:
     # publishes the free edition. The paid tier is listed but stays hidden
     # until the Windows installer has really uploaded it, which means we
     # never take money for a download that does not exist yet.
-    make_app.publish({**concept}, basic_dir, None, tier="basic",
+    # write_app named the public folder "<slug>-basic"; the catalog entry must
+    # carry the same name so the two match on disk and in URLs
+    make_app.publish({**concept, "slug": basic_dir.name}, basic_dir, None,
+                     tier="basic",
                      brand=stage["brand"], differences=stage["differences"],
                      free_blurb=stage["free_blurb"], paid_blurb=stage["paid_blurb"],
                      published=True, price_override=0.0)
