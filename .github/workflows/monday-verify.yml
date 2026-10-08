@@ -74,7 +74,7 @@ jobs:
           git commit -q -m "feat: verified new Slingshot Tool [skip ci]" || echo "nothing to commit"
           git fetch origin main
           git rebase origin/main || git -c rebase.autoStash=true pull --rebase origin main
-          git push || echo "push failed"
+          git fetch origin main && git pull --rebase origin main && git push || (git pull --rebase origin main && git push) || echo "push failed"
 
       # paid/ is gitignored on purpose, so the paid build can never be public.
       # Pass it to the Windows job as a private artifact instead of through git.
@@ -123,7 +123,7 @@ jobs:
           git config user.email "bot@users.noreply.github.com"
           git add -A
           git commit -q -m "build: windows installer [skip ci]" || echo "nothing to commit"
-          git push || echo "push failed"
+          git fetch origin main && git pull --rebase origin main && git push || (git pull --rebase origin main && git push) || echo "push failed"
 
       - name: Commit and publish the site
         run: |
@@ -131,4 +131,4 @@ jobs:
           git config user.email "bot@users.noreply.github.com"
           git add -A
           git commit -q -m "feat: verified new Slingshot Tool [skip ci]" || echo "nothing to commit"
-          git push || echo "push failed"
+          git fetch origin main && git pull --rebase origin main && git push || (git pull --rebase origin main && git push) || echo "push failed"
