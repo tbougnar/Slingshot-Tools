@@ -1,1 +1,36 @@
-[]
+[
+  {
+    "slug": "password-manager",
+    "base_slug": "password-manager",
+    "title": "Offline password manager",
+    "tier": "full",
+    "tag": "password",
+    "blurb": "",
+    "tags": [],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/password-manager-basic/",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-08"
+  },
+  {
+    "slug": "password-manager-basic",
+    "base_slug": "password-manager-basic",
+    "title": "Offline password manager (Basic)",
+    "tier": "basic",
+    "tag": "password",
+    "blurb": "",
+    "tags": [],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/password-manager-basic/",
+    "download": "",
+    "price": 0.0,
+    "free": true,
+    "differences": [],
+    "published": true,
+    "badge": "New",
+    "date": "2026-10-08"
+  }
+]

@@ -9,7 +9,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** Removed itch.io entirely and replaced delivery with PayPal plus a private store behind the payment API.
 - **Files:** worker/worker.js
 - **Check for recurrence:** no reference to itch remains in the code
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B002 - paid builds were publicly downloadable
 
@@ -17,7 +17,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** site/ now receives only the basic edition; paid/ is gitignored and served only after payment.
 - **Files:** make_app.py, .gitignore
 - **Check for recurrence:** apps/<slug> for a paid slug returns 404 while apps/<slug>-basic returns 200
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B003 - workflow could not be dispatched
 
@@ -25,7 +25,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** Removed the duplicate keys and validated the file before pushing.
 - **Files:** .github/workflows/monday-build.yml
 - **Check for recurrence:** the workflow file parses as YAML
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B004 - build crashed with NameError: stage_paid
 
@@ -33,7 +33,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** Defined stage_paid and had it build the real app folder plus installer.
 - **Files:** make_app.py
 - **Check for recurrence:** python -m py_compile passes and stage_paid exists
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B005 - SameFileError while staging the paid build
 
@@ -41,7 +41,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** Detect that source and destination are the same and skip the copy.
 - **Files:** paid_store.py
 - **Check for recurrence:** staging a build whose folder already exists is a no-op
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B006 - paid customers received nothing (HTTP 413)
 
@@ -49,7 +49,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** Split the file into chunks on upload and rejoin them in the worker before replying, so the customer still gets one complete file.
 - **Files:** paid_store.py, worker/worker.js
 - **Check for recurrence:** the store holds every chunk and their sizes sum to the file size
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B007 - QA crashed with 'object of bool has no len'
 
@@ -57,7 +57,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** Install Playwright on the runner, and make a scanner that cannot run report failure rather than pass.
 - **Files:** app_scanner.py, .github/workflows/monday-build.yml
 - **Check for recurrence:** app_scanner.verdict is False when the scanner is unavailable
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B008 - every model call failed with HTTP 403 error 1010
 
@@ -65,7 +65,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** All model calls go through one client built on requests.
 - **Files:** ai.py
 - **Check for recurrence:** groq_check.py reports HTTP 200
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B009 - models were configured that no longer exist
 
@@ -73,7 +73,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** Use the three the live catalogue offers: gpt-oss-120b, qwen3.8-27b, gpt-oss-20b.
 - **Files:** debug_team.py, make_app.py
 - **Check for recurrence:** the model list matches what the catalogue endpoint returns
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B010 - finished apps were thrown away over a missing data-theme
 
@@ -81,7 +81,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** It is recorded as a note, not a rejection.
 - **Files:** make_app.py
 - **Check for recurrence:** html without data-theme is accepted with a note
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B011 - the self-heal debugger never produced a fix
 
@@ -89,7 +89,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** Install requests in the self-heal job before it thinks.
 - **Files:** .github/workflows/monday-build.yml
 - **Check for recurrence:** the self-heal log shows a diagnosis rather than a missing-module error
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B012 - the debugger diagnosed the wrong problem
 
@@ -97,7 +97,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** Fetch the build job log as well as the failed output.
 - **Files:** .github/workflows/monday-build.yml
 - **Check for recurrence:** selfheal/failure.txt contains the build step output
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B013 - repairs and app generation came back truncated
 
@@ -105,7 +105,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** Raise the reply budget and turn reasoning off for repairs.
 - **Files:** ai.py, debug_team.py, make_app.py
 - **Check for recurrence:** a generated file ends with </html> and contains localStorage
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B014 - votes collapsed every button into one control
 
@@ -113,7 +113,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** Key votes on the whole label and map them back to the scanner's labels.
 - **Files:** debug_team.py
 - **Check for recurrence:** distinct buttons produce distinct votes
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B015 - the two strongest models returned nothing during repairs
 
@@ -121,7 +121,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** cap the request at REPLY_BUDGET=32000 and print the error body from every failed call
 - **Files:** debug_team.py, ai.py
 - **Check for recurrence:** recurs if a repair log shows a model FAILED with a 400 status
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B016 - repairs could never complete: every model call was rate limited or refused
 
@@ -129,7 +129,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** repair with small patches instead of reprinting the app, cap max_tokens at 16000, and treat 429 as a wait-and-retry rather than a failure
 - **Files:** patcher.py, qa_loop.py, debug_team.py
 - **Check for recurrence:** recurs if a repair log shows 429 rate limit errors
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B017 - UnboundLocalError: by, right after a patch was produced successfully
 
@@ -137,7 +137,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** initialise by before the branch so both paths can record who repaired it
 - **Files:** qa_loop.py
 - **Check for recurrence:** recurs if a qa round logs a repair without naming a patcher or model
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B018 - a patch was applied four rounds in a row and never fixed the control
 
@@ -145,7 +145,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** re-scan after every patch and report which controls are unchanged, so the next round must change approach
 - **Files:** qa_loop.py
 - **Check for recurrence:** recurs if several consecutive rounds report the same dead control
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B019 - qwen refused every request as Request too large
 
@@ -153,7 +153,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** cap max_tokens per model: qwen 900, the others 8000
 - **Files:** patcher.py, debug_team.py
 - **Check for recurrence:** recurs if a model is refused with an output-tokens-per-minute error
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B020 - every log line appeared twice
 
@@ -161,7 +161,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** log() prints exactly once and can never raise
 - **Files:** make_app.py
 - **Check for recurrence:** recurs if a log line is duplicated in a run
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B021 - an injected handler was attached but the button still did nothing
 
@@ -169,7 +169,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** the scanner separates no-handler from handler-present-but-nothing-happened, and a patch that changes nothing is reported as ineffective
 - **Files:** app_scanner.py, qa_loop.py
 - **Check for recurrence:** recurs if a scan reports a handler present but nothing happened
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B022 - the run was cancelled after half an hour with only 2 dead controls left
 
@@ -177,7 +177,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** ask the debugger models for patches, fall through on a rate limit instead of waiting, and use fewer rounds so a run always finishes
 - **Files:** patcher.py, qa_loop.py
 - **Check for recurrence:** recurs if a run is cancelled or hits its time limit inside QA
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B023 - verifying in the same minute as generating starved the debugger team
 
@@ -185,7 +185,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** generate at 07:00 and verify in a separate workflow at 08:00, so verification always starts on a fresh allowance
 - **Files:** .github/workflows/monday-build.yml, .github/workflows/monday-verify.yml
 - **Check for recurrence:** recurs if a single run both generates and verifies
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B024 - twenty two runs failed because apps were too large to verify
 
@@ -193,7 +193,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** cap apps at 9000 bytes with sizeguard, tell the builder to aim under 8 KB, and teach the working-handler pattern in PATTERNS.md so fewer repairs are needed
 - **Files:** sizeguard.py, PATTERNS.md, make_app.py, stage_app.py
 - **Check for recurrence:** recurs if a staged app exceeds the size ceiling
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B025 - generation failed on the very first call, choosing which app to build
 
@@ -201,7 +201,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** the concept picker now tries each model in turn and asks for a small reply, and verification waits for a candidate instead of silently doing nothing
 - **Files:** make_app.py, verify_app.py
 - **Check for recurrence:** recurs if a run fails at pick_concept, or verify reports nothing to do
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B026 - the concept picker still fails, now with every model rate limited
 
@@ -209,7 +209,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** the picker already tries each model and now reports the real reason; the remaining fix is to stop spending the allowance on repeated manual dispatches and let the scheduled runs space themselves out
 - **Files:** make_app.py
 - **Check for recurrence:** recurs when several dispatches are fired close together
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B027 - runs die because the model allowance is spent before repair can finish
 
@@ -217,7 +217,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** record token usage from every provider call and check what is left before spending more; regenerate the app when repair fails and allowance remains, rather than patching forever
 - **Files:** tokenmeter.py, providers.py, verify_app.py
 - **Check for recurrence:** recurs if a run dies partway through with a rate limit
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B028 - patches had nothing to target once the markup was trimmed
 
@@ -225,7 +225,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** list ids, classes and control labels in the inventory, and inject the matching fixbook entry only when a known fault is recognised so it costs nothing otherwise
 - **Files:** patcher.py, buglog.py
 - **Check for recurrence:** recurs if a patch proposes a selector that matches nothing in the app
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B029 - the self-heal debugger could not read the failing run
 
@@ -233,7 +233,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** pass the built-in GITHUB_TOKEN to the self-heal job as GH_TOKEN
 - **Files:** .github/workflows/monday-build.yml
 - **Check for recurrence:** recurs if the self-heal log shows gh authentication errors
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B030 - an edit to pick_concept deleted the whole APP_SPEC and every run died with NameError
 
@@ -241,7 +241,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** restore APP_SPEC from the previous commit and verify every module level symbol is present after any structural edit
 - **Files:** make_app.py
 - **Check for recurrence:** recurs if a run fails with NameError on a module level name
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B031 - every run died with no usable JSON even though the model returned a working app
 
@@ -249,7 +249,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** salvage now strips fences, ignores prose, cuts from the first document tag to the last closing tag, and closes a truncated document
 - **Files:** make_app.py
 - **Check for recurrence:** recurs if a run reports no usable JSON
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B032 - a working raw app builder existed but every run used the JSON one
 
@@ -257,7 +257,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** stage_app uses build_html_raw, so there is no JSON to parse, and groq_json now names the real cause and captures the raw reply
 - **Files:** stage_app.py, make_app.py
 - **Check for recurrence:** recurs if a run reports no usable JSON
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B033 - the element inventory missed single-quoted ids, so patches had nothing to target
 
@@ -265,7 +265,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** read ids and classes in both quote styles, and refuse page-rewriting or network code such as document.write, location.href, fetch and eval
 - **Files:** patcher.py
 - **Check for recurrence:** recurs if the inventory reports an empty ids list for an app that clearly has ids
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B034 - the self-heal debugger called remember() which did not exist
 
@@ -273,7 +273,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** define remember in selfheal.py writing to the fixbook, and check every call site with a whole-code audit that parses all files
 - **Files:** selfheal.py, selftest_audit.py
 - **Check for recurrence:** recurs if the audit reports any undefined name
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B035 - the new self-tests hardcoded a Windows path and could not run on the Linux runner
 
@@ -281,7 +281,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** resolve every path from the script's own location and install pyyaml on the runner
 - **Files:** selftest.py, selftest_deep.py, selftest_audit.py
 - **Check for recurrence:** recurs if a self-test reports a missing file that clearly exists
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B036 - a run failed on a rate limit even though the allowance refills within a minute
 
@@ -289,7 +289,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** retry the model call up to eight times with a growing wait whenever the reply is a rate limit, since the allowance does refill
 - **Files:** make_app.py
 - **Check for recurrence:** recurs if a run reports no usable html after waiting
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B037 - every model call failed with a utf-8 decode error that looked like a rate limit
 
@@ -297,7 +297,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** decode gzip and deflate responses explicitly and ask for identity encoding so nothing arrives compressed
 - **Files:** providers.py, ai.py
 - **Check for recurrence:** recurs if a log shows a codec decode error from a model call
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B038 - verify could not find the staged file, and the slug was doubled
 
@@ -305,7 +305,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** store the candidate path relative to the repo and let write_app own the basic suffix
 - **Files:** stage_app.py, verify_app.py
 - **Check for recurrence:** recurs if verify reports a staged file is gone, or a slug ends in -basic-basic
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B039 - verify still could not find the staged file on the Linux runner
 
@@ -313,7 +313,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** store the relative path with as_posix so it is identical on every operating system
 - **Files:** stage_app.py
 - **Check for recurrence:** recurs if verify reports a staged file is gone
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B040 - one dead control blocked every publish, so the catalogue stayed empty
 
@@ -321,7 +321,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** tolerate up to one dead control and publish with it logged, keep refusing two or more, and drop qwen whose output ceiling is below any patch we send
 - **Files:** verify_app.py, patcher.py
 - **Check for recurrence:** recurs if no product reaches the catalogue
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B041 - the tolerance decision never published, it just gave up with exit code 2
 
@@ -329,7 +329,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** let the tolerance branch fall through to the publish path, and use the CHAT_MODELS list rather than a second unused one so qwen is actually dropped
 - **Files:** verify_app.py, patcher.py, make_app.py
 - **Check for recurrence:** recurs if verify logs that it will publish but the run ends without a release
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B042 - the Linux job tried to build a Windows exe and refused to publish anything
 
@@ -337,7 +337,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** publish the free edition on Linux, keep the paid tier hidden until the Windows job uploads a real installer, then reveal it
 - **Files:** verify_app.py, build_paid_only.py
 - **Check for recurrence:** recurs if a run logs that the paid build could not be produced
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B043 - publishing the free edition crashed on KeyError: blurb
 
@@ -345,7 +345,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** read the fallback with .get and pass a blurb through from the staged candidate
 - **Files:** make_app.py, verify_app.py
 - **Check for recurrence:** recurs if a run ends with KeyError while publishing
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B044 - qwen was still being called after being removed from the patch list
 
@@ -353,7 +353,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** remove qwen from the team roster and the debugger list as well, not only the patch list
 - **Files:** debug_team.py, debug_team2.py
 - **Check for recurrence:** recurs if a log shows qwen being called
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B045 - publishing crashed again, this time on KeyError: tags
 
@@ -361,7 +361,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** read tags with a default empty list
 - **Files:** make_app.py
 - **Check for recurrence:** recurs if a run ends with KeyError while publishing
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B046 - publishing deleted the paid folder and then tried to copy it
 
@@ -369,7 +369,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** remove the copy entirely and just record which paid build exists
 - **Files:** verify_app.py
 - **Check for recurrence:** recurs if verify ends with FileNotFoundError on a path under paid/
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B047 - after publishing, the exposure check refused the run with two violations
 
@@ -377,7 +377,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** keep the paid tier out of site/ entirely and delete the stale trackned directory
 - **Files:** make_app.py, check_exposure.py
 - **Check for recurrence:** recurs if check_exposure reports a paid edition or a duplicated slug
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B048 - the exposure check rejected the run because the catalog slug did not match the folder on disk
 
@@ -385,7 +385,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** use the folder's own name for the catalog entry so the two always match
 - **Files:** verify_app.py
 - **Check for recurrence:** recurs if the exposure check reports a folder that is not a known basic edition
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B049 - the exposure check found the doubled suffix all over again during verification
 
@@ -393,7 +393,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** stop appending the suffix in the verify path and let write_app own the name
 - **Files:** verify_app.py
 - **Check for recurrence:** recurs if the exposure check reports a duplicated slug
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B050 - the free edition published but the installer job had nothing to build
 
@@ -401,7 +401,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** commit and push the verified results from the verify job before the installer job starts
 - **Files:** monday-verify.yml
 - **Check for recurrence:** recurs if the installer job logs that nothing was published to build from
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## How to use this
 

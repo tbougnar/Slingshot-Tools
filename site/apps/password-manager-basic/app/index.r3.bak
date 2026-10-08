@@ -11,6 +11,4 @@ document.getElementById('themeToggle').addEventListener('click',toggleTheme);
 if(LIMITS.export){document.getElementById('exportBtn').addEventListener('click',exportData);
 document.getElementById('importBtn').addEventListener('click',()=>document.getElementById('importFile').click());
 document.getElementById('importFile').addEventListener('change',importData);}
-initTheme();render();
-try{var __n=document.querySelector("#addForm button[type=\"submit\"]");if(__n&&!__n.dataset.slFixed){__n.dataset.slFixed='1';__n.addEventListener('click',function(ev){addEntry(event)});}}catch(__e){console.error(__e);}
-</script></body></html>
+initTheme();render();</script></body></html>

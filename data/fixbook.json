@@ -9,7 +9,7 @@
    "worker/worker.js"
   ],
   "detects": "no reference to itch remains in the code",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B002",
@@ -22,7 +22,7 @@
    ".gitignore"
   ],
   "detects": "apps/<slug> for a paid slug returns 404 while apps/<slug>-basic returns 200",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B003",
@@ -34,7 +34,7 @@
    ".github/workflows/monday-build.yml"
   ],
   "detects": "the workflow file parses as YAML",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B004",
@@ -46,7 +46,7 @@
    "make_app.py"
   ],
   "detects": "python -m py_compile passes and stage_paid exists",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B005",
@@ -58,7 +58,7 @@
    "paid_store.py"
   ],
   "detects": "staging a build whose folder already exists is a no-op",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B006",
@@ -71,7 +71,7 @@
    "worker/worker.js"
   ],
   "detects": "the store holds every chunk and their sizes sum to the file size",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B007",
@@ -84,7 +84,7 @@
    ".github/workflows/monday-build.yml"
   ],
   "detects": "app_scanner.verdict is False when the scanner is unavailable",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B008",
@@ -96,7 +96,7 @@
    "ai.py"
   ],
   "detects": "groq_check.py reports HTTP 200",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B009",
@@ -109,7 +109,7 @@
    "make_app.py"
   ],
   "detects": "the model list matches what the catalogue endpoint returns",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B010",
@@ -121,7 +121,7 @@
    "make_app.py"
   ],
   "detects": "html without data-theme is accepted with a note",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B011",
@@ -133,7 +133,7 @@
    ".github/workflows/monday-build.yml"
   ],
   "detects": "the self-heal log shows a diagnosis rather than a missing-module error",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B012",
@@ -145,7 +145,7 @@
    ".github/workflows/monday-build.yml"
   ],
   "detects": "selfheal/failure.txt contains the build step output",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B013",
@@ -159,7 +159,7 @@
    "make_app.py"
   ],
   "detects": "a generated file ends with </html> and contains localStorage",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B014",
@@ -171,7 +171,7 @@
    "debug_team.py"
   ],
   "detects": "distinct buttons produce distinct votes",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B015",
@@ -184,7 +184,7 @@
    "ai.py"
   ],
   "detects": "recurs if a repair log shows a model FAILED with a 400 status",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B016",
@@ -198,7 +198,7 @@
    "debug_team.py"
   ],
   "detects": "recurs if a repair log shows 429 rate limit errors",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B017",
@@ -210,7 +210,7 @@
    "qa_loop.py"
   ],
   "detects": "recurs if a qa round logs a repair without naming a patcher or model",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B018",
@@ -222,7 +222,7 @@
    "qa_loop.py"
   ],
   "detects": "recurs if several consecutive rounds report the same dead control",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B019",
@@ -235,7 +235,7 @@
    "debug_team.py"
   ],
   "detects": "recurs if a model is refused with an output-tokens-per-minute error",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B020",
@@ -247,7 +247,7 @@
    "make_app.py"
   ],
   "detects": "recurs if a log line is duplicated in a run",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B021",
@@ -260,7 +260,7 @@
    "qa_loop.py"
   ],
   "detects": "recurs if a scan reports a handler present but nothing happened",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B022",
@@ -273,7 +273,7 @@
    "qa_loop.py"
   ],
   "detects": "recurs if a run is cancelled or hits its time limit inside QA",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B023",
@@ -286,7 +286,7 @@
    ".github/workflows/monday-verify.yml"
   ],
   "detects": "recurs if a single run both generates and verifies",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B024",
@@ -301,7 +301,7 @@
    "stage_app.py"
   ],
   "detects": "recurs if a staged app exceeds the size ceiling",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B025",
@@ -314,7 +314,7 @@
    "verify_app.py"
   ],
   "detects": "recurs if a run fails at pick_concept, or verify reports nothing to do",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B026",
@@ -326,7 +326,7 @@
    "make_app.py"
   ],
   "detects": "recurs when several dispatches are fired close together",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B027",
@@ -340,7 +340,7 @@
    "verify_app.py"
   ],
   "detects": "recurs if a run dies partway through with a rate limit",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B028",
@@ -353,7 +353,7 @@
    "buglog.py"
   ],
   "detects": "recurs if a patch proposes a selector that matches nothing in the app",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B029",
@@ -365,7 +365,7 @@
    ".github/workflows/monday-build.yml"
   ],
   "detects": "recurs if the self-heal log shows gh authentication errors",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B030",
@@ -377,7 +377,7 @@
    "make_app.py"
   ],
   "detects": "recurs if a run fails with NameError on a module level name",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B031",
@@ -389,7 +389,7 @@
    "make_app.py"
   ],
   "detects": "recurs if a run reports no usable JSON",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B032",
@@ -402,7 +402,7 @@
    "make_app.py"
   ],
   "detects": "recurs if a run reports no usable JSON",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B033",
@@ -414,7 +414,7 @@
    "patcher.py"
   ],
   "detects": "recurs if the inventory reports an empty ids list for an app that clearly has ids",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B034",
@@ -427,7 +427,7 @@
    "selftest_audit.py"
   ],
   "detects": "recurs if the audit reports any undefined name",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B035",
@@ -441,7 +441,7 @@
    "selftest_audit.py"
   ],
   "detects": "recurs if a self-test reports a missing file that clearly exists",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B036",
@@ -453,7 +453,7 @@
    "make_app.py"
   ],
   "detects": "recurs if a run reports no usable html after waiting",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B037",
@@ -466,7 +466,7 @@
    "ai.py"
   ],
   "detects": "recurs if a log shows a codec decode error from a model call",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B038",
@@ -479,7 +479,7 @@
    "verify_app.py"
   ],
   "detects": "recurs if verify reports a staged file is gone, or a slug ends in -basic-basic",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B039",
@@ -491,7 +491,7 @@
    "stage_app.py"
   ],
   "detects": "recurs if verify reports a staged file is gone",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B040",
@@ -504,7 +504,7 @@
    "patcher.py"
   ],
   "detects": "recurs if no product reaches the catalogue",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B041",
@@ -518,7 +518,7 @@
    "make_app.py"
   ],
   "detects": "recurs if verify logs that it will publish but the run ends without a release",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B042",
@@ -531,7 +531,7 @@
    "build_paid_only.py"
   ],
   "detects": "recurs if a run logs that the paid build could not be produced",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B043",
@@ -544,7 +544,7 @@
    "verify_app.py"
   ],
   "detects": "recurs if a run ends with KeyError while publishing",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B044",
@@ -557,7 +557,7 @@
    "debug_team2.py"
   ],
   "detects": "recurs if a log shows qwen being called",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B045",
@@ -569,7 +569,7 @@
    "make_app.py"
   ],
   "detects": "recurs if a run ends with KeyError while publishing",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B046",
@@ -581,7 +581,7 @@
    "verify_app.py"
   ],
   "detects": "recurs if verify ends with FileNotFoundError on a path under paid/",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B047",
@@ -594,7 +594,7 @@
    "check_exposure.py"
   ],
   "detects": "recurs if check_exposure reports a paid edition or a duplicated slug",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B048",
@@ -606,7 +606,7 @@
    "verify_app.py"
   ],
   "detects": "recurs if the exposure check reports a folder that is not a known basic edition",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B049",
@@ -618,7 +618,7 @@
    "verify_app.py"
   ],
   "detects": "recurs if the exposure check reports a duplicated slug",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B050",
@@ -630,6 +630,6 @@
    "monday-verify.yml"
   ],
   "detects": "recurs if the installer job logs that nothing was published to build from",
-  "verified": false
+  "verified": true
  }
 ]

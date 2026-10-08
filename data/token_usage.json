@@ -1,0 +1,7 @@
+{
+ "window_start": 1791468393.3578336,
+ "total": 15863,
+ "calls": 11,
+ "last_model": "openai/gpt-oss-20b",
+ "last_provider": "groq"
+}
