@@ -355,6 +355,14 @@ the change that fixed it. Check here before proposing anything.
 - **Check for recurrence:** recurs if a log shows qwen being called
 - **Status:** UNTESTED
 
+## B045 - publishing crashed again, this time on KeyError: tags
+
+- **Cause:** the same pattern as blurb: publish reads keys that the verification path does not put in its concept dict
+- **Fix:** read tags with a default empty list
+- **Files:** make_app.py
+- **Check for recurrence:** recurs if a run ends with KeyError while publishing
+- **Status:** UNTESTED
+
 ## How to use this
 
 1. If the symptom matches an entry, use that fix. Do not invent a new one.
