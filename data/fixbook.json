@@ -655,5 +655,18 @@
   ],
   "detects": "recurs if any catalog entry has an empty blurb or an empty tags list",
   "verified": false
+ },
+ {
+  "id": "B053",
+  "date": "2026-10-08",
+  "symptom": "the store showed two separate cards because the basic tier carried base_slug 'password-manager-basic'",
+  "cause": "publish() trusted an inherited base_slug, so the free and paid entries fell into different product families and each card offered only one tier",
+  "fix": "strip a trailing tier marker from base_slug at publish time and fail check_exposure when a family is left with only one tier",
+  "files": [
+   "make_app.py",
+   "check_exposure.py"
+  ],
+  "detects": "recurs if any product family has just one tier in site/apps.json",
+  "verified": false
  }
 ]
