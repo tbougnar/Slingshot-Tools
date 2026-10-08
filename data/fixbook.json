@@ -668,5 +668,30 @@
   ],
   "detects": "recurs if any product family has just one tier in site/apps.json",
   "verified": false
+ },
+ {
+  "id": "B054",
+  "date": "2026-10-08",
+  "symptom": "community ballot winners never reached the build step because the winner was stored as a display label and compared against slugs",
+  "cause": "the winner was recorded as 'color picker' but make_app compared it to 'color-picker', so every vote was silently ignored",
+  "fix": "store winner_slug when the ballot closes, and normalise labels to slugs when reading recent winners",
+  "files": [
+   "discord_data.py",
+   "discord_polls.py"
+  ],
+  "detects": "recurs if a ballot closes but pick_concept does not mention the community vote",
+  "verified": false
+ },
+ {
+  "id": "B055",
+  "date": "2026-10-08",
+  "symptom": "a tool that was already live was about to be generated again because data/already_built.json had lost its entry",
+  "cause": "already_built.json is tracked in git, so a git reset reverted the record and the concept looked unbuilt",
+  "fix": "merge the public catalog into load_built() so anything on the site counts as built regardless of the record",
+  "files": [
+   "make_app.py"
+  ],
+  "detects": "recurs if a published product is missing from data/already_built.json",
+  "verified": false
  }
 ]

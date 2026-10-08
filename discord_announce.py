@@ -21,8 +21,9 @@ CATALOG = ROOT / "site" / "apps.json"
 PUBLISHED = ROOT / "data" / "published.json"
 SENT = ROOT / "data" / "discord_sent.json"
 
-SITE_URL = (os.environ.get("SITE_URL")
-            or "https://tbougnar.github.io/Slingshot-Tools").rstrip("/")
+import discord_data as dd
+
+SITE_URL = dd.SITE_URL
 WEBHOOK = os.environ.get("DISCORD_WEBHOOK_URL", "").strip()
 
 BRAND = 0xC1272D

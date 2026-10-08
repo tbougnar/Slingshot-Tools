@@ -128,8 +128,13 @@ jobs:
       #     github-token: ${{ secrets.GITHUB_TOKEN }}
 
         run: python build_paid_only.py
-      # Only fires once the paid tier is genuinely on sale, and stays silent
-      # when no webhook is configured, so it can never block a publish.
+      # Discord is best-effort: a missing webhook or a Discord outage must never
+      # stop a release. Ballots are NOT handled here: votes hold Discord user
+      # ids and a CI runner is thrown away when the job ends, so the long-lived
+      # bot host owns the poll lifecycle (see DISCORD_BOT_SETUP.md).
+      - name: Write the Discord article for the new tool
+        run: python discord_article.py
+        continue-on-error: true
       - name: Announce the new tool in Discord
         run: python discord_announce.py
         continue-on-error: true

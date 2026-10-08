@@ -339,12 +339,39 @@ def groq_json_any(system, user, models=None, **kw):
 
 
 def load_built():
+    """Everything already built, so nothing is generated twice.
+
+    `data/already_built.json` is the record the pipeline appends to, but a
+    reset or a hand edit can drop entries. The public catalog is the other
+    half of the truth, so both are merged: a tool that is on the site counts
+    as built even if the record lost it.
+    """
+    built = []
+    seen = set()
     if BANNED.exists():
         try:
-            return json.loads(BANNED.read_text(encoding="utf-8"))
+            built = json.loads(BANNED.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
-            pass
-    return []
+            built = []
+    for b in built:
+        slug = b.get("slug") if isinstance(b, dict) else None
+        if slug:
+            seen.add(slug)
+
+    if CATALOG.exists():
+        try:
+            entries = json.loads(CATALOG.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            entries = []
+        if isinstance(entries, list):
+            for a in entries:
+                if not isinstance(a, dict):
+                    continue
+                base = strip_tier_suffix_slug(a.get("base_slug") or a.get("slug"))
+                if base and base not in seen:
+                    seen.add(base)
+                    built.append({"slug": base, "source": "catalog"})
+    return built
 
 
 def pick_concept(money=""):
@@ -354,6 +381,9 @@ def pick_concept(money=""):
     first call of every run on something the code already knew. That call was
     where runs died on a rate limit, so it is gone: the pool is in CATEGORIES
     and the choice needs no intelligence.
+
+    Community votes are honoured first: whatever won the last Discord ballot
+    is built next, so the roadmap follows what people actually asked for.
     """
     built = load_built()
     taken = {b["slug"] for b in built}
@@ -370,12 +400,32 @@ def pick_concept(money=""):
                 "blurb": desc,
                 "tags": [w.strip(",.") for w in desc.split()[:4]]}
 
+    voted = _voted_next()
+    if voted:
+        match = next((c for c in pool if c[0] == voted), None)
+        if match:
+            concept = parts(match)
+            log(f"community vote chose {concept['slug']} "
+                f"[won the last Discord ballot]")
+            return concept
+        log(f"ballot winner {voted!r} is not an unused concept; ignoring vote")
+
     chosen = max(pool, key=lambda c: (len(c[1]), c[0]))
     concept = parts(chosen)
     log(f"choosing from {len(pool)} unused concepts (built: {len(built)})")
     log(f"concept: {concept['title']} ({concept['slug']}) "
         f"[chosen locally, no model call]")
     return concept
+
+
+def _voted_next() -> str:
+    """The most recent community ballot winner, if it is still buildable."""
+    try:
+        import discord_data
+        winners = discord_data.recent_winners(1)
+    except Exception:  # noqa: BLE001
+        return ""
+    return winners[0] if winners else ""
 
 
 _CARD_FILE = ROOT / "PATTERN_CARD.txt"

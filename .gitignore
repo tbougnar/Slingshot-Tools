@@ -33,3 +33,10 @@ paid/
 
 # regenerated from the fixbook at build time
 data/lessons.txt
+
+# Discord state that must never be published.
+# data/polls.json holds voters' Discord user ids, and
+# data/discord_sent.json only matters on the machine that posts.
+data/polls.json
+data/discord_sent.json
+data/articles.json
