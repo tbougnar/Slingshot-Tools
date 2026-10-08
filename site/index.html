@@ -1,505 +1,147 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Slingshot Tools — tiny apps for everyday use</title>
-<meta name="description" content="Slingshot Tools makes small, fast, free apps that solve one everyday problem properly. Download and run with nothing to sign up for.">
-<link rel="icon" href="favicon.png">
-<link rel="apple-touch-icon" href="icon-512.png">
-<style>
-  :root{
-    --red:#C1272D; --red-dark:#8E1B20; --red-ink:#E23B41;
-    --bg:#14100F; --bg-2:#1C1615; --card:#221B1A; --line:#332826;
-    --fg:#F6EFEC; --muted:#B9A8A4; --shadow:0 10px 30px rgba(0,0,0,.45);
-  }
-  html[data-theme="light"]{
-    --bg:#FBF7F6; --bg-2:#FFFFFF; --card:#FFFFFF; --line:#EADEDC;
-    --fg:#1B1211; --muted:#6B5B58; --shadow:0 10px 26px rgba(140,30,36,.10);
-  }
-  *{box-sizing:border-box}
-  body{
-    margin:0; background:var(--bg); color:var(--fg);
-    font:16px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Inter,sans-serif;
-    -webkit-font-smoothing:antialiased;
-  }
-  a{color:inherit}
-  .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
-  header{position:sticky;top:0;z-index:20;backdrop-filter:blur(10px);
-    background:color-mix(in srgb,var(--bg) 82%,transparent);border-bottom:1px solid var(--line)}
-  .bar{display:flex;align-items:center;gap:14px;padding:14px 0}
-  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;font-weight:800;letter-spacing:-.02em}
-  .brand img{width:38px;height:38px;border-radius:11px;display:block;object-fit:contain}
-  .brand span b{color:var(--red-ink)}
-  .spacer{flex:1}
-  .btn{border:1px solid var(--line);background:var(--card);color:var(--fg);
-    padding:9px 15px;border-radius:11px;font:inherit;font-size:14px;cursor:pointer;
-    text-decoration:none;display:inline-flex;align-items:center;gap:8px;transition:.15s}
-  .btn:hover{border-color:var(--red-ink);transform:translateY(-1px)}
-  .btn.primary{background:linear-gradient(180deg,var(--red-ink),var(--red));color:#fff;border-color:transparent}
-  .hero{padding:72px 0 44px;text-align:center}
-  .hero img{width:104px;height:104px;border-radius:26px;box-shadow:var(--shadow);object-fit:contain}
-  h1{font-size:clamp(34px,6vw,58px);line-height:1.05;margin:22px 0 12px;letter-spacing:-.035em}
-  h1 b{color:var(--red-ink)}
-  .sub{color:var(--muted);font-size:clamp(16px,2.2vw,19px);max-width:60ch;margin:0 auto}
-  .cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:28px}
-  .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));
-    padding:22px 0 60px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;
-    display:flex;flex-direction:column;gap:10px;transition:.18s;position:relative;overflow:hidden}
-  .card:before{content:"";position:absolute;inset:0 auto auto 0;width:100%;height:3px;
-    background:linear-gradient(90deg,var(--red-ink),transparent)}
-  .card:hover{transform:translateY(-3px);box-shadow:var(--shadow);border-color:var(--red-ink)}
-  .card h3{margin:0;font-size:18px;letter-spacing:-.02em}
-  .card p{margin:0;color:var(--muted);font-size:14.5px;flex:1}
-  .tags{display:flex;flex-wrap:wrap;gap:6px}
-  .tag{font-size:11.5px;padding:3px 9px;border-radius:999px;background:var(--bg-2);
-    border:1px solid var(--line);color:var(--muted)}
-  .row{display:flex;gap:9px;align-items:center;margin-top:4px}
-  .pill{font-size:11.5px;padding:3px 9px;border-radius:999px;background:var(--red);
-    color:#fff;font-weight:700;letter-spacing:.02em}
-  .pill.free{background:var(--red-ink)}
-  .pill.basic{background:var(--bg-2);color:var(--red-ink);border:1px solid var(--red-ink)}
-  .card.full{border-color:var(--red-ink)}
-  .card.full:before{background:linear-gradient(90deg,var(--red-ink),var(--red))}
-  .diffs{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:5px}
-  .diffs li{font-size:13px;color:var(--muted);padding-left:20px;position:relative;line-height:1.45}
-  .diffs li:before{content:"+";position:absolute;left:2px;top:-1px;color:var(--red-ink);
-    font-weight:800;font-size:14px}
-  .price{margin-right:auto;font-weight:800;font-size:17px;letter-spacing:-.02em}
-  footer{border-top:1px solid var(--line);padding:30px 0 60px;color:var(--muted);font-size:14px}
-  footer .grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));padding:0}
-  .dlg{position:fixed;inset:0;background:rgba(0,0,0,.66);display:none;
-    align-items:center;justify-content:center;padding:20px;z-index:60}
-  .dlg.open{display:flex}
-  .dlgBox{background:var(--card);border:1px solid var(--line);border-radius:20px;max-width:760px;
-    width:100%;padding:26px;position:relative;box-shadow:var(--shadow)}
-  .dlgX{position:absolute;top:12px;right:14px;background:none;border:0;color:var(--muted);
-    font-size:28px;cursor:pointer;line-height:1}
-  .dlgBox h3{margin:0 0 6px;font-size:22px}
-  .dlgBlurb{color:var(--muted);margin:0 0 18px}
-  .dlgOpts{display:grid;gap:12px;grid-template-columns:1fr 1fr}
-  @media(max-width:640px){.dlgOpts{grid-template-columns:1fr}}
-  .opt{text-align:left;background:var(--bg-2);border:1px solid var(--line);border-radius:14px;
-    padding:16px;cursor:pointer;display:flex;flex-direction:column;gap:6px;color:var(--fg);
-    font:inherit;transition:.15s}
-  .opt:hover{transform:translateY(-2px);border-color:var(--red-ink)}
-  .opt.full{border-color:var(--red-ink);background:color-mix(in srgb,var(--red) 8%,var(--bg-2))}
-  .optTier{font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
-    color:var(--red-ink)}
-  .optTitle{font-weight:700;font-size:16px}
-  .optBlurb{color:var(--muted);font-size:13.5px;line-height:1.45}
-  .optPrice{font-size:20px;font-weight:800;letter-spacing:-.02em;margin-top:2px}
-  .optCta{font-size:13px;color:var(--red-ink);font-weight:700}
-  .dlgBox h4{margin:20px 0 8px;font-size:14px}
-  .empty{grid-column:1/-1;text-align:center;padding:70px 20px;color:var(--muted);
-    border:1px dashed var(--line);border-radius:18px}
-  .filters{display:flex;gap:8px;flex-wrap:wrap;padding:0 0 6px}
-  .filters .btn.active{background:var(--red);color:#fff;border-color:transparent}
-.signpath{margin-top:28px;padding:12px;border:1px solid var(--line);border-radius:9px;color:var(--dim);font-size:12.5px;text-align:center}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Slingshot Tools — tiny apps for everyday use</title>
+  <meta name="description" content="Slingshot Tools makes small, fast, free apps that solve everyday problems.">
+  <link rel="icon" href="favicon.png">
+  <link rel="apple-touch-icon" href="icon-512.png">
+  <style>
+    :root{
+      --red:#C1272D; --red-dark:#8E1B20; --red-ink:#E23B41;
+      --bg:#14100F; --bg-2:#1C1615; --card:#221B1A; --line:#332826;
+      --fg:#F6EFEC; --muted:#B9A8A4; --shadow:0 10px 30px rgba(0,0,0,.45);
+    }
+    html[data-theme="light"]{
+      --bg:#FBF7F6; --bg-2:#FFFFFF; --card:#FFFFFF; --line:#EADEDC;
+      --fg:#1B1211; --muted:#6B5B58; --shadow:0 10px 26px rgba(140,30,36,.10);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; background:var(--bg); color:var(--fg);
+      font:16px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Inter,sans-serif;
+      -webkit-font-smoothing:antialiased;
+    }
+    a{color:inherit}
+    .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+    header{position:sticky;top:0;z-index:20;backdrop-filter:blur(12px) saturate(120%);
+      background:color-mix(in srgb,var(--bg) 85%,transparent);border-bottom:1px solid var(--line);
+      animation:fadeDown .8s ease-out;}
+    .bar{display:flex;align-items:center;gap:14px;padding:14px 0}
+    .brand{display:flex;align-items:center;gap:12px;text-decoration:none;font-weight:800;letter-spacing:-.02em}
+    .brand img{width:38px;height:38px;border-radius:11px;display:block;object-fit:contain}
+    .brand span b{color:var(--red-ink)}
+    .spacer{flex:1}
+    .btn{border:1px solid var(--line);background:var(--card);color:var(--fg);
+      padding:9px 15px;border-radius:11px;font:inherit;font-size:14px;cursor:pointer;
+      text-decoration:none;display:inline-flex;align-items:center;gap:8px;transition:.15s}
+    .btn:hover{border-color:var(--red-ink);transform:translateY(-1px)}
+    .btn.primary{background:linear-gradient(180deg,var(--red-ink),var(--red));color:#fff;border-color:transparent}
+    .hero{padding:72px 0 44px;text-align:center}
+    .hero img{width:104px;height:104px;border-radius:26px;box-shadow:var(--shadow);object-fit:contain;
+      animation:float 6s ease-in-out infinite;}
+    h1{font-size:clamp(34px,6vw,58px);line-height:1.05;margin:22px 0 12px;letter-spacing:-.035em}
+    h1 b{color:var(--red-ink)}
+    .sub{color:var(--muted);font-size:clamp(16px,2.2vw,19px);max-width:60ch;margin:0 auto}
+    .cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:28px}
+    .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));padding:22px 0 60px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;
+      display:flex;flex-direction:column;gap:10px;transition:.18s;position:relative;overflow:hidden}
+    .card:before{content:"";position:absolute;inset:0 auto auto 0;width:100%;height:3px;
+      background:linear-gradient(90deg,var(--red-ink),transparent)}
+    .card:hover{transform:translateY(-3px);box-shadow:var(--shadow);border-color:var(--red-ink)}
+    .card h3{margin:0;font-size:18px;letter-spacing:-.02em}
+    .card p{margin:0;color:var(--muted);font-size:14.5px;flex:1}
+    .tags{display:flex;flex-wrap:wrap;gap:6px}
+    .tag{font-size:11.5px;padding:3px 9px;border-radius:999px;background:var(--bg-2);
+      border:1px solid var(--line);color:var(--muted)}
+    .row{display:flex;gap:9px;align-items:center;margin-top:4px}
+    .pill{font-size:11.5px;padding:3px 9px;border-radius:999px;background:var(--red);
+      color:#fff;font-weight:700;letter-spacing:.02em}
+    .pill.basic{background:var(--bg-2);color:var(--red-ink);border:1px solid var(--red-ink)}
+    .card.full{border-color:var(--red-ink)}
+    .price{margin-right:auto;font-weight:800;font-size:17px;letter-spacing:-.02em}
+    footer{border-top:1px solid var(--line);padding:30px 0 60px;color:var(--muted);font-size:14px}
+    .dlg{position:fixed;inset:0;background:rgba(0,0,0,.66);display:none;backdrop-filter:blur(4px);
+      align-items:center;justify-content:center;padding:20px;z-index:60}
+    .dlg.open{display:flex}
+    .dlgBox{background:var(--card);border:1px solid var(--line);border-radius:20px;max-width:760px;
+      width:100%;padding:26px;position:relative;box-shadow:var(--shadow)}
+    .dlgX{position:absolute;top:12px;right:14px;background:none;border:0;color:var(--muted);
+      font-size:28px;cursor:pointer;line-height:1}
+    .dlgBox h3{margin:0 0 6px;font-size:22px}
+    .dlgBlurb{color:var(--muted);margin:0 0 18px}
+    .dlgOpts{display:grid;gap:12px;grid-template-columns:1fr 1fr}
+    @media(max-width:640px){.dlgOpts{grid-template-columns:1fr}}
+    .opt{text-align:left;background:var(--bg-2);border:1px solid var(--line);border-radius:14px;
+      padding:16px;cursor:pointer;display:flex;flex-direction:column;gap:6px;color:var(--fg);
+      font:inherit;transition:.15s}
+    .opt:hover{transform:translateY(-2px);border-color:var(--red-ink)}
+    .opt.full{border-color:var(--red-ink);background:color-mix(in srgb,var(--red) 8%,var(--bg-2))}
+    .optTier{font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+      color:var(--red-ink)}
+    .optTitle{font-weight:700;font-size:16px}
+    .optBlurb{color:var(--muted);font-size:13.5px;line-height:1.45}
+    .optPrice{font-size:20px;font-weight:800;letter-spacing:-.02em;margin-top:2px}
+    .optCta{font-size:13px;color:var(--red-ink);font-weight:700}
+    .empty{grid-column:1/-1;text-align:center;padding:70px 20px;color:var(--muted);
+      border:1px dashed var(--line);border-radius:18px}
+    @keyframes fadeDown{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+  </style>
 </head>
 <body>
-<header>
-  <div class="wrap bar">
-    <a class="brand" href="./">
-      <img src="logo.png" alt="Slingshot Tools logo">
-      <span>Slingshot <b>Tools</b></span>
-    </a>
-    <div class="spacer"></div>
-    <a class="btn" href="#apps">Browse for apps</a> <a class="btn ghost" href="https://signpath.org" target="_blank" rel="noopener">Code signing</a>
-    <button class="btn" id="themeBtn" aria-label="Toggle light and dark mode">Light mode</button>
-  </div>
-</header>
-
-<main class="wrap">
-  <section class="hero">
-    <img src="logo.png" alt="">
-    <h1>Tiny apps for <b>everyday</b> problems</h1>
-    <p class="sub">Small, fast, free tools that solve real annoyances. One focused app at a time —
-      a password manager, a unit converter, and a habit tracker. Simple, focused tools that just work.</p>
-    <div class="cta">
-      <a class="btn" href="#apps">Browse for apps</a> <a class="btn ghost" href="#signing">Code signing</a>
+  <header>
+    <div class="wrap bar">
+      <a class="brand" href="./">
+        <img src="logo.png" alt="Slingshot Tools logo">
+        <span>Slingshot <b>Tools</b></span>
+      </a>
+      <div class="spacer"></div>
+      <a class="btn" href="#apps">Browse for apps</a>
+      <button class="btn" id="themeBtn" aria-label="Toggle light and dark mode">Light mode</button>
     </div>
-  </section><!DOCTYPE html>
-<html lang="en" data-theme="dark">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Slingshot Tools — tiny apps for everyday use</title>
-<meta name="description" content="Slingshot Tools makes small, fast, free apps that solve one everyday problem properly. Download and run with nothing to sign up for.">
-<link rel="icon" href="favicon.png">
-<link rel="apple-touch-icon" href="icon-512.png">
-<style>
-  :root{
-    --red:#C1272D; --red-dark:#8E1B20; --red-ink:#E23B41;
-    --bg:#14100F; --bg-2:#1C1615; --card:#221B1A; --line:#332826;
-    --fg:#F6EFEC; --muted:#B9A8A4; --shadow:0 10px 30px rgba(0,0,0,.45);
-  }
-  html[data-theme="light"]{
-    --bg:#FBF7F6; --bg-2:#FFFFFF; --card:#FFFFFF; --line:#EADEDC;
-    --fg:#1B1211; --muted:#6B5B58; --shadow:0 10px 26px rgba(140,30,36,.10);
-  }
-  *{box-sizing:border-box}
-  body{
-    margin:0; background:var(--bg); color:var(--fg);
-    font:16px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Inter,sans-serif;
-    -webkit-font-smoothing:antialiased;
-  }
-  a{color:inherit}
-  .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
-  header{position:sticky;top:0;z-index:20;backdrop-filter:blur(10px);
-    background:color-mix(in srgb,var(--bg) 82%,transparent);border-bottom:1px solid var(--line)}
-  .bar{display:flex;align-items:center;gap:14px;padding:14px 0}
-  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;font-weight:800;letter-spacing:-.02em}
-  .brand img{width:38px;height:38px;border-radius:11px;display:block;object-fit:contain}
-  .brand span b{color:var(--red-ink)}
-  .spacer{flex:1}
-  .btn{border:1px solid var(--line);background:var(--card);color:var(--fg);
-    padding:9px 15px;border-radius:11px;font:inherit;font-size:14px;cursor:pointer;
-    text-decoration:none;display:inline-flex;align-items:center;gap:8px;transition:.15s}
-  .btn:hover{border-color:var(--red-ink);transform:translateY(-1px)}
-  .btn.primary{background:linear-gradient(180deg,var(--red-ink),var(--red));color:#fff;border-color:transparent}
-  .hero{padding:72px 0 44px;text-align:center}
-  .hero img{width:104px;height:104px;border-radius:26px;box-shadow:var(--shadow);object-fit:contain}
-  h1{font-size:clamp(34px,6vw,58px);line-height:1.05;margin:22px 0 12px;letter-spacing:-.035em}
-  h1 b{color:var(--red-ink)}
-  .sub{color:var(--muted);font-size:clamp(16px,2.2vw,19px);max-width:60ch;margin:0 auto}
-  .cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:28px}
-  .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));
-    padding:22px 0 60px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;
-    display:flex;flex-direction:column;gap:10px;transition:.18s;position:relative;overflow:hidden}
-  .card:before{content:"";position:absolute;inset:0 auto auto 0;width:100%;height:3px;
-    background:linear-gradient(90deg,var(--red-ink),transparent)}
-  .card:hover{transform:translateY(-3px);box-shadow:var(--shadow);border-color:var(--red-ink)}
-  .card h3{margin:0;font-size:18px;letter-spacing:-.02em}
-  .card p{margin:0;color:var(--muted);font-size:14.5px;flex:1}
-  .tags{display:flex;flex-wrap:wrap;gap:6px}
-  .tag{font-size:11.5px;padding:3px 9px;border-radius:999px;background:var(--bg-2);
-    border:1px solid var(--line);color:var(--muted)}
-  .row{display:flex;gap:9px;align-items:center;margin-top:4px}
-  .pill{font-size:11.5px;padding:3px 9px;border-radius:999px;background:var(--red);
-    color:#fff;font-weight:700;letter-spacing:.02em}
-  .pill.free{background:var(--red-ink)}
-  .pill.basic{background:var(--bg-2);color:var(--red-ink);border:1px solid var(--red-ink)}
-  .card.full{border-color:var(--red-ink)}
-  .card.full:before{background:linear-gradient(90deg,var(--red-ink),var(--red))}
-  .diffs{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:5px}
-  .diffs li{font-size:13px;color:var(--muted);padding-left:20px;position:relative;line-height:1.45}
-  .diffs li:before{content:"+";position:absolute;left:2px;top:-1px;color:var(--red-ink);
-    font-weight:800;font-size:14px}
-  .price{margin-right:auto;font-weight:800;font-size:17px;letter-spacing:-.02em}
-  footer{border-top:1px solid var(--line);padding:30px 0 60px;color:var(--muted);font-size:14px}
-  footer .grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));padding:0}
-  .dlg{position:fixed;inset:0;background:rgba(0,0,0,.66);display:none;
-    align-items:center;justify-content:center;padding:20px;z-index:60}
-  .dlg.open{display:flex}
-  .dlgBox{background:var(--card);border:1px solid var(--line);border-radius:20px;max-width:760px;
-    width:100%;padding:26px;position:relative;box-shadow:var(--shadow)}
-  .dlgX{position:absolute;top:12px;right:14px;background:none;border:0;color:var(--muted);
-    font-size:28px;cursor:pointer;line-height:1}
-  .dlgBox h3{margin:0 0 6px;font-size:22px}
-  .dlgBlurb{color:var(--muted);margin:0 0 18px}
-  .dlgOpts{display:grid;gap:12px;grid-template-columns:1fr 1fr}
-  @media(max-width:640px){.dlgOpts{grid-template-columns:1fr}}
-  .opt{text-align:left;background:var(--bg-2);border:1px solid var(--line);border-radius:14px;
-    padding:16px;cursor:pointer;display:flex;flex-direction:column;gap:6px;color:var(--fg);
-    font:inherit;transition:.15s}
-  .opt:hover{transform:translateY(-2px);border-color:var(--red-ink)}
-  .opt.full{border-color:var(--red-ink);background:color-mix(in srgb,var(--red) 8%,var(--bg-2))}
-  .optTier{font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
-    color:var(--red-ink)}
-  .optTitle{font-weight:700;font-size:16px}
-  .optBlurb{color:var(--muted);font-size:13.5px;line-height:1.45}
-  .optPrice{font-size:20px;font-weight:800;letter-spacing:-.02em;margin-top:2px}
-  .optCta{font-size:13px;color:var(--red-ink);font-weight:700}
-  .dlgBox h4{margin:20px 0 8px;font-size:14px}
-  .empty{grid-column:1/-1;text-align:center;padding:70px 20px;color:var(--muted);
-    border:1px dashed var(--line);border-radius:18px}
-  .filters{display:flex;gap:8px;flex-wrap:wrap;padding:0 0 6px}
-  .filters .btn.active{background:var(--red);color:#fff;border-color:transparent}
-.signpath{margin-top:28px;padding:12px;border:1px solid var(--line);border-radius:9px;color:var(--dim);font-size:12.5px;text-align:center}
-</style>
-</head>
-<body>
-<header>
-  <div class="wrap bar">
-    <a class="brand" href="./">
-      <img src="logo.png" alt="Slingshot Tools logo">
-      <span>Slingshot <b>Tools</b></span>
-    </a>
-    <div class="spacer"></div>
-    <a class="btn" href="#apps">Browse for apps</a> <a class="btn ghost" href="https://signpath.org" target="_blank" rel="noopener">Code signing</a>
-    <button class="btn" id="themeBtn" aria-label="Toggle light and dark mode">Light mode</button>
-  </div>
-</header>
-
-<main class="wrap">
-  <!DOCTYPE html>
-<html lang="en" data-theme="dark">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Slingshot Tools — tiny apps for everyday use</title>
-<meta name="description" content="Slingshot Tools makes small, fast, free apps that solve one everyday problem properly. Download and run with nothing to sign up for.">
-<link rel="icon" href="favicon.png">
-<link rel="apple-touch-icon" href="icon-512.png">
-<style>
-  :root{
-    --red:#C1272D; --red-dark:#8E1B20; --red-ink:#E23B41;
-    --bg:#14100F; --bg-2:#1C1615; --card:#221B1A; --line:#332826;
-    --fg:#F6EFEC; --muted:#B9A8A4; --shadow:0 10px 30px rgba(0,0,0,.45);
-  }
-  html[data-theme="light"]{
-    --bg:#FBF7F6; --bg-2:#FFFFFF; --card:#FFFFFF; --line:#EADEDC;
-    --fg:#1B1211; --muted:#6B5B58; --shadow:0 10px 26px rgba(140,30,36,.10);
-  }
-  *{box-sizing:border-box}
-  body{
-    margin:0; background:var(--bg); color:var(--fg);
-    font:16px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Inter,sans-serif;
-    -webkit-font-smoothing:antialiased;
-  }
-  a{color:inherit}
-  .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
-  header{position:sticky;top:0;z-index:20;backdrop-filter:blur(10px);
-    background:color-mix(in srgb,var(--bg) 82%,transparent);border-bottom:1px solid var(--line)}
-  .bar{display:flex;align-items:center;gap:14px;padding:14px 0}
-  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;font-weight:800;letter-spacing:-.02em}
-  .brand img{width:38px;height:38px;border-radius:11px;display:block;object-fit:contain}
-  .brand span b{color:var(--red-ink)}
-  .spacer{flex:1}
-  .btn{border:1px solid var(--line);background:var(--card);color:var(--fg);
-    padding:9px 15px;border-radius:11px;font:inherit;font-size:14px;cursor:pointer;
-    text-decoration:none;display:inline-flex;align-items:center;gap:8px;transition:.15s}
-  .btn:hover{border-color:var(--red-ink);transform:translateY(-1px)}
-  .btn.primary{background:linear-gradient(180deg,var(--red-ink),var(--red));color:#fff;border-color:transparent}
-  .hero{padding:72px 0 44px;text-align:center}
-  .hero img{width:104px;height:104px;border-radius:26px;box-shadow:var(--shadow);object-fit:contain}
-  h1{font-size:clamp(34px,6vw,58px);line-height:1.05;margin:22px 0 12px;letter-spacing:-.035em}
-  h1 b{color:var(--red-ink)}
-  .sub{color:var(--muted);font-size:clamp(16px,2.2vw,19px);max-width:60ch;margin:0 auto}
-  .cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:28px}
-  .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));
-    padding:22px 0 60px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;
-    display:flex;flex-direction:column;gap:10px;transition:.18s;position:relative;overflow:hidden}
-  .card:before{content:"";position:absolute;inset:0 auto auto 0;width:100%;height:3px;
-    background:linear-gradient(90deg,var(--red-ink),transparent)}
-  .card:hover{transform:translateY(-3px);box-shadow:var(--shadow);border-color:var(--red-ink)}
-  .card h3{margin:0;font-size:18px;letter-spacing:-.02em}
-  .card p{margin:0;color:var(--muted);font-size:14.5px;flex:1}
-  .tags{display:flex;flex-wrap:wrap;gap:6px}
-  .tag{font-size:11.5px;padding:3px 9px;border-radius:999px;background:var(--bg-2);
-    border:1px solid var(--line);color:var(--muted)}
-  .row{display:flex;gap:9px;align-items:center;margin-top:4px}
-  .pill{font-size:11.5px;padding:3px 9px;border-radius:999px;background:var(--red);
-    color:#fff;font-weight:700;letter-spacing:.02em}
-  .pill.free{background:var(--red-ink)}
-  .pill.basic{background:var(--bg-2);color:var(--red-ink);border:1px solid var(--red-ink)}
-  .card.full{border-color:var(--red-ink)}
-  .card.full:before{background:linear-gradient(90deg,var(--red-ink),var(--red))}
-  .diffs{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:5px}
-  .diffs li{font-size:13px;color:var(--muted);padding-left:20px;position:relative;line-height:1.45}
-  .diffs li:before{content:"+";position:absolute;left:2px;top:-1px;color:var(--red-ink);
-    font-weight:800;font-size:14px}
-  .price{margin-right:auto;font-weight:800;font-size:17px;letter-spacing:-.02em}
-  footer{border-top:1px solid var(--line);padding:30px 0 60px;color:var(--muted);font-size:14px}
-  footer .grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));padding:0}
-  .dlg{position:fixed;inset:0;background:rgba(0,0,0,.66);display:none;
-    align-items:center;justify-content:center;padding:20px;z-index:60}
-  .dlg.open{display:flex}
-  .dlgBox{background:var(--card);border:1px solid var(--line);border-radius:20px;max-width:760px;
-    width:100%;padding:26px;position:relative;box-shadow:var(--shadow)}
-  .dlgX{position:absolute;top:12px;right:14px;background:none;border:0;color:var(--muted);
-    font-size:28px;cursor:pointer;line-height:1}
-  .dlgBox h3{margin:0 0 6px;font-size:22px}
-  .dlgBlurb{color:var(--muted);margin:0 0 18px}
-  .dlgOpts{display:grid;gap:12px;grid-template-columns:1fr 1fr}
-  @media(max-width:640px){.dlgOpts{grid-template-columns:1fr}}
-  .opt{text-align:left;background:var(--bg-2);border:1px solid var(--line);border-radius:14px;
-    padding:16px;cursor:pointer;display:flex;flex-direction:column;gap:6px;color:var(--fg);
-    font:inherit;transition:.15s}
-  .opt:hover{transform:translateY(-2px);border-color:var(--red-ink)}
-  .opt.full{border-color:var(--red-ink);background:color-mix(in srgb,var(--red) 8%,var(--bg-2))}
-  .optTier{font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
-    color:var(--red-ink)}
-  .optTitle{font-weight:700;font-size:16px}
-  .optBlurb{color:var(--muted);font-size:13.5px;line-height:1.45}
-  .optPrice{font-size:20px;font-weight:800;letter-spacing:-.02em;margin-top:2px}
-  .optCta{font-size:13px;color:var(--red-ink);font-weight:700}
-  .dlgBox h4{margin:20px 0 8px;font-size:14px}
-  .empty{grid-column:1/-1;text-align:center;padding:70px 20px;color:var(--muted);
-    border:1px dashed var(--line);border-radius:18px}
-  .filters{display:flex;gap:8px;flex-wrap:wrap;padding:0 0 6px}
-  .filters .btn.active{background:var(--red);color:#fff;border-color:transparent}
-.signpath{margin-top:28px;padding:12px;border:1px solid var(--line);border-radius:9px;color:var(--dim);font-size:12.5px;text-align:center}
-</style>
-</head>
-<body>
-<header>
-  <div class="wrap bar">
-    <a class="brand" href="./">
-      <img src="logo.png" alt="Slingshot Tools logo">
-      <span>Slingshot <b>Tools</b></span>
-    </a>
-    <div class="spacer"></div>
-    <a class="btn" href="#apps">Browse for apps</a> <a class="btn ghost" href="https://signpath.org" target="_blank" rel="noopener">Code signing</a>
-    <button class="btn" id="themeBtn" aria-label="Toggle light and dark mode">Light mode</button>
-  </div>
-</header>
-
-<main class="wrap">
-  
-
-  <div class="filters" id="filters"></div>
-  <section class="grid" id="apps"></section>
-</main>
-
-<div class="dlg" id="dlg" onclick="if(event.target.id==='dlg')closeDialog()">
-  <div class="dlgBox">
-    <button class="dlgX" onclick="closeDialog()" aria-label="Close">&times;</button>
-    <h3 id="dlgTitle"></h3>
-    <p id="dlgBlurb" class="dlgBlurb"></p>
-    <div id="dlgOpts" class="dlgOpts"></div>
-    <div id="dlgDiff"></div>
-  </div>
-</div>
-
-<p class="signpath">Code signing: Free code signing provided by <a href="https://signpath.org" target="_blank" rel="noopener">SignPath.io</a>, certificate by SignPath Foundation.</p>
-<footer>
-  <div class="wrap">
-    <p><strong>Slingshot Tools</strong> — small apps that just work.</p>
-    <p>Free forever. Works offline. Your data stays on your device.</p>
-  </div>
-</footer>
-
-<script>
-const THEME_KEY = "slingshot-theme";
-const btn = document.getElementById("themeBtn");
-const root = document.documentElement;
-
-function paint(t){
-  root.dataset.theme = t;
-  btn.textContent = t === "dark" ? "Light mode" : "Dark mode";
-}
-let saved = null;
-try { saved = localStorage.getItem(THEME_KEY); } catch (e) {}
-if (!saved) saved = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
-paint(saved);
-btn.onclick = () => {
-  const next = root.dataset.theme === "dark" ? "light" : "dark";
-  paint(next);
-  try { localStorage.setItem(THEME_KEY, next); } catch (e) {}
-};
-
-const appsEl = document.getElementById("apps");
-const filtersEl = document.getElementById("filters");
-const CHECKOUT = "./checkout.html";
-const FULL = "./full.html";
-let APPS = [];
-let active = "all";
-
-function esc(s){
-  return String(s == null ? "" : s).replace(/[&<>"']/g, c =>
-    ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-}
-
-function render(){
-  const products = groupProducts(APPS);
-  const list = active === "all" ? products
-    : products.filter(p => (p.full.tag || "") === active);
-  if (!APPS.length){
-    appsEl.innerHTML = '<div class="empty"><strong>Nothing here yet.</strong><br>'
-      + 'New tools land here soon.</div>';
-    return;
-  }
-  if (!list.length){
-    appsEl.innerHTML = '<div class="empty">Nothing in this category yet.</div>';
-    return;
-  }
-  appsEl.innerHTML = list.map(item => {
-    const f = item.full;
-    const p = f.price != null ? '$' + Number(f.price).toFixed(2) : '';
-    return `
-    <article class="card full">
-      <span class="pill">Full edition</span>
-      <h3>${esc(f.title)}</h3>
-      <p>${esc(f.blurb)}</p>
-      <div class="tags">${(f.tags||[]).slice(0,4).map(t =>
-        '<span class="tag">'+esc(t)+'</span>').join("")}</div>
-      <div class="row">
-        <span class="price">${p}</span>
-        <button class="btn primary" onclick='openDialog(${JSON.stringify(item).replace(/'/g,"&#39;")})'>See options</button>
+  </header>
+  <main class="wrap">
+    <section class="hero">
+      <img src="logo.png" alt="">
+      <h1>Tiny apps for <b>everyday</b> problems</h1>
+      <p class="sub">Small, fast, free tools that solve real annoyances. One focused app at a time — a password manager, a unit converter, and a habit tracker. Simple, focused tools that just work.</p>
+      <div class="cta">
+        <a class="btn" href="#apps">Browse for apps</a>
       </div>
-    </article>`;
-  }).join("");
-}
-
-function renderFilters(){
-  const tags = [];
-  APPS.forEach(a => { if (a.tag && !tags.includes(a.tag)) tags.push(a.tag); });
-  if (!tags.length){ filtersEl.innerHTML = ""; return; }
-  filtersEl.innerHTML = ['<button class="btn' + (active==="all"?" active":"") +
-    '" data-f="all">All</button>']
-    .concat(tags.map(t => '<button class="btn' + (active===t?" active":"") +
-      '" data-f="' + esc(t) + '">' + esc(t) + '</button>')).join("");
-  filtersEl.querySelectorAll("button").forEach(b => b.onclick = () => {
-    active = b.dataset.f; render(); renderFilters();
-  });
-}
-
-function groupProducts(list){
-  const byBase = {};
-  list.forEach(a => {
-    if (a.published === false) return;            // not published yet -> hidden
-    const key = a.base_slug || a.slug;
-    (byBase[key] = byBase[key] || []).push(a);
-  });
-  return Object.values(byBase).map(pair => {
-    const full = pair.find(x => x.tier !== 'basic') || pair[0];
-    const basic = pair.find(x => x.tier === 'basic');
-    return {full, basic, key, diffs: full.differences || []};
-  });
-}
-
-function openDialog(item){
-  const opts = [];
-  if (item.basic) opts.push({
-    tier:'basic', title:item.basic.title, blurb:item.basic.blurb,
-    price:'Free', href:item.basic.url});
-  if (item.full) opts.push({
-    tier:'full', title:item.full.title, blurb:item.full.blurb,
-    price:'$' + Number(item.full.price || 0).toFixed(2), href:CHECKOUT + '?slug=' + encodeURIComponent(item.base_slug || item.full.slug) + '&price=' + Number(item.full.price || 0).toFixed(2) + '&title=' + encodeURIComponent(item.full.title)});
-  const d = document.getElementById('dlg');
-  document.getElementById('dlgTitle').textContent = item.full.title;
-  document.getElementById('dlgBlurb').textContent = item.full.blurb || '';
-  document.getElementById('dlgOpts').innerHTML = opts.map(o => `
-    <button class="opt ${o.tier}" onclick="location.href='${esc(o.href)}'">
-      <span class="optTier">${o.tier === 'basic' ? 'Free basic' : 'Full edition'}</span>
-      <span class="optTitle">${esc(o.title)}</span>
-      <span class="optBlurb">${esc(o.blurb || '')}</span>
-      <span class="optPrice">${esc(o.price)}</span>
-      <span class="optCta">${o.tier === 'basic' ? 'Download free' : 'Get the full edition'}</span>
-    </button>`).join('');
-  document.getElementById('dlgDiff').innerHTML = item.diffs.length
-    ? '<h4>What the full edition adds</h4><ul class="diffs">' +
-      item.diffs.map(x => '<li>' + esc(String(x).replace(/^Full edition:\s*/i,'')) + '</li>').join('') +
-      '</ul>' : '';
-  d.classList.add('open');
-}
-
-function closeDialog(){ document.getElementById('dlg').classList.remove('open'); }
-
-fetch("apps.json", {cache:"no-store"})
-  .then(r => r.json())
-  .then(d => { APPS = Array.isArray(d) ? d : (d.apps || []); render(); renderFilters(); })
-  .catch(() => {
-    APPS = [];
-    appsEl.innerHTML = '<div class="empty"><strong>Slingshot Tools</strong><br>'
-      + 'The catalog loads on first build — Monday, 07:00 UTC.</div>';
-  });
-</script>
+    </section>
+    <section class="grid" id="apps"></section>
+  </main>
+  <div class="dlg" id="dlg" onclick="if(event.target.id==='dlg')closeDialog()">
+    <div class="dlgBox">
+      <button class="dlgX" onclick="closeDialog()" aria-label="Close">&times;</button>
+      <h3 id="dlgTitle"></h3>
+      <p id="dlgBlurb" class="dlgBlurb"></p>
+      <div id="dlgOpts" class="dlgOpts"></div>
+    </div>
+  </div>
+  <footer>
+    <div class="wrap">
+      <p><strong>Slingshot Tools</strong> — small apps that just work.</p>
+      <p>Free forever. Works offline. Your data stays on your device.</p>
+    </div>
+  </footer>
+  <script>
+    const THEME_KEY="slingshot-theme"; const btn=document.getElementById("themeBtn"); const root=document.documentElement;
+    function paint(t){root.dataset.theme=t; btn.textContent=t==="dark"?"Light mode":"Dark mode";}
+    let saved=null; try{saved=localStorage.getItem(THEME_KEY);}catch(e){}
+    if(!saved)saved=window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";
+    paint(saved); btn.onclick=()=>{const next=root.dataset.theme==="dark"?"light":"dark"; paint(next); try{localStorage.setItem(THEME_KEY,next);}catch(e){}};
+    const appsEl=document.getElementById("apps"), filtersEl=document.getElementById("filters");
+    const CHECKOUT="./checkout.html"; let APPS=[], active="all";
+    function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+    function groupProducts(list){const byBase={}; list.forEach(a=>{if(a.published===false)return; const k=a.base_slug||a.slug; (byBase[k]=byBase[k]||[]).push(a);}); return Object.values(byBase).map(pair=>{const full=pair.find(x=>x.tier!=="basic")||pair[0]; const basic=pair.find(x=>x.tier==="basic"); return{full,basic,key:k,diffs:full.differences||[]};});}
+    function render(){const products=groupProducts(APPS); const list=active==="all"?products:products.filter(p=>(p.full.tag||"")==active); if(!APPS.length){appsEl.innerHTML='<div class="empty"><strong>Nothing here yet.</strong><br>New tools land here soon.</div>'; return;} appsEl.innerHTML=list.map(item=>{const f=item.full; const p=f.price!=null?'$'+Number(f.price).toFixed(2):''; return '<article class="card full"><span class="pill">Full edition</span><h3>'+esc(f.title)+'</h3><p>'+esc(f.blurb)+'</p><div class="tags">'+(f.tags||[]).slice(0,4).map(t=>'<span class="tag">'+esc(t)+'</span>').join('')+'</div><div class="row"><span class="price">'+p+'</span><button class="btn primary" onclick="openDialog('+JSON.stringify(item).replace(/'/g,'&#39;')+')">See options</button></div></article>';}).join('');}
+    function openDialog(item){const opts=[]; if(item.basic)opts.push({tier:'basic',title:item.basic.title,blurb:item.basic.blurb,price:'Free',href:item.basic.url}); if(item.full)opts.push({tier:'full',title:item.full.title,blurb:item.full.blurb,price:'$'+Number(item.full.price||0).toFixed(2),href:CHECKOUT+'?slug='+encodeURIComponent(item.base_slug||item.full.slug)+'&price='+Number(item.full.price||0).toFixed(2)+'&title='+encodeURIComponent(item.full.title)}); document.getElementById('dlgTitle').textContent=item.full.title; document.getElementById('dlgBlurb').textContent=item.full.blurb||''; document.getElementById('dlgOpts').innerHTML=opts.map(o=>'<button class="opt '+o.tier+'" onclick="location.href=\''+esc(o.href)+'\'"><span class="optTier">'+(o.tier==='basic'?'Free basic':'Full edition')+'</span><span class="optTitle">'+esc(o.title)+'</span><span class="optBlurb">'+esc(o.blurb||'')+'</span><span class="optPrice">'+esc(o.price)+'</span><span class="optCta">'+(o.tier==='basic'?'Download free':'Get the full edition')+'</span></button>').join(''); document.getElementById('dlg').classList.add('open');}
+    function closeDialog(){document.getElementById('dlg').classList.remove('open');}
+    fetch("apps.json",{cache:"no-store"}).then(r=>r.json()).then(d=>{APPS=Array.isArray(d)?d:(d.apps||[]); render();}).catch(()=>{appsEl.innerHTML='<div class="empty"><strong>Slingshot Tools</strong><br>The catalog loads on first build.</div>';});
+  </script>
 </body>
 </html>
