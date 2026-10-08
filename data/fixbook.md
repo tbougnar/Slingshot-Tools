@@ -387,6 +387,14 @@ the change that fixed it. Check here before proposing anything.
 - **Check for recurrence:** recurs if the exposure check reports a folder that is not a known basic edition
 - **Status:** UNTESTED
 
+## B049 - the exposure check found the doubled suffix all over again during verification
+
+- **Cause:** the helper appends -basic itself, but the verify path was also appending it, so the folder became -basic-basic and the check flagged it
+- **Fix:** stop appending the suffix in the verify path and let write_app own the name
+- **Files:** verify_app.py
+- **Check for recurrence:** recurs if the exposure check reports a duplicated slug
+- **Status:** UNTESTED
+
 ## How to use this
 
 1. If the symptom matches an entry, use that fix. Do not invent a new one.

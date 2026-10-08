@@ -80,9 +80,9 @@ def main() -> int:
                "title": stage["title"], "tag": stage["tag"],
                "blurb": stage.get("blurb") or stage.get("free_blurb") or ""}
 
-    full_dir = make_app.write_app({**concept}, html, tier="full")
-    basic_dir = make_app.write_app({**concept, "slug": f"{stage['slug']}-basic"},
-                                   html, tier="basic")
+full_dir = make_app.write_app({**concept}, html, tier="full")
+    # write_app adds the "-basic" suffix itself; passing it here doubles it
+    basic_dir = make_app.write_app({**concept}, html, tier="basic")
 
     price = make_app.PRICE_START
     import pricing

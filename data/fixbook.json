@@ -607,5 +607,17 @@
   ],
   "detects": "recurs if the exposure check reports a folder that is not a known basic edition",
   "verified": false
+ },
+ {
+  "id": "B049",
+  "date": "2026-10-08",
+  "symptom": "the exposure check found the doubled suffix all over again during verification",
+  "cause": "the helper appends -basic itself, but the verify path was also appending it, so the folder became -basic-basic and the check flagged it",
+  "fix": "stop appending the suffix in the verify path and let write_app own the name",
+  "files": [
+   "verify_app.py"
+  ],
+  "detects": "recurs if the exposure check reports a duplicated slug",
+  "verified": false
  }
 ]
