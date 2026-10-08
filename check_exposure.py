@@ -14,6 +14,29 @@ SITE = ROOT / "site"
 APPS = SITE / "apps"
 
 
+def check_tier_families(catalog):
+    """Both tiers of a product must share one base_slug.
+
+    If they drift apart the site renders two separate cards instead of a
+    single product offering a free and a paid option.
+    """
+    families = {}
+    for a in catalog:
+        if a.get("published") is False:
+            continue
+        key = a.get("base_slug") or a.get("slug")
+        families.setdefault(key, []).append(a.get("tier"))
+    problems = []
+    for key, tiers in families.items():
+        if "basic" in tiers and "full" in tiers:
+            continue
+        # a lone tier is only a problem when the other tier exists on disk
+        if len(tiers) == 1:
+            problems.append(f"{key} only has a {tiers[0]} tier; "
+                            f"the two tiers must group together")
+    return families, problems
+
+
 def main() -> int:
     catalog = json.loads((SITE / "apps.json").read_text(encoding="utf-8"))
     paid = [a["slug"] for a in catalog if a.get("tier") == "full"]
@@ -38,6 +61,9 @@ def main() -> int:
     for a in catalog:
         if "-basic-basic" in str(a.get("url", "")):
             problems.append(f"{a['slug']} has a malformed url")
+
+    families, family_problems = check_tier_families(catalog)
+    problems.extend(family_problems)
 
     if problems:
         print("[exposure] FAILED - the public site must not contain paid work:")

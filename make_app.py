@@ -767,6 +767,84 @@ def stage_paid(app_dir: Path, slug: str, installer: Path | None = None) -> bool:
 
 
 
+_JUNK_BLURBS = {"x", "n/a", "na", "none", "todo", "-", "...", "tbd", "null"}
+
+_TAG_STOPWORDS = {
+    "a", "an", "the", "and", "or", "of", "for", "to", "in", "on", "with",
+    "app", "apps", "tool", "tools", "utility", "free", "offline", "online",
+    "small", "tiny", "simple", "mini", "software", "program", "web",
+    "basic", "full", "edition", "version", "premium", "pro",
+}
+
+
+def clean_blurb(*candidates, title="", tag=""):
+    """Return the first blurb that reads like a sentence.
+
+    The generator sometimes emits a placeholder instead of a description
+    (we have seen a bare "x"), and an empty card looks broken on the site,
+    so fall back to a deterministic sentence built from the app's own title.
+    """
+    for cand in candidates:
+        if not isinstance(cand, str):
+            continue
+        text = " ".join(cand.split()).strip().strip('"').strip()
+        if len(text) < 12 or text.lower() in _JUNK_BLURBS:
+            continue
+        # a single repeated character is never a real description
+        if len(set(text.replace(" ", ""))) <= 2:
+            continue
+        return text[:180]
+    name = strip_tier_suffix(title) or "This tool"
+    topic = (tag or "everyday tasks").strip()
+    return f"A small, focused {topic} tool. {name} does one job properly, runs offline, and keeps your data on your device."
+
+
+def strip_tier_suffix(title):
+    """Drop the "(Basic)" suffix the catalog appends to free editions."""
+    return re.sub(r"\s*\(basic\)\s*$", "", str(title or ""), flags=re.I).strip()
+
+
+def strip_tier_suffix_slug(slug):
+    """Return the product family slug, without a trailing tier marker."""
+    s = re.sub(r"-(basic|full)$", "", str(slug or "").strip().lower())
+    return s.strip("-")
+
+
+def clean_tags(*candidates, tag="", title="", limit=4):
+    """Return usable tags, always led by the product's own category."""
+    def norm(raw):
+        if not isinstance(raw, str):
+            return ""
+        t = " ".join(raw.split()).strip().lower()
+        t = t.strip("().,;:!?-—_")          # drop "(basic)" style edges
+        t = re.sub(r"\(.*?\)", " ", t).strip()   # and any bracketed aside
+        t = " ".join(t.split()).strip(".")
+        if not t or t in _JUNK_BLURBS or len(t) > 24:
+            return ""
+        if t in _TAG_STOPWORDS:
+            return ""
+        return t
+
+    # seeds first, so the category leads and the tags stay specific
+    lead = norm(tag)
+    ordered = [lead] if lead else []
+    for seed in str(title or "").lower().split():
+        t = norm(seed)
+        if t and t not in ordered:
+            ordered.append(t)
+    # then whatever the generator suggested
+    for source in candidates:
+        if isinstance(source, str):
+            source = re.split(r"[,\n]", source)
+        if not isinstance(source, (list, tuple, set)):
+            continue
+        for raw in source:
+            t = norm(raw)
+            if t and t not in ordered:
+                ordered.append(t)
+    return ordered[:limit] or ["utility"]
+
+
 def publish(concept, app_dir, installer, tier="full", brand="", differences=None,
              free_blurb="", paid_blurb="", published=False, price_override=None):
     dest = SITE_APPS / concept["slug"]
@@ -789,7 +867,12 @@ def publish(concept, app_dir, installer, tier="full", brand="", differences=None
                 apps = apps.get("apps", [])
         except json.JSONDecodeError:
             apps = []
-    base = concept.get("base_slug", concept["slug"])
+    # Both tiers must land in the same product family, otherwise the site
+    # renders two separate cards instead of one free + one full option. Strip
+    # the tier suffix so an inherited base_slug can never split the family.
+    base = strip_tier_suffix_slug(concept.get("base_slug") or concept["slug"])
+    if not base:
+        base = concept["slug"]
     entry = {
         "slug": concept["slug"],
         "base_slug": base,
@@ -797,10 +880,11 @@ def publish(concept, app_dir, installer, tier="full", brand="", differences=None
                   else f"{brand or concept['title']} (Basic)"),
         "tier": tier,
         "tag": concept["tag"],
-        "blurb": (free_blurb if tier == "basic" and free_blurb
-                  else paid_blurb if tier == "full" and paid_blurb
-                  else concept.get("blurb", "")),
-        "tags": concept.get("tags", []),
+        "blurb": clean_blurb(free_blurb if tier == "basic" else paid_blurb,
+                             concept.get("blurb", ""),
+                             title=brand or concept["title"], tag=concept["tag"]),
+        "tags": clean_tags(concept.get("tags", []), tag=concept["tag"],
+                           title=brand or concept["title"]),
         "url": (f"{SITE_URL.rstrip('/')}/apps/{concept['slug']}/" if tier == "basic"
                 else f"{SITE_URL.rstrip('/')}/apps/{concept['slug']}-basic/"),
         "download": "",

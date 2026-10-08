@@ -5,25 +5,31 @@
     "title": "Offline password manager",
     "tier": "full",
     "tag": "password",
-    "blurb": "",
-    "tags": [],
+    "blurb": "A small, focused password tool. Offline password manager does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "password",
+      "manager"
+    ],
     "url": "https://tbougnar.github.io/Slingshot-Tools/apps/password-manager-basic/",
     "download": "",
     "price": 3.0,
     "free": false,
     "differences": [],
-    "published": false,
+    "published": true,
     "badge": "New",
     "date": "2026-10-08"
   },
   {
     "slug": "password-manager-basic",
-    "base_slug": "password-manager-basic",
+    "base_slug": "password-manager",
     "title": "Offline password manager (Basic)",
     "tier": "basic",
     "tag": "password",
-    "blurb": "",
-    "tags": [],
+    "blurb": "A small, focused password tool. Offline password manager does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "password",
+      "manager"
+    ],
     "url": "https://tbougnar.github.io/Slingshot-Tools/apps/password-manager-basic/",
     "download": "",
     "price": 0.0,
