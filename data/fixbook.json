@@ -631,5 +631,17 @@
   ],
   "detects": "recurs if the installer job logs that nothing was published to build from",
   "verified": true
+ },
+ {
+  "id": "B051",
+  "date": "2026-10-08",
+  "symptom": "the paid installer uploaded but the catalog commit was rejected",
+  "cause": "the Windows job pushed without fetching first, so a concurrent runner's commit rejected it and the paid tier stayed marked unpublished",
+  "fix": "fetch and rebase before every push in both installer commit steps",
+  "files": [
+   "monday-verify.yml"
+  ],
+  "detects": "recurs if the installer logs a rejected push",
+  "verified": false
  }
 ]
