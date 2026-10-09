@@ -48,8 +48,9 @@ The bot needs **Manage Channels** and **Use Application Commands**. On the Bot
 page, either tick those in the permissions link, or give the bot's role
 Administrator and then narrow it afterwards.
 
-To let moderators post in the bot channels, create a role called `Moderator`
-and pass `DISCORD_MOD_ROLE_ID`.
+There is no moderator role. Your own account is the server Administrator, so
+you can post and pin anywhere by hand; the script only locks the channels
+against ordinary members and grants the bot.
 
 ---
 

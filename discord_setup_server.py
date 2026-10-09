@@ -22,7 +22,6 @@ import sys
 
 TOKEN = os.environ.get("DISCORD_BOT_TOKEN", "").strip()
 GUILD_ID = os.environ.get("DISCORD_GUILD_ID", "").strip()
-MOD_ROLE_ID = os.environ.get("DISCORD_MOD_ROLE_ID", "").strip()
 
 try:
     import discord
@@ -89,18 +88,6 @@ def bot_permissions() -> discord.Permissions:
     )
 
 
-def moderator_permissions() -> discord.Permissions:
-    """Human moderation: talk in the bot channels, and keep them tidy."""
-    return discord.Permissions(
-        view_channel=True,
-        send_messages=True,
-        embed_links=True,
-        manage_messages=True,
-        manage_channels=True,
-        read_message_history=True,
-    )
-
-
 def member_permissions() -> discord.Permissions:
     """Members: read and use the bot, but never post in a bot channel."""
     return discord.Permissions(
@@ -128,13 +115,6 @@ def plan_lines() -> list[str]:
 async def configure(guild: discord.Guild) -> int:
     everyone = guild.default_role
     bot_role = guild.me.top_role
-    mod_role = None
-    if MOD_ROLE_ID:
-        mod_role = guild.get_role(int(MOD_ROLE_ID))
-        if mod_role is None:
-            print(f"[setup] warning: moderator role {MOD_ROLE_ID} not found")
-
-    mods = ([mod_role] if mod_role else []) + [bot_role]
     made = reused = 0
 
     # categories first, in the declared order
@@ -198,9 +178,6 @@ async def configure(guild: discord.Guild) -> int:
                     member_permissions(), discord.Permissions.none()),
                 bot_role: bot_permissions(),
             }
-        if mod_role:
-            overwrites[mod_role] = moderator_permissions()
-
         try:
             await target.edit(overwrites=overwrites)
         except discord.Forbidden:
@@ -283,10 +260,10 @@ async def run(dry_run: bool) -> int:
 
     print()
     print("[setup] next steps:")
-    print("  - create a role called 'Moderator' and set DISCORD_MOD_ROLE_ID to "
-          "its id if you want moderators to post in the bot channels")
     print("  - start the bot so the slash commands answer: "
           "python discord_bot.py")
+    print("  - your own account has Administrator, so you can post and pin "
+          "anywhere without a moderator role")
     return 0
 
 
