@@ -134,25 +134,25 @@ def article_embeds(slug: str) -> list:
 
 # -------------------------------------------------------------------- client
 
-def build_client() -> "discord.Client":
-    intents = discord.Intents.default()
-    intents.message_content = False          # the bot never reads messages
-    client = discord.Client(intents=intents)
+def register(tree):
+    """Attach every slash command to a CommandTree.
 
-    tree = discord.app_commands.CommandTree(client)
+    Kept separate from build_client so the setup script can register the same
+    commands without spinning up a second client.
+    """
 
     @tree.command(name="ping", description="Is the Slingshot bot running?")
-    async def ping(interaction: discord.Interaction):
+    async def ping(interaction):
         await interaction.response.send_message(
             f"Pong - {len(dd.live_tools())} tool(s) live.", ephemeral=True)
 
     @tree.command(name="tools", description="Every live Slingshot Tool.")
-    async def tools(interaction: discord.Interaction):
+    async def tools(interaction):
         await interaction.response.send_message(embed=tools_view(), ephemeral=True)
 
     @tree.command(name="article", description="Read about one tool.")
     @discord.app_commands.describe(slug="For example: password-manager")
-    async def article(interaction: discord.Interaction, slug: str):
+    async def article(interaction, slug: str):
         embeds = article_embeds(slug)
         if not embeds:
             await interaction.response.send_message(
@@ -163,8 +163,7 @@ def build_client() -> "discord.Client":
     @tree.command(name="vote", description="Vote for the next Slingshot Tool.")
     @discord.app_commands.describe(
         results="Show closed polls instead of the open ballot")
-    async def vote(interaction: discord.Interaction,
-                   results: bool = False):
+    async def vote(interaction, results: bool = False):
         if results:
             await interaction.response.send_message(
                 embed=results_embed(), ephemeral=True)
@@ -180,6 +179,15 @@ def build_client() -> "discord.Client":
         view = build_vote_view(poll)
         await interaction.response.send_message(embed=poll_embed(poll), view=view,
                                                 ephemeral=True)
+
+    return tree
+
+
+def build_client() -> "discord.Client":
+    intents = discord.Intents.default()
+    intents.message_content = False          # the bot never reads messages
+    client = discord.Client(intents=intents)
+    tree = register(discord.app_commands.CommandTree(client))
 
     @client.event
     async def on_ready():

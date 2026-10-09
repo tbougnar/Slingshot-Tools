@@ -12,22 +12,48 @@ later for interactive voting.
 
 ---
 
-## 1. Create the server and channels
+## 1. Create the server
 
-Follow `DISCORD_SERVER.md`. In short, four categories:
+Create the server in Discord, then let the script in step 2 build the channels
+for you. You do not need to create any channel by hand.
 
-- **START HERE** — `#welcome` `#rules` `#announcements` `#roadmap`
-- **TOOLS** — `#tools` `#articles` `#downloads` `#showcase` `#support`
-- **VOTING** — `#polls` `#ideas` `#results`
-- **ABOUT** — `#how-it-works` `#changelog` `#links`
-
-Make the bot's channels read-only for members, so only the bot and moderators
-can post in `#announcements`, `#tools`, `#articles`, `#downloads`, `#polls`
-and `#results`. Members still vote, because voting happens through bot buttons.
+The one thing you must do: turn on **Settings -> Advanced -> Developer Mode**,
+or "Copy Server ID" will not be available.
 
 ---
 
-## 2. Webhook (announcements, no bot needed)
+## 2. Build the channel structure automatically
+
+You do not have to create 15 channels by hand. The script builds the whole
+layout in `DISCORD_SERVER.md`, sets the permissions, and registers the slash
+commands.
+
+Preview it first, which changes nothing:
+
+```bash
+python discord_setup_server.py --dry-run
+```
+
+Then apply it:
+
+```bash
+DISCORD_BOT_TOKEN=<your bot token> DISCORD_GUILD_ID=<your server id> \
+  python discord_setup_server.py
+```
+
+It is idempotent, so running it again repairs permissions or picks up new
+channels instead of creating duplicates.
+
+The bot needs **Manage Channels** and **Use Application Commands**. On the Bot
+page, either tick those in the permissions link, or give the bot's role
+Administrator and then narrow it afterwards.
+
+To let moderators post in the bot channels, create a role called `Moderator`
+and pass `DISCORD_MOD_ROLE_ID`.
+
+---
+
+## 3. Webhook (announcements, no bot needed)
 
 1. Right-click `#announcements` -> **Edit Channel** -> **Integrations** ->
    **Webhooks** -> **New Webhook**. Name it `Slingshot Tools`.
@@ -53,7 +79,7 @@ python discord_announce.py --dry-run
 
 ---
 
-## 3. Bot (interactive voting)
+## 4. Bot (interactive voting)
 
 ### Create the application
 
@@ -75,9 +101,13 @@ with Discord's policy.
 | Setting | Value |
 |---|---|
 | Scopes | `bot`, `applications.commands` |
-| Bot permissions | `Send Messages`, `Embed Links`, `Use Application Commands`, `Manage Messages` (only for `#results`) |
+| Bot permissions | `Send Messages`, `Embed Links`, `Use Application Commands`, `Manage Channels`, `Manage Roles` |
 
-Copy the URL, open it, and pick your server.
+Manage Channels is what lets the setup script build the layout. Copy the URL,
+open it, and pick your server.
+
+Copy the **Server ID** (right-click the server name with Developer Mode on)
+and the **bot token**, then run the setup script from step 2.
 
 ### Add the secrets
 
@@ -128,7 +158,7 @@ Once running, the commands appear in Discord:
 
 ---
 
-## 4. What the pipeline does on its own
+## 5. What the pipeline does on its own
 
 After each monthly build, automatically:
 
