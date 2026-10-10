@@ -48,10 +48,15 @@ jobs:
       - name: Install deps
         run: pip install --quiet pillow edge-tts
 
-      # ffmpeg ships with the runner, but say so plainly rather than let a
-      # missing binary fail three steps later with a confusing message
-      - name: Check ffmpeg
-        run: ffmpeg -version | head -1
+      # ffmpeg ships with the runner image but is not always on PATH, and
+      # three steps later a missing binary reads as a mystery
+      - name: Install ffmpeg
+        run: |
+          if ! command -v ffmpeg >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq ffmpeg
+          fi
+          ffmpeg -version | head -1
 
       - name: Write the script
         run: python shorts_script.py
