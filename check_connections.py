@@ -376,6 +376,43 @@ def describe_discord_permissions(token: str, guild: str) -> None:
     print("        --- end ---")
 
 
+def check_webhook() -> bool:
+    """The webhook path, which needs no bot permissions at all.
+
+    Worth checking separately from the bot: it is the transport that works
+    while Discord's guild endpoints are failing, so a green bot and a red
+    webhook would be the wrong way round.
+    """
+    url = os.environ.get("DISCORD_WEBHOOK_URL", "").strip()
+    if not url:
+        log("DISCORD_WEBHOOK_URL is not set; announcements fall back to "
+            "the bot")
+        return True
+    if not require_real("discord webhook", url,
+                        "Server Settings, edit the channel, Integrations, "
+                        "Webhooks, New Webhook, Copy URL"):
+        return False
+
+    # read the webhook itself rather than posting: this proves the URL and
+    # token are good without putting a test message in front of the members
+    try:
+        with get(url) as r:
+            data = json.loads(r.read().decode("utf-8"))
+        return ok("discord webhook",
+                  f"posts as {data.get('name', '?')} in "
+                  f"#{data.get('channel_id', '?')}")
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return bad("discord webhook",
+                       "rejected (404)",
+                       "the webhook was deleted; make a new one and "
+                       "gh secret set DISCORD_WEBHOOK_URL")
+        return bad("discord webhook", f"HTTP {e.code}",
+                   "the URL is wrong or the token was rotated")
+    except Exception as e:  # noqa: BLE001
+        return bad("discord webhook", str(e)[:80])
+
+
 def check_paid_build() -> bool:
     """Is there an installer ready for itch.io?
 
@@ -417,6 +454,7 @@ def main() -> int:
         "itch api": check_itch_api(),
         "itch session": check_itch_session(),
         "discord": check_discord(),
+        "webhook": check_webhook(),
         "website": check_site(),
         "installer": check_paid_build(),
     }
