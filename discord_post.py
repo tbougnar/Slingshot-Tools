@@ -28,12 +28,14 @@ SITE_URL = "https://tbougnar.github.io/Slingshot-Tools"
 BRAND = 0xC1272D
 OK = 0x2ECC71
 
-# the channels this project owns, by name
+# the channels this project owns, by plain name. An explicit id always wins.
 CHANNELS = {
     "announcements": os.environ.get("DISCORD_ANNOUNCEMENTS_CHANNEL_ID", "").strip(),
-    "polls": os.environ.get("DISCORD_POLL_WEBHOOK_URL", "").strip(),
-    "results": os.environ.get("DISCORD_RESULTS_WEBHOOK_URL", "").strip(),
+    "polls": os.environ.get("DISCORD_POLLS_CHANNEL_ID", "").strip(),
+    "results": os.environ.get("DISCORD_RESULTS_CHANNEL_ID", "").strip(),
     "articles": os.environ.get("DISCORD_ARTICLES_CHANNEL_ID", "").strip(),
+    "store": os.environ.get("DISCORD_STORE_CHANNEL_ID", "").strip(),
+    "roadmap": os.environ.get("DISCORD_ROADMAP_CHANNEL_ID", "").strip(),
 }
 
 
@@ -100,8 +102,32 @@ def _rest(method: str, path: str, body: dict | None = None) -> tuple[int, object
         return 0, str(e)[:200]
 
 
+def strip_emoji(name: str) -> str:
+    """Drop a leading emoji and separator.
+
+    "\U0001f6e0\ufe0f-tools" -> "tools", "\U0001f5f3\ufe0f-polls" -> "polls".
+
+    Done by code point rather than from a list of prefixes, so a channel whose
+    emoji is changed later is still found.
+    """
+    text = (name or "").strip()
+    while text:
+        head = text[0]
+        # emoji live above the BMP, plus the variation and joiner selectors
+        if ord(head) > 0x2000 or head in "\ufe0f\u200d":
+            text = text[1:].lstrip()
+            continue
+        break
+    return text.lstrip("-_ ").strip()
+
+
 def find_channel(name: str) -> str | None:
-    """The channel id for a name, preferring an explicit id from the env."""
+    """The channel id for a name, preferring an explicit id from the env.
+
+    Channels are named with an emoji prefix, so matching is done on the plain
+    part as well. Renaming a channel for looks must not silently stop the
+    announcements.
+    """
     explicit = CHANNELS.get(name, "").strip()
     if explicit and explicit.isdigit():
         return explicit
@@ -111,8 +137,17 @@ def find_channel(name: str) -> str | None:
     st, data = _rest("GET", f"/guilds/{GUILD_ID}/channels")
     if st != 200 or not isinstance(data, list):
         return None
-    for c in data:
-        if c.get("name") == name and c.get("type") in (0, 5):
+
+    text = [c for c in data if c.get("type") in (0, 5)]
+
+    # an exact match wins, so a channel called "tools" beats "my-tools"
+    for c in text:
+        if c.get("name") == name:
+            return c["id"]
+    # then the same name once the emoji prefix is taken off
+    wanted = name.lower()
+    for c in text:
+        if strip_emoji(c.get("name", "")).lower() == wanted:
             return c["id"]
     return None
 
