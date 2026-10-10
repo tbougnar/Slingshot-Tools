@@ -101,16 +101,19 @@ def sales_from_itch(slug):
     return None
 
 
-# Fee model: itch.io takes its cut and PayPal takes a percentage plus a fixed
-# fee. Money below FLOOR is not revenue, it is a loss - so the floor is real.
-ITCH_CUT = float(os.environ.get("ITCH_CUT", "0.0"))        # 0 unless they opt in
-PAYPAL_PCT = float(os.environ.get("PAYPAL_PCT", "0.049"))
-PAYPAL_FIXED = float(os.environ.get("PAYPAL_FIXED", "0.30"))
+# Fee model: itch.io is the merchant, so its cut is the only one to model.
+# Buyers pay itch.io and it pays us, so PayPal's fee applies to the payout
+# rather than the sale. Roughly: itch.io default cut, plus a little for the
+# transfer, plus a little for card processing on the payout.
+ITCH_CUT = float(os.environ.get("ITCH_CUT") or 0.10)
+PAYOUT_PCT = float(os.environ.get("PAYOUT_PCT") or 0.02)
+PAYOUT_FIXED = float(os.environ.get("PAYOUT_FIXED") or 0.30)
 
 
 def profit_per_sale(price):
-    """What actually lands in the account after processing."""
-    return round(price - (price * PAYPAL_PCT + PAYPAL_FIXED) - price * ITCH_CUT, 4)
+    """What actually lands in the account after itch.io's cut and the payout."""
+    fees = (price * ITCH_CUT) + (price * PAYOUT_PCT) + PAYOUT_FIXED
+    return round(price - fees, 4)
 
 
 def break_even_price():

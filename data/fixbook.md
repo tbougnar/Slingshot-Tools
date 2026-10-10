@@ -703,3 +703,21 @@ One entry per bug that actually happened. Newest last.
 - **Files:** discord_post.py, discord_intro.py
 - **Detects:** recurs if a channel is renamed without updating what looks it up
 - **Verified:** yes
+
+## B079 - the site had no way to take money at all, because PayPal live mode needs a Business account with a tax ID that does not exist
+
+- **Date:** 2026-10-10
+- **Cause:** the payment worker was the only checkout, and it depended on PayPal credentials that cannot be issued without a business account
+- **Fix:** itch.io became the store: the catalog carries an itch_url, checkout.html forwards to it, and the worker, paid_store.py and full.html were deleted
+- **Files:** ITCH_SELLING.md, set_itch_url.py, publish_paid.py, site/checkout.html
+- **Detects:** recurs if a buy button is wired to an endpoint that does not exist
+- **Verified:** yes
+
+## B080 - the paid tier was still marked published even though nothing could be bought, so the site showed a buy button that led to a dead worker
+
+- **Date:** 2026-10-10
+- **Cause:** the flip used to happen the moment the build reached Cloudflare, and that pipeline no longer exists
+- **Fix:** publishing is now manual and refuses unless an itch_url is already in the catalog
+- **Files:** publish_paid.py, build_paid_only.py
+- **Detects:** recurs if a product is shown for sale before its purchase link exists
+- **Verified:** yes

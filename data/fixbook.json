@@ -980,5 +980,33 @@
     ],
     "detects": "recurs if a channel is renamed without updating what looks it up",
     "verified": true
+  },
+  {
+    "id": "B079",
+    "date": "2026-10-10",
+    "symptom": "the site had no way to take money at all, because PayPal live mode needs a Business account with a tax ID that does not exist",
+    "cause": "the payment worker was the only checkout, and it depended on PayPal credentials that cannot be issued without a business account",
+    "fix": "itch.io became the store: the catalog carries an itch_url, checkout.html forwards to it, and the worker, paid_store.py and full.html were deleted",
+    "files": [
+      "ITCH_SELLING.md",
+      "set_itch_url.py",
+      "publish_paid.py",
+      "site/checkout.html"
+    ],
+    "detects": "recurs if a buy button is wired to an endpoint that does not exist",
+    "verified": true
+  },
+  {
+    "id": "B080",
+    "date": "2026-10-10",
+    "symptom": "the paid tier was still marked published even though nothing could be bought, so the site showed a buy button that led to a dead worker",
+    "cause": "the flip used to happen the moment the build reached Cloudflare, and that pipeline no longer exists",
+    "fix": "publishing is now manual and refuses unless an itch_url is already in the catalog",
+    "files": [
+      "publish_paid.py",
+      "build_paid_only.py"
+    ],
+    "detects": "recurs if a product is shown for sale before its purchase link exists",
+    "verified": true
   }
 ]

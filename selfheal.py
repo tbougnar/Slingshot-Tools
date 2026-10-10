@@ -6,8 +6,8 @@ workflow run again.
 
 Guardrails, because a model is editing the code that takes payments:
 
-  * only files on ALLOWED may be touched - the pipeline, never the Worker,
-    never pricing bounds, never the site output, never licences or policies
+  * only files on ALLOWED may be touched - the pipeline only, never the price
+    bounds, never the itch.io links, never the site output or policies
   * FORBIDDEN patterns are rejected outright (payment endpoints, price clamps,
     publish gating, secrets, delete/rm of the paid folder)
   * every patch is compiled and must survive a test run before it counts
@@ -49,24 +49,19 @@ MODEL = "openai/gpt-oss-120b"
 
 ALLOWED = {
     "make_app.py",
-    "pricing.py",
     "learn.py",
-    "paid_store.py",
     "build_exe.py",
     "build_installer_app.py",
     "native_launcher.py",
-    "paypal.py",
     "selfheal.py",
 }
 
 FORBIDDEN = [
-    r"/api/(order|download)",
-    r"capture\(",
-    r"BUILDS\.get",
-    r"BUILDS\.put",
+    r"itch_url",              # where a product is sold
+    r"publish_paid",
     r"PRICE_FLOOR",
     r"PRICE_CEILING",
-    r"PAYPAL_(CLIENT_ID|SECRET|SANDBOX)",
+    r"ITCH_(API_KEY|USER)",
     r"LICENSE_SECRET",
     r"CF_API_TOKEN",
     r"cfut_",

@@ -19,21 +19,29 @@ def check_tier_families(catalog):
 
     If they drift apart the site renders two separate cards instead of a
     single product offering a free and a paid option.
+
+    A published product showing only its free edition is allowed: that is what
+    a tool looks like between its build and the moment somebody uploads it to
+    itch.io. What must never happen is a product whose two entries have drifted
+    onto different base_slugs, which is checked separately.
     """
     families = {}
     for a in catalog:
-        if a.get("published") is False:
-            continue
         key = a.get("base_slug") or a.get("slug")
         families.setdefault(key, []).append(a.get("tier"))
+
     problems = []
     for key, tiers in families.items():
         if "basic" in tiers and "full" in tiers:
             continue
-        # a lone tier is only a problem when the other tier exists on disk
-        if len(tiers) == 1:
-            problems.append(f"{key} only has a {tiers[0]} tier; "
-                            f"the two tiers must group together")
+        # a lone tier is only a problem when it is on sale and the other tier
+        # exists nowhere in the catalog: the two would never regroup
+        on_sale = [a for a in catalog
+                   if (a.get("base_slug") or a.get("slug")) == key
+                   and a.get("published") is not False]
+        if len(on_sale) == 1 and len(tiers) == 1 and on_sale[0].get("tier") == "full":
+            problems.append(f"{key} is on sale with no free edition beside it")
+
     return families, problems
 
 

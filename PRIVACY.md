@@ -14,14 +14,15 @@ anyone else, because there is nowhere for it to go.
 
 ## Payments
 
-Payments are processed entirely by **PayPal**. We never see, receive, or store
-your card number, your PayPal password, or any payment credentials. PayPal
-handles that data under its own privacy policy.
+Payments are processed entirely by **itch.io**, our store. We never see,
+receive, or store your card number or any payment credentials. itch.io handles
+every transaction and hands the paid file over.
+your card number or any payment credentials. itch.io handles that data under
+its own privacy policy.
 
-When you buy a utility we receive only what PayPal sends us for order
-fulfilment: the order reference, the amount, and the email address PayPal
-attaches to the transaction. We use it to deliver your download and nothing
-else.
+When you buy a utility we receive only what itch.io tells us: the order
+reference, the amount, and the email address attached to the transaction. We
+use it to answer support questions and nothing else.
 
 We do not store your email address in our systems, we do not use it for
 marketing, and we do not sell or share it with anyone.
@@ -36,9 +37,9 @@ consent to.
 
 | Service | Purpose | What it sees |
 |---|---|---|
-| PayPal | Payment processing | Your payment details, which never reach us |
+| itch.io | The store, payment processing and file delivery | Your payment details, which never reach us |
 | GitHub | Source hosting and site hosting | Public repository and site traffic |
-| Cloudflare | Serverless hosting for the payment and download endpoint | Connection metadata |
+| Cloudflare | None for the store; site hosting only | Connection metadata |
 
 Each of these has its own privacy policy.
 

@@ -57,10 +57,11 @@ and your data never leaves your device.
 | Document | What it covers |
 |---|---|
 | [PRIVACY.md](PRIVACY.md) | what is stored, and what is not |
+| [ITCH_SELLING.md](ITCH_SELLING.md) | how the paid editions are sold |
+| [WEEKLY_CYCLE.md](WEEKLY_CYCLE.md) | Monday ballot, Wednesday review, Friday release |
 | [CODE_SIGNING_POLICY.md](CODE_SIGNING_POLICY.md) | installer signing and Windows warnings |
 | [SIGNPATH_SETUP.md](SIGNPATH_SETUP.md) | how the installers are signed |
 | [DISCORD_BOT_SETUP.md](DISCORD_BOT_SETUP.md) | the community server and its bot |
-| [PAYPAL_LIVE.md](PAYPAL_LIVE.md) | taking payments |
 
 Each tool's own page carries a short description of what it does and what the
 two editions differ by.

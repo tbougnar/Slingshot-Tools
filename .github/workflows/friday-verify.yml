@@ -24,10 +24,6 @@ jobs:
     timeout-minutes: 60
     env:
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-      CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
-      CF_ACCOUNT_ID: 72d86a35ce85cf491146e9f10cc2caca
-      CF_BUILDS_NAMESPACE: 3d55488f7d384ce3ad51c0ba34afeade
-      PAY_WORKER: ${{ secrets.PAY_WORKER }}
       SITE_URL: ${{ vars.SITE_URL }}
       PRICE_FLOOR: '1.00'
       PRICE_CEILING: '10.00'
@@ -97,9 +93,6 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 45
     env:
-      CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
-      CF_ACCOUNT_ID: 72d86a35ce85cf491146e9f10cc2caca
-      CF_BUILDS_NAMESPACE: 3d55488f7d384ce3ad51c0ba34afeade
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
       PRICE_FLOOR: '1.00'
       PRICE_CEILING: '10.00'
@@ -121,7 +114,10 @@ jobs:
         run: |
           choco install nsis -y --no-progress
           python -m pip install --quiet pillow requests pyinstaller pywebview
-      - name: Build the Windows installer and publish it to the store
+      # itch.io is the store now, so this builds the installer and prints where
+      # it is. Uploading it, setting the itch_url and flipping the paid tier are
+      # all manual, because only a person can confirm the itch.io page is live.
+      - name: Build the Windows installer
       # - name: Submit installer for signing (SignPath)
       #   uses: signpath/github-action-submit-signing-request@v1
       #   with:
@@ -134,6 +130,17 @@ jobs:
       #     github-token: ${{ secrets.GITHUB_TOKEN }}
 
         run: python build_paid_only.py
+
+      # The installer is finished but private, so it travels as an artifact
+      # rather than through git, where paid/ is gitignored and must stay that
+      # way. Nothing downloads it here: a person uploads it to itch.io.
+      - name: Keep the built installer for the itch.io upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: slingshot-installer
+          path: paid/**/*Setup.exe
+          if-no-files-found: error
+          retention-days: 30
       # Discord is best-effort: no credentials, or a Discord outage, must never
       # stop a release. discord_post.py posts through DISCORD_WEBHOOK_URL when
       # one is set and falls back to the bot token, so either credential works.

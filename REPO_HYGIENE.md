@@ -45,13 +45,13 @@ Those live on the machine that builds. They are in `.gitignore`, and
 
 ## The two secrets that matter
 
-Only two, and neither is in this repository:
+Only one, and it is not in this repository:
 
-- the PayPal **Live** client id and secret, set with `wrangler secret put`
 - the Discord **bot token**, set with `gh secret set`
 
-Both have been pasted into a chat session, so both are treated as burned and
-must be rotated. See `PAYPAL_LIVE.md`.
+It has been pasted into a chat session, so it is treated as burned and must be
+rotated. See `DISCORD_BOT_SETUP.md`. There is no payment secret any more: itch.io
+is the store, and it holds the credentials.
 
 ## Adding a file, honestly
 

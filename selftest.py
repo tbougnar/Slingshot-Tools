@@ -140,8 +140,10 @@ def t_workflows():
 def t_imports():
     import importlib
     for mod in ("make_app", "patcher", "qa_loop", "app_scanner", "providers",
-                "paid_store", "buglog", "tokenmeter", "sizeguard",
-                "check_exposure", "stage_app", "verify_app"):
+                "buglog", "tokenmeter", "sizeguard", "set_itch_url",
+                "publish_paid", "check_exposure", "stage_app", "verify_app",
+                "discord_tally", "discord_intro", "budget", "weekly_guard",
+                "check_repo_hygiene"):
         importlib.import_module(mod)
     return "every module imports"
 

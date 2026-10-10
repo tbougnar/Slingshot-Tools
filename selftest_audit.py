@@ -86,13 +86,34 @@ for wf in sorted(wf_dir.glob("*.yml")):
 # ---- every script a workflow might invoke exists ----
 for f in ("make_app.py", "stage_app.py", "verify_app.py", "pricing.py",
           "learn.py", "selftest.py", "selftest_deep.py", "write_fixbook.py",
-          "check_exposure.py", "build_paid_only.py", "mark_verified.py",
-          "build_exe.py", "build_installer_app.py", "patcher.py",
-          "app_scanner.py", "qa_loop.py", "debug_team.py", "providers.py",
-          "paid_store.py", "buglog.py", "tokenmeter.py", "sizeguard.py",
-          "selfheal.py"):
+          "check_exposure.py", "build_paid_only.py", "publish_paid.py",
+          "set_itch_url.py", "build_exe.py", "build_installer_app.py",
+          "patcher.py", "app_scanner.py", "qa_loop.py", "providers.py",
+          "buglog.py", "tokenmeter.py", "sizeguard.py", "selfheal.py",
+          "discord_intro.py", "discord_tally.py", "budget.py",
+          "weekly_guard.py", "check_repo_hygiene.py"):
     if not (R / f).exists():
         problems.append(("-", f"referenced script missing: {f}"))
+
+# ---- the PayPal worker is gone; nothing may reach for it again ----
+for gone in ("worker/worker.js", "worker/wrangler.toml", "paid_store.py",
+             "verify_live_paypal.py", "site/full.html"):
+    if (R / gone).exists():
+        problems.append(("-", f"removed but still present: {gone}"))
+
+# Every reference to the old payment worker has to be gone too, or it would
+# silently point a buy button at something that no longer answers.
+for f in R.rglob("*.py"):
+    if ".git" in f.parts or f.name in ("selftest_audit.py",):
+        continue
+    try:
+        body = f.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        continue
+    for needle in ("slingshot-pay.bougnartaha2", "api/download?token=",
+                   "/api/order"):
+        if needle in body:
+            problems.append((f.name, f"still calls the removed worker: {needle}"))
 
 # ---- the repository must never track anything private ----
 # The repo is public on purpose, because GitHub Pages serves the site from it,
@@ -141,7 +162,8 @@ try:
     sys.path.insert(0, str(R))
     import weekly_guard as _g
     for _p in ("site/index.html", "site/apps.json", "check_exposure.py",
-               "worker/worker.js", "pricing.py", "retire_product.py",
+               "pricing.py", "retire_product.py", "publish_paid.py",
+               "set_itch_url.py",
                ".github/workflows/friday-build.yml",
                ".github/workflows/friday-verify.yml",
                ".github/workflows/pages.yml"):

@@ -40,20 +40,18 @@ PROTECTED_WORKFLOWS = [
 # without touching site/, so they are protected too.
 SITE_SCRIPTS = [
     "check_exposure.py",
-    "paid_store.py",
     "build_exe.py",
     "build_installer_app.py",
     "build_paid_only.py",
-    "worker/worker.js",
-    "worker/wrangler.toml",
 ]
 
 # Money, and deletion. Both need a human decision, not a model.
 MONEY_AND_DEATH = [
-    "site/apps.json",       # prices and what is for sale
+    "site/apps.json",       # prices, what is for sale, and where it is sold
     "pricing.py",           # price movement
     "retire_product.py",    # taking a product down
-    "worker/worker.js",     # payment API
+    "publish_paid.py",      # putting a product on sale
+    "set_itch_url.py",      # where a product is sold
 ]
 
 # The generator and its QA stack: the part the company may freely improve.

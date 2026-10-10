@@ -11,7 +11,6 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-import paid_store
 import qa_loop
 
 # how many dead controls we will ship with rather than ship nothing
@@ -102,9 +101,9 @@ def main() -> int:
     price = max(make_app.PRICE_FLOOR, min(make_app.PRICE_CEILING, price))
 
     # A Windows .exe cannot be built on the Linux runner, so this job only
-    # publishes the free edition. The paid tier is listed but stays hidden
-    # until the Windows installer has really uploaded it, which means we
-    # never take money for a download that does not exist yet.
+    # publishes the free edition. The paid tier is listed but stays hidden:
+    # itch.io hosts the paid file and only a person can upload it, so
+    # publish_paid.py is what makes it visible, and never before then.
     # write_app named the public folder "<slug>-basic"; the catalog entry must
     # carry the same name so the two match on disk and in URLs
     make_app.publish({**concept, "slug": basic_dir.name}, basic_dir, None,

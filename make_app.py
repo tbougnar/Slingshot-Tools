@@ -40,7 +40,6 @@ import urllib.request
 from datetime import date
 from pathlib import Path
 
-import paid_store
 import buglog
 import qa_loop
 import build_exe
@@ -69,9 +68,8 @@ CHAT_FALLBACKS = ["openai/gpt-oss-120b", "openai/gpt-oss-20b",
                      "qwen/qwen3.8-27b"]
 SITE_URL = (os.environ.get("SITE_URL") or "").strip() or "https://tbougnar.github.io/Slingshot-Tools"
 SITE_BASE = SITE_URL.rstrip("/")
-# PayPal replaces itch.io. Sandbox until the business account is approved,
-# then set PAYPAL_ENV=live (secrets are already stored for both).
-PAYPAL_ENV_LIVE = (os.environ.get("PAYPAL_ENV") or "").lower() == "live"
+# itch.io is the store. A product is only shown for sale once its itch_url is
+# in the catalog, which only a person sets, so there is no payment code here.
 LICENSE_SECRET = (os.environ.get("LICENSE_SECRET") or "").strip()
 PRICE_FLOOR = float((os.environ.get("PRICE_FLOOR") or "").strip() or 1.00)
 PRICE_START = float((os.environ.get("PRICE_START") or "").strip() or 3.00)
@@ -802,18 +800,47 @@ def build_installer(app_dir: Path, concept):
     return out
 
 
-def stage_paid(app_dir: Path, slug: str, installer: Path | None = None) -> bool:
-    """Publish the paid edition to the private store.
+def already_listed(base_slug: str) -> bool:
+    """Is this product already for sale on itch.io?
 
-    The paid build is never written under site/. It is handed to the Worker,
-    which releases the installer only after PayPal confirms payment.
+    A rebuild must not silently hide a product that is on sale. If the catalog
+    already carries an itch_url for this family, the paid tier stays published.
     """
-    ok = paid_store.stage(app_dir, slug, installer)
-    if ok:
-        log(f"paid edition ready for {slug}")
-    else:
-        log(f"paid edition FAILED for {slug} - it must not be advertised")
-    return ok
+    try:
+        entries = json.loads(CATALOG.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    return any((e.get("base_slug") or e.get("slug")) == base_slug
+               and (e.get("itch_url") or "").startswith("https://")
+               for e in entries if isinstance(e, dict))
+
+
+def stage_paid(app_dir: Path, slug: str, installer: Path | None = None) -> bool:
+    """Confirm the paid build is built and kept out of the public site.
+
+    There is no private store to upload to any more: itch.io hosts the paid file
+    and a person uploads it. So this only checks that the build exists and that
+    nothing paid has leaked into site/, then says where the installer is.
+
+    The paid tier stays unpublished until ``publish_paid.py`` is run by hand,
+    because only that knows whether the itch.io page is actually live.
+    """
+    if not app_dir.exists():
+        log(f"no paid build was produced for {slug}")
+        return False
+
+    if SITE_APPS / slug in [p for p in SITE_APPS.glob("*") if p.is_dir()]:
+        log(f"REFUSING: a paid edition would be written into site/ for {slug}")
+        return False
+
+    where = ""
+    if installer and Path(installer).exists():
+        size = Path(installer).stat().st_size / 1024 / 1024
+        where = f" ({Path(installer).name}, {size:.1f} MB)"
+    log(f"paid edition built for {slug}{where}")
+    log(f"  upload it to itch.io, then: "
+        f"python set_itch_url.py {slug} <url> && python publish_paid.py {slug}")
+    return True
 
 
 
@@ -1011,10 +1038,12 @@ def main():
         full_dir = write_app(full_meta, html, tier="full")
         installer = build_installer(full_dir, full_meta)
         ok_full = stage_paid(full_dir, concept["slug"], installer)
+        # hidden until publish_paid.py has confirmed the itch.io page, so a buy
+        # button can never appear before there is anything to buy
         full_entry = publish({**full_meta, "base_slug": concept["slug"]}, full_dir,
                              installer, tier="full", brand=brand, differences=diffs,
                              free_blurb=free_blurb, paid_blurb=paid_blurb,
-                             published=ok_full)
+                             published=ok_full and already_listed(concept["slug"]))
 
         basic_meta = {**concept, "brand": brand,
                       "slug": f"{concept['slug']}-basic"}
