@@ -463,3 +463,8 @@ B083: the browser automation would never have logged in, because it set a cookie
   cause: the cookie name was guessed from the domain instead of read from a real request, and nothing tested it against a live login
   fix:   use itchio_token, accept either a bare value or a whole pasted Cookie header, and drop cf_clearance because it is bound to one IP and gets a runner blocked
   file:  itch_publish.py
+
+B084: an expired itch.io session cookie would fail later as a confusing 'project was not created' rather than the truth
+  cause: the browser login was attempted first and its failure reported as a creation problem
+  fix:   check the session before attempting anything, and pass butler the API key so uploading keeps working after the cookie expires
+  file:  itch_publish.py

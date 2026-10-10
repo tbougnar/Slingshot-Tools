@@ -133,19 +133,39 @@ def session_cookie() -> str:
     return ""
 
 
+def check_session() -> bool:
+    """Is the cookie still good?
+
+    Asked before anything is attempted, because an expired session otherwise
+    shows up as a confusing "project was not created" rather than the truth.
+    """
+    cookie = session_cookie()
+    if not cookie:
+        return False
+    req = urllib.request.Request(
+        "https://itch.io/settings/mine/new/game",
+        headers={"Cookie": f"itchio_token={cookie}",
+                 "User-Agent": "slingshot-tools"})
+    try:
+        with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+            r.read()
+            landed = r.geturl()
+    except Exception as e:  # noqa: BLE001
+        log(f"could not check the session: {e}")
+        return False
+    # a refused session redirects to the login page
+    return "/login" not in landed and "itch.io/login" not in landed
+
+
 def create_project(title: str, slug: str, price: float,
                    icon: Path | None = None) -> str:
     """Create the project page in a real browser, and return its URL.
 
     itch.io offers no API for this, and butler refuses it outright, so the only
-    way is to drive the page a person would use. That needs a signed-in
-    session, which is why it comes from a secret rather than being typed here.
+    way is to drive the page a person would use. The session is checked first by
+    the caller, so reaching here means it is still good.
     """
     cookie = session_cookie()
-    if not cookie:
-        log("no itch.io session cookie, so the project cannot be created")
-        log("see ITCH_SELLING.md for the one-time setup")
-        return ""
     try:
         from playwright.sync_api import sync_playwright
     except ImportError:
@@ -212,22 +232,22 @@ def create_project(title: str, slug: str, price: float,
 def butler() -> str:
     """Where butler is, or an empty string."""
     exe = "butler.exe" if os.name == "nt" else "butler"
-    local = Path.home() / (".butler" if os.name != "nt" else ".butler")
-    for candidate in (exe, str(local / exe)):
-        if candidate == exe:
-            try:
-                subprocess.run([candidate, "--version"], capture_output=True,
-                               timeout=30)
-                return candidate
-            except (OSError, subprocess.SubprocessError):
-                continue
-        elif Path(candidate).exists():
-            return candidate
-    return ""
+    local = Path.home() / ".butler" / exe
+    if local.exists():
+        return str(local)
+    try:
+        subprocess.run([exe, "--version"], capture_output=True, timeout=30)
+        return exe
+    except (OSError, subprocess.SubprocessError):
+        return ""
 
 
 def upload(installer: Path, slug: str, version: str) -> bool:
-    """Push the installer with butler, which is itch.io's own uploader."""
+    """Push the installer with butler, itch.io's own uploader.
+
+    butler authenticates with the API key, not with the browser session, so
+    this half keeps working after the session cookie expires.
+    """
     exe = butler()
     if not exe:
         log("butler is not installed, so the installer cannot be uploaded")
@@ -238,7 +258,9 @@ def upload(installer: Path, slug: str, version: str) -> bool:
     cmd = [exe, "push", str(installer), target]
     if version:
         cmd += ["--userversion", version]
-    log(f"butler: {' '.join(cmd)}")
+    if KEY:
+        cmd += ["--api_key", KEY]
+    log(f"butler: pushing to {target}")
     try:
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
     except (OSError, subprocess.SubprocessError) as e:
@@ -250,6 +272,8 @@ def upload(installer: Path, slug: str, version: str) -> bool:
         if line.strip():
             print(f"  {line.strip()}")
     if r.returncode != 0:
+        if "403" in out or "own the target" in out:
+            log("butler was refused: the project does not exist yet")
         log(f"butler failed with exit {r.returncode}")
         return False
     return True
@@ -329,11 +353,20 @@ def publish(slug: str, title: str, price: float, version: str = "") -> bool:
             url = (found.get("url") or "").replace("http://", "https://")
             log(f"1. the project already exists: {url}")
     if not url:
-        log("1. no project yet")
-        url = create_project(title, slug, price,
-                             (PAID / slug / "icon.png"))
+        log("1. no project yet, so one has to be created")
+        if not session_cookie():
+            log("   no itch.io session cookie is set")
+            log("   that is needed only for creating a project, not for "
+                "uploading to one")
+            return False
+        if not check_session():
+            log("   the session cookie is expired or was refused")
+            log("   set a new one: gh secret set ITCH_SESSION_COOKIE "
+                "--repo tbougnar/Slingshot-Tools")
+            return False
+        url = create_project(title, slug, price, (PAID / slug / "icon.png"))
         if not url:
-            log("cannot continue without a project page")
+            log("   the project could not be created")
             return False
         url = url.replace("http://", "https://").rstrip("/")
         log(f"1. created: {url}")

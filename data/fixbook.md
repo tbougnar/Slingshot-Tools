@@ -748,3 +748,12 @@ One entry per bug that actually happened. Newest last.
 - **Files:** itch_publish.py
 - **Detects:** recurs if browser automation sets a cookie by guessing its name
 - **Verified:** yes
+
+## B084 - an expired itch.io session cookie would fail later as a confusing 'project was not created' rather than the truth
+
+- **Date:** 2026-10-10
+- **Cause:** the browser login was attempted first and its failure reported as a creation problem
+- **Fix:** check the session before attempting anything, and pass butler the API key so uploading keeps working after the cookie expires
+- **Files:** itch_publish.py
+- **Detects:** recurs if an expired credential is only detected by the action that needed it
+- **Verified:** yes
