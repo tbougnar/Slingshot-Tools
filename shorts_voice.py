@@ -51,19 +51,30 @@ def seconds(path: Path) -> float:
 
 
 async def _one(line: str, dest: Path, index: int) -> dict:
-    """Synthesise one line and return where it sits in the timeline."""
+    """Synthesise one line and return where it sits in the timeline.
+
+    The boundary has to be requested explicitly. edge_tts defaults to
+    SentenceBoundary, which silently produces a clip with no timings at all,
+    and the captions simply never appear.
+    """
     marks: list[dict] = []
-    comm = edge_tts.Communicate(line, VOICE, rate=RATE, pitch=PITCH)
+    comm = edge_tts.Communicate(line, VOICE, rate=RATE, pitch=PITCH,
+                                boundary="WordBoundary")
     with dest.open("wb") as f:
         async for chunk in comm.stream():
             if chunk["type"] == "audio":
                 f.write(chunk["data"])
-            elif chunk["type"] == "WordBoundary":
+            elif chunk["type"] in ("WordBoundary", "SentenceBoundary"):
+                # edge-tts offsets are in 100-nanosecond ticks
                 marks.append({"offset": chunk["offset"] / 1e7,
                               "text": chunk.get("text", "")})
 
     if not dest.exists() or dest.stat().st_size < 512:
         raise SystemExit(f"[voice] line {index} produced no audio")
+    if not marks:
+        raise SystemExit(
+            f"[voice] line {index} gave no word timings, so the captions "
+            f"would be empty")
     return {"file": dest.name, "offset": marks, "text": line,
             "seconds": seconds(dest)}
 
