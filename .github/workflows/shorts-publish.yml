@@ -1,0 +1,95 @@
+name: Slingshot — publish the Short
+
+# Turns the product that just launched into a vertical Short and uploads it.
+# Runs on launch only, so the channel stays one video a week rather than
+# turning into a stream of near-identical clips, which is what YouTube's
+# inauthentic content policy targets.
+
+on:
+  workflow_dispatch:
+    inputs:
+      slug:
+        description: "Product slug; blank uses the published one"
+        required: false
+        type: string
+      dry_run:
+        description: "Render everything, upload nothing"
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: slingshot-shorts
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      GROQ_CHAT_MODEL: ${{ secrets.GROQ_CHAT_MODEL }}
+      YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+      YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+      YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+      YOUTUBE_PRIVACY: ${{ vars.YOUTUBE_PRIVACY }}
+      SITE_URL: ${{ vars.SITE_URL }}
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: pip install --quiet pillow edge-tts
+
+      # ffmpeg ships with the runner, but say so plainly rather than let a
+      # missing binary fail three steps later with a confusing message
+      - name: Check ffmpeg
+        run: ffmpeg -version | head -1
+
+      - name: Write the script
+        run: python shorts_script.py
+
+      - name: Record it
+        run: |
+          python - <<'PY'
+          import os, pathlib, json
+          dry = os.environ.get("DRY_RUN", "").strip().lower() in ("1", "true")
+          os.environ["DRY_RUN"] = "1" if dry else "0"
+          pathlib.Path("data/dry_run.json").write_text(json.dumps({"dry": dry}))
+          print("dry run:", dry)
+          PY
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+
+      - name: Speak it
+        run: python shorts_voice.py
+
+      - name: Render the frames
+        run: python shorts_render.py
+
+      - name: Join audio and video
+        run: python shorts_mux.py
+
+      - name: Upload
+        run: python shorts_upload.py
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+
+      - name: Announce
+        if: always()
+        run: python shorts_announce.py
+
+      - name: Keep the mp4
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: short-${{ github.run_number }}
+          path: dist/shorts/*.mp4
+          retention-days: 14

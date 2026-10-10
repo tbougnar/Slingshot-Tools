@@ -69,3 +69,14 @@ data/lessons.txt
 data/polls.json
 data/discord_sent.json
 data/articles.json
+
+# Shorts build output. Thousands of frames and synthesised audio are large,
+# regenerable, and meaningless once the video is uploaded.
+data/shorts_frames/
+data/shorts_audio/
+data/shorts_frames.json
+data/shorts_script.json
+data/shorts_voice.json
+data/shorts_video.json
+data/shorts_published.json
+data/dry_run.json
