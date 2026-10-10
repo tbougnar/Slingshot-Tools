@@ -757,3 +757,12 @@ One entry per bug that actually happened. Newest last.
 - **Files:** itch_publish.py
 - **Detects:** recurs if an expired credential is only detected by the action that needed it
 - **Verified:** yes
+
+## B085 - the itch.io publisher would have uploaded one tool's installer under another tool's page, because it took whichever .exe it found first in a shared dist folder
+
+- **Date:** 2026-10-10
+- **Cause:** dist/ is shared between builds and the search had no name match, so invoice-maker's exe could be published as password-manager
+- **Fix:** require a name match, prefer the exact stem, and prefer paid/<slug>/ when it exists
+- **Files:** itch_publish.py
+- **Detects:** recurs if a file is chosen from a shared folder without checking it belongs to the product
+- **Verified:** yes

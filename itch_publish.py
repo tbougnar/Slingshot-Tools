@@ -331,12 +331,33 @@ def remember(slug: str, url: str) -> None:
 # -------------------------------------------------------------------- main
 
 def find_installer(slug: str) -> Path | None:
-    """The installer for a product, wherever the build put it."""
-    roots = [PAID / slug, ROOT / "dist"]
-    for root in roots:
-        if not root.exists():
-            continue
-        for exe in sorted(root.glob("**/*Setup.exe")):
+    """The installer for one product, and only that product.
+
+    The dist/ folder is shared between builds, so a name match is required:
+    taking whatever .exe happens to be there would upload one tool's installer
+    under another tool's page, and nobody would notice until a customer
+    installed the wrong thing.
+    """
+    own = PAID / slug
+    if own.exists():
+        for exe in sorted(own.glob("**/*Setup.exe")):
+            return exe
+
+    needle = slug.lower().replace("-", "").replace("_", "").replace("slingshottool", "")
+    candidates = sorted((ROOT / "dist").glob("**/*Setup.exe"))
+
+    # an exact stem match first, so a leftover file from an older naming
+    # cannot win over the one this build actually produced
+    for exe in candidates:
+        stem = exe.name.lower().replace("-", "").replace("_", "")
+        stem = stem.replace("slingshottool", "").replace("setup.exe", "")
+        if stem == needle:
+            return exe
+    # then any file that genuinely mentions the tool
+    for exe in candidates:
+        stem = exe.name.lower().replace("-", "").replace("_", "")
+        stem = stem.replace("slingshottool", "").replace("setup.exe", "")
+        if needle and (needle in stem or stem in needle):
             return exe
     return None
 

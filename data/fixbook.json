@@ -1057,5 +1057,17 @@
     ],
     "detects": "recurs if an expired credential is only detected by the action that needed it",
     "verified": true
+  },
+  {
+    "id": "B085",
+    "date": "2026-10-10",
+    "symptom": "the itch.io publisher would have uploaded one tool's installer under another tool's page, because it took whichever .exe it found first in a shared dist folder",
+    "cause": "dist/ is shared between builds and the search had no name match, so invoice-maker's exe could be published as password-manager",
+    "fix": "require a name match, prefer the exact stem, and prefer paid/<slug>/ when it exists",
+    "files": [
+      "itch_publish.py"
+    ],
+    "detects": "recurs if a file is chosen from a shared folder without checking it belongs to the product",
+    "verified": true
   }
 ]

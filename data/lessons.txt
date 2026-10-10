@@ -468,3 +468,8 @@ B084: an expired itch.io session cookie would fail later as a confusing 'project
   cause: the browser login was attempted first and its failure reported as a creation problem
   fix:   check the session before attempting anything, and pass butler the API key so uploading keeps working after the cookie expires
   file:  itch_publish.py
+
+B085: the itch.io publisher would have uploaded one tool's installer under another tool's page, because it took whichever .exe it found first in a shared dist folder
+  cause: dist/ is shared between builds and the search had no name match, so invoice-maker's exe could be published as password-manager
+  fix:   require a name match, prefer the exact stem, and prefer paid/<slug>/ when it exists
+  file:  itch_publish.py
