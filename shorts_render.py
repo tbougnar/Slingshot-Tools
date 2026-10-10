@@ -238,11 +238,18 @@ def main() -> int:
             # the price may arrive as a number, so it is coerced before any
             # measuring: textlength on a float raises deep in Pillow
             label = str(price)
-            tw = d.textlength(label, font=pf)
-            px, py = (W - tw) / 2, int(H * 0.56)
-            d.rounded_rectangle([px - 40, py - 24, px + tw + 40, py + 104],
-                                radius=40, fill=(*DEEP, int(236 * a)))
-            d.text((px, py), label, font=pf, fill=(*ACCENT, int(255 * a)))
+            lines = wrap(d, label, pf, W - 220)
+            line_h = 92
+            block = len(lines) * line_h
+            y = int(H * 0.62) - block / 2
+            for ln in lines:
+                tw = d.textlength(ln, font=pf)
+                x = (W - tw) / 2
+                d.rounded_rectangle([x - 38, y - 18, x + tw + 38,
+                                     y + line_h - 14],
+                                    radius=44, fill=(*DEEP, int(240 * a)))
+                d.text((x, y), ln, font=pf, fill=(*ACCENT, int(255 * a)))
+                y += line_h
 
         d = ImageDraw.Draw(img, "RGBA")
         caption(d, _words(voice["parts"], t, total), t, 1.0)
@@ -263,10 +270,10 @@ def main() -> int:
 def _words(parts: list[dict], t: float, total: float) -> list[dict]:
     """Rebuild a word clock across the whole clip from the per-line offsets.
 
-    Each line gets an equal share of the timeline and the words inside it are
-    scaled to fit, which keeps the caption and the spoken audio in step. Equal
-    shares are close enough: the per-line gaps are small next to the drift that
-    a real per-line duration would avoid.
+    The synthesiser's last mark sits before the audio actually ends, because a
+    clip trails off after the final word. Scaling offsets by that last mark
+    squeezes every word into the front of its slot and leaves the tail silent
+    on screen, so the last word is stretched to fill the slot instead.
     """
     if not parts:
         return []
@@ -280,13 +287,13 @@ def _words(parts: list[dict], t: float, total: float) -> list[dict]:
         span = marks[-1]["offset"] or 0.001
         for j, m in enumerate(marks):
             start = base + (m["offset"] / span) * each
-            nxt = marks[j + 1]["offset"] if j + 1 < len(marks) \
-                else m["offset"] + 0.25
-            end = base + (nxt / span) * each
-            # a word holds its highlight until the next begins, so a word
-            # spoken quickly does not flash for a single frame
+            if j + 1 < len(marks):
+                end = base + (marks[j + 1]["offset"] / span) * each
+            else:
+                end = base + each          # hold the last word to the cut
+            # a word spoken quickly still has to be readable
             words.append({"t": m["text"], "start": start,
-                          "end": max(end, start + 0.22)})
+                          "end": max(end, start + 0.25)})
     return words
 
 
