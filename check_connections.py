@@ -51,11 +51,49 @@ def blocked_by_cloudflare(e: urllib.error.HTTPError) -> bool:
     return e.code == 403 and ("1010" in body or "banned" in body.lower())
 
 
+PLACEHOLDERS = {
+    "paste", "<paste>", "your_real", "your real", "changeme", "change_me",
+    "todo", "xxx", "test", "example", "placeholder", "none", "null",
+    "here", "replace_me", "your_token", "your_key", "token_here",
+}
+
+
+def looks_fake(value: str) -> bool:
+    """Catch a copied example that was never replaced with a real value.
+
+    Far too easy to paste the sample line out of the instructions and spend
+    an hour debugging a 403 for a credential that was never really there.
+    """
+    v = value.strip().lower()
+    if not v:
+        return False
+    if any(p in v for p in PLACEHOLDERS):
+        return True
+    # a real key is long and dense; an example is short or dashed prose
+    if len(v) < 20:
+        return True
+    if v.count("_") > 2 or "your" in v:
+        return True
+    return False
+
+
+def require_real(name: str, value: str, how: str) -> bool:
+    if not value.strip():
+        return bad(name, "not set", how)
+    if looks_fake(value):
+        print(f"  FAIL  {name} - this is still the example text, not a real "
+              f"value")
+        print(f"        {how}")
+        return False
+    return True
+
+
 def check_groq() -> bool:
     key = os.environ.get("GROQ_API_KEY", "").strip()
-    if not key:
-        return bad("groq", "GROQ_API_KEY is not set",
-                   "gh secret set GROQ_API_KEY --repo tbougnar/Slingshot-Tools")
+    if not require_real("groq", key,
+                        "gh secret set GROQ_API_KEY --repo "
+                        "tbougnar/Slingshot-Tools"):
+        return False
     req = urllib.request.Request(
         "https://api.groq.com/openai/v1/models",
         headers={"Authorization": f"Bearer {key}"})
@@ -81,9 +119,11 @@ def check_groq() -> bool:
 
 def check_itch_api() -> bool:
     key = os.environ.get("ITCH_API_KEY", "").strip()
-    if not key:
-        return bad("itch.io api", "ITCH_API_KEY is not set",
-                   "gh secret set ITCH_API_KEY --repo tbougnar/Slingshot-Tools")
+    if not require_real("itch.io api", key,
+                        "https://itch.io/settings/user, then "
+                        "gh secret set ITCH_API_KEY --repo "
+                        "tbougnar/Slingshot-Tools"):
+        return False
     req = urllib.request.Request(
         "https://api.itch.io/profile",
         headers={"Authorization": f"Bearer {key}"})
@@ -106,10 +146,12 @@ def check_itch_api() -> bool:
 def check_itch_session() -> bool:
     """Only matters for creating a project; uploads do not need it."""
     raw = os.environ.get("ITCH_SESSION_COOKIE", "").strip()
-    if not raw:
-        return bad("itch.io session", "ITCH_SESSION_COOKIE is not set",
-                   "needed only to create a new project; see "
-                   "ITCH_SELLING.md")
+    if not require_real("itch.io session", raw,
+                        "log in at itch.io, F12, Console, "
+                        "document.cookie, copy the itchio_token= part, then "
+                        "gh secret set ITCH_SESSION_COOKIE --repo "
+                        "tbougnar/Slingshot-Tools"):
+        return False
 
     cookie = ""
     for part in raw.split(";"):
@@ -168,10 +210,11 @@ def check_discord() -> bool:
     token = os.environ.get("DISCORD_BOT_TOKEN", "").strip()
     guild = os.environ.get("DISCORD_GUILD_ID", "").strip()
 
-    if not token:
-        return bad("discord bot", "DISCORD_BOT_TOKEN is not set",
-                   "gh secret set DISCORD_BOT_TOKEN --repo "
-                   "tbougnar/Slingshot-Tools")
+    if not require_real("discord bot", token,
+                        "the Discord Developer Portal, your app, Bot, "
+                        "Reset Token; then gh secret set "
+                        "DISCORD_BOT_TOKEN --repo tbougnar/Slingshot-Tools"):
+        return False
     if not guild:
         return bad("discord server", "DISCORD_GUILD_ID is not set",
                    "right-click the server name, Copy Server ID, then "
