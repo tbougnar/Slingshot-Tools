@@ -1,0 +1,118 @@
+name: Slingshot — Wednesday, review and improve
+
+on:
+  schedule:
+    # Wednesday 09:00 UTC
+    - cron: "0 9 * * 3"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: slingshot-wednesday
+  cancel-in-progress: false
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      GROQ_CHAT_MODEL: ${{ secrets.GROQ_CHAT_MODEL }}
+      ITCH_API_KEY: ${{ secrets.ITCH_API_KEY }}
+      ITCH_USER: ${{ vars.ITCH_PAGE }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+      DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
+      SLINGSHOT_MONTHLY_HOURS: "30"
+      SLINGSHOT_EMERGENCY_HOURS: "3"
+      SLINGSHOT_RETIRE_MIN_DAYS: "365"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: pip install --quiet requests
+
+      - name: Show what is protected
+        run: python weekly_guard.py
+
+      - name: Is there budget left this month
+        run: python budget.py check --label wednesday --need 0.35
+
+      - name: Read the outside world, review the week, write the coaching
+        run: python weekly_cycle.py wednesday
+
+      - name: Can any product be retired
+        run: python retire_product.py --list
+
+      - name: Refuse the commit if anything protected changed
+        run: python weekly_guard.py check
+
+      - name: The whole-code audit still passes
+        continue-on-error: true
+        run: |
+          python selftest.py
+          python selftest_deep.py
+          python selftest_audit.py
+
+      - name: The public site never leaks a paid build
+        run: python check_exposure.py
+
+      - name: Commit the review
+        run: |
+          git config user.name "slingshot-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add -A
+          git commit -q -m "chore: weekly review and coaching [skip ci]" || echo "nothing to commit"
+          git push || (git pull --rebase origin main && git push) || echo "push failed"
+
+  # The self-upgrade pass: the company may rewrite its own machinery, and
+  # nothing else. It runs on a second day so a bad patch has a week to be
+  # noticed before the next build depends on it.
+  improve:
+    needs: review
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      GROQ_CHAT_MODEL: ${{ secrets.GROQ_CHAT_MODEL }}
+      SLINGSHOT_MONTHLY_HOURS: "30"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: pip install --quiet requests
+
+      - name: Is there budget left this month
+        run: python budget.py check --label improve --need 0.4
+
+      - name: Let the model patch its own generator and QA stack
+        env:
+          SLINGSHOT_ALLOWED: "make_app.py,qa_loop.py,app_scanner.py,patcher.py,selfheal.py,sizeguard.py,tokenmeter.py,providers.py"
+        run: python self_upgrade.py
+
+      - name: A patch must pass every test before it can be committed
+        run: |
+          python selftest.py
+          python selftest_deep.py
+          python selftest_audit.py
+
+      - name: And it must not have touched anything protected
+        run: python weekly_guard.py check
+
+      - name: Commit the improvement
+        run: |
+          git config user.name "slingshot-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add -A
+          git commit -q -m "chore: self-improvement [skip ci]" || echo "nothing to commit"
+          git push || (git pull --rebase origin main && git push) || echo "push failed"

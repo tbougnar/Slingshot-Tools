@@ -1,0 +1,53 @@
+name: Slingshot — Monday, open the weekly ballot
+
+on:
+  schedule:
+    # Monday 09:00 UTC. GitHub cron is UTC and can be late by a few minutes
+    # when the platform is busy, so nothing here depends on the exact minute.
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: slingshot-monday
+  cancel-in-progress: false
+
+jobs:
+  vote:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+      DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      SLINGSHOT_MONTHLY_HOURS: "30"
+      SLINGSHOT_EMERGENCY_HOURS: "3"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: pip install --quiet requests
+
+      - name: Is there budget left this month
+        run: python budget.py check --label monday --need 0.15
+
+      - name: Open this week's ballot in #polls
+        run: python weekly_cycle.py monday
+
+      - name: Announce the ballot on the site roadmap
+        continue-on-error: true
+        run: python discord_polls.py
+
+      - name: Commit the ballot
+        run: |
+          git config user.name "slingshot-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add -A
+          git commit -q -m "vote: ballot opened [skip ci]" || echo "nothing to commit"
+          git push || (git pull --rebase origin main && git push) || echo "push failed"
