@@ -37,6 +37,20 @@ def bad(label: str, why: str, fix: str = "") -> bool:
 
 # --------------------------------------------------------------------- groq
 
+def blocked_by_cloudflare(e: urllib.error.HTTPError) -> bool:
+    """Is this our IP being blocked, rather than the credential being wrong?
+
+    Cloudflare answers 403 with code 1010 when it refuses the caller outright.
+    GitHub's runner addresses are frequently on that list, so reporting that as
+    a bad secret would send people off to rotate a perfectly good key.
+    """
+    try:
+        body = e.read().decode("utf-8", "replace")
+    except Exception:  # noqa: BLE001
+        return e.code == 403
+    return e.code == 403 and ("1010" in body or "banned" in body.lower())
+
+
 def check_groq() -> bool:
     key = os.environ.get("GROQ_API_KEY", "").strip()
     if not key:
@@ -50,6 +64,12 @@ def check_groq() -> bool:
             data = json.loads(r.read().decode("utf-8"))
         return ok("groq", f"{len(data.get('data') or [])} models reachable")
     except urllib.error.HTTPError as e:
+        if blocked_by_cloudflare(e):
+            return bad("groq",
+                       "this runner's IP is blocked by Cloudflare (403/1010)",
+                       "the key may well be fine; a real build would fail the "
+                       "same way, so check whether groq.com works from a "
+                       "normal connection")
         return bad("groq", f"HTTP {e.code}",
                    "the key was revoked or is wrong; make a new one at "
                    "https://console.groq.com/keys")
@@ -112,6 +132,12 @@ def check_itch_session() -> bool:
         with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
             r.read()
             landed = r.geturl()
+    except urllib.error.HTTPError as e:
+        # a 404 on the new-game form means the cookie worked and that page
+        # moved; the sign-in page is the only real failure
+        if e.code == 404:
+            return ok("itch.io session", "accepted (the form moved)")
+        return bad("itch.io session", f"HTTP {e.code}")
     except Exception as e:  # noqa: BLE001
         return bad("itch.io session", str(e)[:80])
 
@@ -161,6 +187,11 @@ def check_discord() -> bool:
         if not ok("discord bot", f"{me['username']}#{me['discriminator']}"):
             return False
     except urllib.error.HTTPError as e:
+        if blocked_by_cloudflare(e):
+            return bad("discord bot",
+                       "this runner's IP is blocked by Cloudflare (403/1010)",
+                       "the token may well be fine; announcements are "
+                       "best-effort and never block a release")
         return bad("discord bot", f"HTTP {e.code}",
                    "the token was rejected; reset it in the Developer "
                    "Portal under Bot")
