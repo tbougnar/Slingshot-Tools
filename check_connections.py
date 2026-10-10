@@ -362,9 +362,9 @@ def describe_discord_permissions(token: str, guild: str) -> None:
     everyone = by_id.get(str(guild))
     if everyone:
         bits = int(everyone.get("permissions", "0"))
-        print(f"        @everyone: {'View Channels' if bits & view else 'NO "
-              "View Channels'}, "
-              f"{'Send Messages' if bits & send else 'NO Send Messages'}")
+        has_view = "View Channels" if bits & view else "NO View Channels"
+        has_send = "Send Messages" if bits & send else "NO Send Messages"
+        print(f"        @everyone: {has_view}, {has_send}")
 
     print("        the bot's roles:")
     for rid in roles:
