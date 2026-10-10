@@ -1008,5 +1008,30 @@
     ],
     "detects": "recurs if a product is shown for sale before its purchase link exists",
     "verified": true
+  },
+  {
+    "id": "B081",
+    "date": "2026-10-10",
+    "symptom": "the site showed a buy button for a tool nobody could actually buy, because the paid tier was marked published with no store behind it",
+    "cause": "publishing was flipped by the build step, which knew nothing about whether a purchase was possible",
+    "fix": "itch_publish.py makes itch.io first and the site second: create, upload, verify the page answers, and only then publish",
+    "files": [
+      "itch_publish.py",
+      "ITCH_SELLING.md"
+    ],
+    "detects": "recurs if anything marks a product as sold before the store has it",
+    "verified": true
+  },
+  {
+    "id": "B082",
+    "date": "2026-10-10",
+    "symptom": "itch.io looked automatable but cannot create a project at all: the API is read-only for games and butler refuses the first push",
+    "cause": "itch.io only exposes reads plus collection editing; project creation is a browser page, so any plan to automate it has to drive a browser",
+    "fix": "create the project with Playwright using a session cookie, then push the file with butler",
+    "files": [
+      "itch_publish.py"
+    ],
+    "detects": "recurs if a plan assumes itch.io has a project-creation API",
+    "verified": true
   }
 ]

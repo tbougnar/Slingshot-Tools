@@ -447,3 +447,14 @@ B080: the paid tier was still marked published even though nothing could be boug
   fix:   publishing is now manual and refuses unless an itch_url is already in the catalog
   file:  publish_paid.py
   file:  build_paid_only.py
+
+B081: the site showed a buy button for a tool nobody could actually buy, because the paid tier was marked published with no store behind it
+  cause: publishing was flipped by the build step, which knew nothing about whether a purchase was possible
+  fix:   itch_publish.py makes itch.io first and the site second: create, upload, verify the page answers, and only then publish
+  file:  itch_publish.py
+  file:  ITCH_SELLING.md
+
+B082: itch.io looked automatable but cannot create a project at all: the API is read-only for games and butler refuses the first push
+  cause: itch.io only exposes reads plus collection editing; project creation is a browser page, so any plan to automate it has to drive a browser
+  fix:   create the project with Playwright using a session cookie, then push the file with butler
+  file:  itch_publish.py

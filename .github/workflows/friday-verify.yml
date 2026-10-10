@@ -114,6 +114,14 @@ jobs:
         run: |
           choco install nsis -y --no-progress
           python -m pip install --quiet pillow requests pyinstaller pywebview
+
+      # butler is itch.io's own uploader. Without it the installer cannot be
+      # pushed, so it is fetched here rather than trusted to be on the runner.
+      - name: Install butler, itch.io's uploader
+        run: |
+          curl -sSL -o butler.zip https://broth.itch.zone/butler/windows-amd64/LATEST/archive/default
+          7z x butler.zip -obutler -y
+          echo "$PWD/butler" >> $GITHUB_PATH
       # itch.io is the store now, so this builds the installer and prints where
       # it is. Uploading it, setting the itch_url and flipping the paid tier are
       # all manual, because only a person can confirm the itch.io page is live.
@@ -141,6 +149,19 @@ jobs:
           path: paid/**/*Setup.exe
           if-no-files-found: error
           retention-days: 30
+
+      # itch.io is the store. This creates the project if it is missing, pushes
+      # the installer with butler, checks the page really answers, and only then
+      # flips the product to published on the site. The order matters: nothing
+      # is advertised before itch.io is confirmed to be serving it.
+      - name: Put the tool on itch.io, then publish it on the site
+        continue-on-error: true
+        run: python itch_publish.py
+        env:
+          ITCH_USER: ${{ vars.ITCH_USER }}
+          ITCH_API_KEY: ${{ secrets.ITCH_API_KEY }}
+          ITCH_SESSION_COOKIE: ${{ secrets.ITCH_SESSION_COOKIE }}
+          ITCH_CHANNEL: "windows"
       # Discord is best-effort: no credentials, or a Discord outage, must never
       # stop a release. discord_post.py posts through DISCORD_WEBHOOK_URL when
       # one is set and falls back to the bot token, so either credential works.

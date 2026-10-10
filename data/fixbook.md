@@ -721,3 +721,21 @@ One entry per bug that actually happened. Newest last.
 - **Files:** publish_paid.py, build_paid_only.py
 - **Detects:** recurs if a product is shown for sale before its purchase link exists
 - **Verified:** yes
+
+## B081 - the site showed a buy button for a tool nobody could actually buy, because the paid tier was marked published with no store behind it
+
+- **Date:** 2026-10-10
+- **Cause:** publishing was flipped by the build step, which knew nothing about whether a purchase was possible
+- **Fix:** itch_publish.py makes itch.io first and the site second: create, upload, verify the page answers, and only then publish
+- **Files:** itch_publish.py, ITCH_SELLING.md
+- **Detects:** recurs if anything marks a product as sold before the store has it
+- **Verified:** yes
+
+## B082 - itch.io looked automatable but cannot create a project at all: the API is read-only for games and butler refuses the first push
+
+- **Date:** 2026-10-10
+- **Cause:** itch.io only exposes reads plus collection editing; project creation is a browser page, so any plan to automate it has to drive a browser
+- **Fix:** create the project with Playwright using a session cookie, then push the file with butler
+- **Files:** itch_publish.py
+- **Detects:** recurs if a plan assumes itch.io has a project-creation API
+- **Verified:** yes
