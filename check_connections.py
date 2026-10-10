@@ -18,6 +18,23 @@ from pathlib import Path
 
 TIMEOUT = 30
 
+# Cloudflare refuses requests that look like a bare script, answering 403 with
+# code 1010 to anything using urllib's default User-Agent. That is a refusal of
+# the fingerprint, not of the address, and it looks exactly like a blocked IP.
+# Presenting an ordinary browser string gets through and lets a real 401 or 403
+# mean what it says.
+UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+      "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
+
+
+def get(url: str, headers: dict | None = None, data: bytes | None = None,
+         timeout: int = TIMEOUT):
+    """urllib with the User-Agent Cloudflare expects."""
+    h = {"User-Agent": UA, "Accept": "application/json"}
+    h.update(headers or {})
+    req = urllib.request.Request(url, data=data, headers=h)
+    return urllib.request.urlopen(req, timeout=timeout)
+
 
 def log(msg: str) -> None:
     print(f"[check] {msg}", flush=True)
@@ -38,11 +55,10 @@ def bad(label: str, why: str, fix: str = "") -> bool:
 # --------------------------------------------------------------------- groq
 
 def blocked_by_cloudflare(e: urllib.error.HTTPError) -> bool:
-    """Is this our IP being blocked, rather than the credential being wrong?
+    """Still a 403/1010? Then something upstream is refusing, not the key.
 
-    Cloudflare answers 403 with code 1010 when it refuses the caller outright.
-    GitHub's runner addresses are frequently on that list, so reporting that as
-    a bad secret would send people off to rotate a perfectly good key.
+    With a browser User-Agent in place this should not happen for the common
+    services, so treat it as a network-level block rather than a bad secret.
     """
     try:
         body = e.read().decode("utf-8", "replace")
@@ -94,23 +110,24 @@ def check_groq() -> bool:
                         "gh secret set GROQ_API_KEY --repo "
                         "tbougnar/Slingshot-Tools"):
         return False
-    req = urllib.request.Request(
-        "https://api.groq.com/openai/v1/models",
-        headers={"Authorization": f"Bearer {key}"})
     try:
-        with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+        with get("https://api.groq.com/openai/v1/models",
+                 {"Authorization": f"Bearer {key}"}) as r:
             data = json.loads(r.read().decode("utf-8"))
         return ok("groq", f"{len(data.get('data') or [])} models reachable")
     except urllib.error.HTTPError as e:
         if blocked_by_cloudflare(e):
             return bad("groq",
-                       "this runner's IP is blocked by Cloudflare (403/1010)",
-                       "the key may well be fine; a real build would fail the "
-                       "same way, so check whether groq.com works from a "
-                       "normal connection")
-        return bad("groq", f"HTTP {e.code}",
-                   "the key was revoked or is wrong; make a new one at "
-                   "https://console.groq.com/keys")
+                       "refused by Cloudflare (403/1010) even with a browser "
+                       "header",
+                       "this is a network block on the way out, not a bad "
+                       "key")
+        if e.code in (401, 403):
+            return bad("groq", "the key was rejected",
+                       "make a new one at https://console.groq.com/keys, then "
+                       "gh secret set GROQ_API_KEY --repo "
+                       "tbougnar/Slingshot-Tools")
+        return bad("groq", f"HTTP {e.code}")
     except Exception as e:  # noqa: BLE001
         return bad("groq", str(e)[:80])
 
@@ -124,11 +141,9 @@ def check_itch_api() -> bool:
                         "gh secret set ITCH_API_KEY --repo "
                         "tbougnar/Slingshot-Tools"):
         return False
-    req = urllib.request.Request(
-        "https://api.itch.io/profile",
-        headers={"Authorization": f"Bearer {key}"})
     try:
-        with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+        with get("https://api.itch.io/profile",
+                 {"Authorization": f"Bearer {key}"}) as r:
             user = json.loads(r.read().decode("utf-8"))["user"]
         name = user.get("username", "?")
         detail = f"account {name}"
@@ -136,9 +151,14 @@ def check_itch_api() -> bool:
             detail += " (not a developer account yet)"
         return ok("itch.io api", detail)
     except urllib.error.HTTPError as e:
-        return bad("itch.io api", f"HTTP {e.code}",
-                   "the key was revoked; make a new one at "
-                   "https://itch.io/settings/user")
+        if blocked_by_cloudflare(e):
+            return bad("itch.io api", "refused by Cloudflare (403/1010)")
+        if e.code in (401, 403):
+            return bad("itch.io api", "the key was rejected",
+                       "make a new one at https://itch.io/settings/user, then "
+                       "gh secret set ITCH_API_KEY --repo "
+                       "tbougnar/Slingshot-Tools")
+        return bad("itch.io api", f"HTTP {e.code}")
     except Exception as e:  # noqa: BLE001
         return bad("itch.io api", str(e)[:80])
 
@@ -166,12 +186,9 @@ def check_itch_session() -> bool:
         return bad("itch.io session", "no itchio_token found in the value",
                    "copy only the itchio_token cookie from the browser")
 
-    req = urllib.request.Request(
-        "https://itch.io/settings/mine/new/game",
-        headers={"Cookie": f"itchio_token={cookie}",
-                 "User-Agent": "slingshot-tools"})
     try:
-        with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+        with get("https://itch.io/settings/mine/new/game",
+                 {"Cookie": f"itchio_token={cookie}"}) as r:
             r.read()
             landed = r.geturl()
     except urllib.error.HTTPError as e:
@@ -223,28 +240,25 @@ def check_discord() -> bool:
 
     head = {"Authorization": f"Bot {token}"}
     try:
-        req = urllib.request.Request("https://discord.com/api/v10/users/@me",
-                                     headers=head)
-        with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+        with get("https://discord.com/api/v10/users/@me", head) as r:
             me = json.loads(r.read().decode("utf-8"))
         if not ok("discord bot", f"{me['username']}#{me['discriminator']}"):
             return False
     except urllib.error.HTTPError as e:
         if blocked_by_cloudflare(e):
-            return bad("discord bot",
-                       "this runner's IP is blocked by Cloudflare (403/1010)",
-                       "the token may well be fine; announcements are "
-                       "best-effort and never block a release")
-        return bad("discord bot", f"HTTP {e.code}",
-                   "the token was rejected; reset it in the Developer "
-                   "Portal under Bot")
+            return bad("discord bot", "refused by Cloudflare (403/1010)")
+        if e.code == 401:
+            return bad("discord bot", "the token was rejected (401)",
+                       "reset it in the Developer Portal under Bot, then "
+                       "gh secret set DISCORD_BOT_TOKEN --repo "
+                       "tbougnar/Slingshot-Tools")
+        return bad("discord bot", f"HTTP {e.code}")
     except Exception as e:  # noqa: BLE001
         return bad("discord bot", str(e)[:80])
 
     try:
-        req = urllib.request.Request(
-            "https://discord.com/api/v10/users/@me/guilds", headers=head)
-        with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+        with get("https://discord.com/api/v10/users/@me/guilds",
+                 head) as r:
             guilds = json.loads(r.read().decode("utf-8"))
     except Exception as e:  # noqa: BLE001
         return bad("discord server", str(e)[:80])
@@ -258,10 +272,8 @@ def check_discord() -> bool:
 
     # the channels the pipeline posts into
     try:
-        req = urllib.request.Request(
-            f"https://discord.com/api/v10/guilds/{guild}/channels",
-            headers=head)
-        with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+        with get(f"https://discord.com/api/v10/guilds/{guild}/channels",
+                 head) as r:
             chans = json.loads(r.read().decode("utf-8"))
     except Exception as e:  # noqa: BLE001
         return bad("discord channels", str(e)[:80])
@@ -283,9 +295,7 @@ def check_discord() -> bool:
 def check_site() -> bool:
     url = "https://tbougnar.github.io/Slingshot-Tools/"
     try:
-        req = urllib.request.Request(url,
-                                     headers={"User-Agent": "slingshot-tools"})
-        with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+        with get(url) as r:
             body = r.read().decode("utf-8", "replace")
         return ok("website", f"{r.status}, {len(body)} bytes")
     except Exception as e:  # noqa: BLE001
