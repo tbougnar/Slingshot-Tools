@@ -23,7 +23,17 @@ ROOT = Path(__file__).resolve().parent
 PROTECTED_GLOBS = [
     "site/**",
     "pages.yml",
-    ".github/workflows/pages.yml",
+]
+
+# The scheduled workflows themselves. A job that could edit its own schedule
+# could raise its own budget, drop a guard step, or run the publish path by
+# hand, so they are protected exactly like the site.
+PROTECTED_WORKFLOWS = [
+    "pages.yml",
+    "monday-vote.yml",
+    "wednesday-review.yml",
+    "friday-build.yml",
+    "friday-verify.yml",
 ]
 
 # The scripts that make the site work. Editing these changes what customers get
@@ -74,7 +84,9 @@ RETIRE_MIN_DAYS = 365
 
 
 def protected_globs() -> list[str]:
-    return PROTECTED_GLOBS + SITE_SCRIPTS
+    return (PROTECTED_GLOBS
+            + [f".github/workflows/{n}" for n in PROTECTED_WORKFLOWS]
+            + SITE_SCRIPTS)
 
 
 def all_protected() -> set[str]:
@@ -113,7 +125,11 @@ def changed_files(base: str = "HEAD", head: str = "HEAD") -> list[str]:
 
 def is_protected(path: str) -> bool:
     """True when an automated job must not edit this path."""
-    p = path.replace("\\", "/").lstrip("./")
+    # normalize separators, and drop a leading "./" but keep the dot in
+    # ".github", which str.lstrip would eat
+    p = path.replace("\\", "/")
+    while p.startswith("./"):
+        p = p[2:]
     if p in MONEY_AND_DEATH:
         return True
     for pattern in protected_globs():

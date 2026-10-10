@@ -120,6 +120,34 @@ for name, scripts in WEEKLY_STAGES.items():
         if script not in text:
             problems.append(("-", f"{name} never runs {script}"))
 
+# The guard must actually protect the workflows and the price limits, or a
+# self-improving job could edit its own schedule or raise its own ceiling.
+try:
+    sys.path.insert(0, str(R))
+    import weekly_guard as _g
+    for _p in ("site/index.html", "site/apps.json", "check_exposure.py",
+               "worker/worker.js", "pricing.py", "retire_product.py",
+               ".github/workflows/friday-build.yml",
+               ".github/workflows/friday-verify.yml",
+               ".github/workflows/pages.yml"):
+        if not _g.is_protected(_p):
+            problems.append(("-", f"should be protected but is not: {_p}"))
+    for _p in ("make_app.py", "verify_app.py", "weekly_guard.py"):
+        if _g.is_protected(_p):
+            problems.append(("-", f"should be improvable but is locked: {_p}"))
+
+    # the price floor and ceiling have to be exactly the agreed amounts
+    import pricing as _p2
+    if abs(_p2.FLOOR - 1.0) > 0.001 or abs(_p2.CEILING - 10.0) > 0.001:
+        problems.append(("-", f"price range moved: "
+                             f"{_p2.FLOOR:.2f} to {_p2.CEILING:.2f}"))
+    for _raw, _want in ((-99, 1.0), (0, 1.0), (5.0, 5.0), (99, 10.0)):
+        if abs(_p2.clamp(_raw) - _want) > 0.001:
+            problems.append(("-", f"clamp({_raw}) is {_p2.clamp(_raw)}, "
+                                 f"expected {_want}"))
+except Exception as _e:  # noqa: BLE001
+    problems.append(("-", f"price or guard check failed: {_e}"))
+
 # The budget has to be asked before work starts, not only reported afterwards.
 for name in ("monday-vote.yml", "wednesday-review.yml", "friday-build.yml",
              "friday-verify.yml"):

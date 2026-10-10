@@ -867,5 +867,30 @@
     ],
     "detects": "recurs if a workflow is renamed without updating what the tests check for",
     "verified": true
+  },
+  {
+    "id": "B070",
+    "date": "2026-10-10",
+    "symptom": "the scheduled workflows were not protected, so the self-improvement job could have edited its own budget and schedule",
+    "cause": "the guard listed only site/ and the site scripts; the workflow files were never added",
+    "fix": "added the five scheduled workflows to the protected set, and fixed a matching bug where str.lstrip ate the dot in .github",
+    "files": [
+      "weekly_guard.py",
+      "selftest_audit.py"
+    ],
+    "detects": "recurs if a new scheduled workflow is added without protecting it",
+    "verified": true
+  },
+  {
+    "id": "B071",
+    "date": "2026-10-10",
+    "symptom": "an edit to weekly_guard.py silently disappeared, because the upgrade test ran git checkout -- . over uncommitted work",
+    "cause": "the self-upgrade test cleans the tree with a blanket checkout, which also reverts changes made in the same working copy beforehand",
+    "fix": "the guard change was re-applied and committed before running the destructive test again",
+    "files": [
+      "weekly_guard.py"
+    ],
+    "detects": "recurs when a destructive test runs while other edits are uncommitted",
+    "verified": true
   }
 ]
