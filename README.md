@@ -3,7 +3,7 @@
 Small, fast, free desktop tools for everyday problems, with a fuller edition of
 each one for anyone who wants the unlimited version.
 
-**One new tool every week, chosen by the people who use them.**
+**Live catalog:** <https://tbougnar.github.io/Slingshot-Tools/>
 
 ---
 
@@ -16,86 +16,60 @@ Every tool ships in two editions:
 | Price | Free | Paid |
 | What it does | The whole job, with sensible limits | Nothing capped |
 | Runs on | Any browser | Windows, as a real app |
+| Setup | None — open the page | One installer |
 
-Same app, same look. The Full edition removes the caps and adds export/import,
-extra themes, bulk actions and history.
+Same app, same look. The Full edition removes the caps and adds:
+
+- **Export and import** — move your data between machines
+- **Extra themes** — more than the default
+- **Bulk actions** — do a lot at once instead of one by one
+- **History** — a record of what you have done
+- **A real Windows app** — no browser tab, Desktop and Start Menu shortcuts
+- **A proper installer** — one click, standard uninstall
+
+The full edition is a native app. The free edition is a single HTML file.
 
 ## Getting the tools
 
-- The **Basic** edition is free and runs straight in the browser.
-- The **Full** edition is a Windows app, bought on the site.
-- Windows users get a real installer with Start Menu and Desktop shortcuts.
+- The **Basic** edition is free. Open it in any browser, or download it and use
+  it offline.
+- The **Full** edition is bought on the site and delivered after payment.
 
-No account, no sign-up, no tracking, no network calls. Your data stays in your
-own browser and never leaves your device.
+Every tool works offline once you have it. No account, no sign-up.
 
-**Live catalog:** <https://tbougnar.github.io/Slingshot-Tools/>
+## How they work
 
----
-
-## How a tool gets made
-
-The community votes on what to build, and the winning option is the one that
-ships.
-
-| Day | What happens |
-|---|---|
-| **Monday** | A ballot opens with the ideas that have not been built yet |
-| **Wednesday** | The week is reviewed — what sold, what people asked for, what changes. The generator also reviews itself and improves |
-| **Friday** | The chosen tool is built, checked in a real browser, and released |
-
-Everything runs on a schedule. Nothing waits for a person to press anything.
-
-### It will not ship you something broken
-
-Before anything is published it is opened in a real browser and every control is
-clicked. A tool with **two or more dead controls is never published** — the week
-closes with nothing shipped rather than something that does not work.
-
-### It cannot cheat
-
-The automation is allowed to rewrite its own generator and its own tests. It is
-not allowed to touch:
-
-- the website, or the scripts that build and serve it
-- prices, or the payment API
-- the products themselves
-
-The price is chosen each week inside a fixed range. The range is set in the
-workflow and enforced again by the payment server, so it holds even if a
-request asks for something else.
-
-A product is only taken down after **a full year** of being for sale with
-essentially no demand, and even then it is only hidden, never deleted.
-
----
-
-## Repository layout
-
-```
-site/          the public website, exactly what GitHub Pages serves
-worker/        the payment API (a Cloudflare Worker)
-data/          internal state: revenue, prices, lessons
-*.py           the generator, the QA stack and the weekly cycle
-```
-
-Everything that runs on a schedule is in `.github/workflows/`:
-
-| When | Workflow | What it does |
-|---|---|---|
-| Monday 09:00 | `monday-vote.yml` | opens the week's ballot |
-| Wednesday 09:00 | `wednesday-review.yml` | reviews the week, and improves the generator |
-| Friday 07:00 | `friday-build.yml` | generates the chosen tool |
-| after that | `friday-verify.yml` | verifies it, builds the installer, publishes |
-| on a push | `pages.yml` | deploys the website |
-
----
+- **Plain HTML, CSS and JavaScript.** No framework, no build step, nothing to
+  install to use the free editions.
+- **Your data stays on your device.** The tools make no network calls at all.
+  Nothing is uploaded, nothing is sent anywhere.
+- **One job each.** A single-purpose tool is easier to trust than a suite with
+  settings, accounts and telemetry.
 
 ## Privacy
 
 **Nothing about you is collected.** No accounts, no sign-up, no analytics, no
-cookies, no network calls from the tools themselves. The Basic editions run
-entirely offline in your browser.
+cookies, no tracking. The free editions run entirely offline in your browser,
+and your data never leaves your device.
+
+## Manuals
+
+| Document | What it covers |
+|---|---|
+| [PRIVACY.md](PRIVACY.md) | what is stored, and what is not |
+| [CODE_SIGNING_POLICY.md](CODE_SIGNING_POLICY.md) | installer signing and Windows warnings |
+| [SIGNPATH_SETUP.md](SIGNPATH_SETUP.md) | how the installers are signed |
+| [DISCORD_BOT_SETUP.md](DISCORD_BOT_SETUP.md) | the community server and its bot |
+| [PAYPAL_LIVE.md](PAYPAL_LIVE.md) | taking payments |
+
+Each tool's own page carries a short description of what it does and what the
+two editions differ by.
+
+## Contributing
+
+The full source of every Basic edition is in this repository, under `site/`.
+Read `REPO_HYGIENE.md` first if you plan to add anything: the repository is
+public, so what goes in it matters.
 
 ## License
 
