@@ -1,18 +1,13 @@
-name: Slingshot - verify and publish (1st, 08:00, after generate)
+name: Slingshot — verify, install and publish (after the Friday build)
 
-# Deliberately an hour after the generator. The model allowance is per minute
-# for the whole account, so verifying in the same minute as generating leaves
-# the debugger team with nothing and no app can ever pass QA.
+# Runs by itself the moment Friday's generation finishes, so verification is
+# never a manual step. Only a successful generate is worth checking.
 
 on:
-  schedule:
-    - cron: "0 8 1 * *"
-  workflow_dispatch:
-  # Runs by itself the moment a build finishes, so verification is never a
-  # manual step. Only a successful generate is worth checking.
   workflow_run:
-    workflows: ["Slingshot - generate an app (1st, 07:00)"]
+    workflows: ["Slingshot — Friday, generate the week's tool"]
     types: [completed]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -37,6 +32,8 @@ jobs:
       PRICE_FLOOR: '1.00'
       PRICE_CEILING: '10.00'
       PRICE_START: "3.00"
+      SLINGSHOT_MONTHLY_HOURS: "30"
+      SLINGSHOT_EMERGENCY_HOURS: "3"
     steps:
       - uses: actions/checkout@v4
 
@@ -54,6 +51,9 @@ jobs:
           python -m playwright install --with-deps chromium
         continue-on-error: true
 
+      - name: Is there budget left this month
+        run: python budget.py check --label friday-verify --need 0.6
+
       - name: Refresh the fixbook the AI reads
         run: python write_fixbook.py
 
@@ -62,6 +62,9 @@ jobs:
 
       - name: Confirm nothing paid is public
         run: python check_exposure.py
+
+      - name: Nothing protected was touched
+        run: python weekly_guard.py check
 
       # The installer job runs on a fresh Windows checkout, so everything this
       # job produced (catalog, free edition, paid source, published manifest)
@@ -149,6 +152,14 @@ jobs:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
+
+      - name: Can any product be retired
+        continue-on-error: true
+        run: python retire_product.py --list
+
+      - name: How much of the month's budget is gone
+        if: always()
+        run: python budget.py status
       - name: Commit the store manifest
         run: |
           git config user.name "slingshot-bot"

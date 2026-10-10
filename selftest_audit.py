@@ -94,11 +94,50 @@ for f in ("make_app.py", "stage_app.py", "verify_app.py", "pricing.py",
     if not (R / f).exists():
         problems.append(("-", f"referenced script missing: {f}"))
 
-# ---- secrets the workflows need ----
-wf = (wf_dir / "monday-build.yml").read_text(encoding="utf-8")
-for s in ("GROQ_API_KEY", "CF_API_TOKEN", "LICENSE_SECRET"):
-    if f"secrets.{s}" in wf and s not in ("GROQ_API_KEY",):
-        pass  # verified separately via gh
+# ---- the weekly cycle is wired up ----
+# Every stage names the file that runs it, so a renamed or deleted script is
+# caught here rather than silently doing nothing on schedule.
+WEEKLY_STAGES = {
+    "monday-vote.yml": ["weekly_cycle.py monday", "budget.py"],
+    # the review runs through weekly_cycle.py, which calls the others
+    "wednesday-review.yml": ["weekly_cycle.py wednesday",
+                             "retire_product.py", "self_upgrade.py",
+                             "weekly_guard.py", "check_exposure.py"],
+    "friday-build.yml": ["stage_app.py", "vote_steer.py", "budget.py",
+                         "weekly_cycle.py monday", "selfheal.py",
+                         "selftest.py"],
+    "friday-verify.yml": ["verify_app.py", "build_paid_only.py",
+                          "check_exposure.py", "weekly_guard.py",
+                          "budget.py"],
+}
+for name, scripts in WEEKLY_STAGES.items():
+    path = wf_dir / name
+    if not path.exists():
+        problems.append(("-", f"weekly stage missing: {name}"))
+        continue
+    text = path.read_text(encoding="utf-8")
+    for script in scripts:
+        if script not in text:
+            problems.append(("-", f"{name} never runs {script}"))
+
+# The budget has to be asked before work starts, not only reported afterwards.
+for name in ("monday-vote.yml", "wednesday-review.yml", "friday-build.yml",
+             "friday-verify.yml"):
+    path = wf_dir / name
+    if path.exists() and "budget.py check" not in path.read_text(encoding="utf-8"):
+        problems.append(("-", f"{name} runs without checking the budget"))
+
+# Nothing protected may be committed by an automated job.
+sys.path.insert(0, str(R))
+try:
+    import weekly_guard as _guard
+    for wf_file in sorted(wf_dir.glob("*.yml")):
+        text = wf_file.read_text(encoding="utf-8")
+        for bad in ("site/index.html", "check_exposure.py "):
+            if f"git add -A" in text and bad in text:
+                problems.append(("-", f"{wf_file.name} edits {bad.strip()}"))
+except ImportError:
+    problems.append(("-", "weekly_guard.py cannot be imported"))
 
 print("== problems ==")
 if not problems:

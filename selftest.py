@@ -125,10 +125,16 @@ def t_fixbook():
 
 def t_workflows():
     import yaml
-    for f in ("monday-build.yml", "monday-verify.yml", "pages.yml"):
-        p = R / ".github" / "workflows" / f
-        yaml.safe_load(p.read_text(encoding="utf-8"))
-    return "all workflows parse"
+    wf = R / ".github" / "workflows"
+    names = sorted(p.name for p in wf.glob("*.yml"))
+    for n in names:
+        yaml.safe_load((wf / n).read_text(encoding="utf-8"))
+    # the four stages of the weekly cycle have to all be there
+    for required in ("monday-vote.yml", "wednesday-review.yml",
+                     "friday-build.yml", "friday-verify.yml", "pages.yml"):
+        if required not in names:
+            raise AssertionError(f"missing workflow: {required}")
+    return f"all {len(names)} workflows parse"
 
 
 def t_imports():

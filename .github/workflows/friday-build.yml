@@ -1,0 +1,125 @@
+name: Slingshot — Friday, generate the week's tool
+
+on:
+  schedule:
+    # Friday 07:00 UTC. An hour before verification, deliberately: the model
+    # allowance is per minute for the whole account, so verifying in the same
+    # minute as generating leaves the repair step with nothing, and then no
+    # app can ever pass QA.
+    - cron: "0 7 * * 5"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: slingshot-generate
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      SITE_URL: ${{ vars.SITE_URL }}
+      PRICE_FLOOR: '1.00'
+      PRICE_CEILING: '10.00'
+      PRICE_START: "3.00"
+      DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+      DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
+      SLINGSHOT_MONTHLY_HOURS: "30"
+      SLINGSHOT_EMERGENCY_HOURS: "3"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-v1
+
+      - name: Install tools
+        run: |
+          python -m pip install --quiet pillow requests pyinstaller pywebview playwright pyyaml
+          python -m playwright install chromium
+
+      - name: Is there budget left this month
+        run: python budget.py check --label friday-generate --need 0.6
+
+      - name: Close this week's ballot
+        run: python weekly_cycle.py monday
+
+      - name: Show what the community chose
+        run: python vote_steer.py
+
+      - name: Behaviour self-test
+        run: python selftest.py
+
+      - name: Adversarial self-test
+        run: python selftest_deep.py
+
+      - name: Whole-code audit
+        run: python selftest_audit.py
+
+      - name: Generate the app and stage it for verification
+        run: python stage_app.py
+
+      - name: Decide the price
+        run: python pricing.py
+
+      - name: Save the candidate for the verifier
+        run: |
+          git add -A
+          git -c user.name="slingshot-bot" -c user.email="bot@users.noreply.github.com" commit -q -m "candidate: staged for verification" || echo "nothing to commit"
+          git push || (git pull --rebase origin main && git push) || echo "push failed"
+
+  # If generation fails, the model diagnoses it and patches itself.
+  selfheal:
+    needs: generate
+    if: ${{ failure() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      GROQ_CHAT_MODEL: ${{ secrets.GROQ_CHAT_MODEL }}
+      SLINGSHOT_EMERGENCY: "1"
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: pip install --quiet requests
+
+      - name: Emergency repair budget
+        run: python budget.py check --label selfheal --need 0.4
+
+      - name: Fetch the failing log
+        continue-on-error: true
+        run: |
+          mkdir -p data
+          gh run download --name generate-log --dir data || echo "no log"
+          ls -la data || true
+
+      - name: Let the model diagnose and patch
+        run: python selfheal.py
+
+      - name: The self-heal may not touch anything protected
+        run: python weekly_guard.py check
+
+      - name: Push the patch
+        run: |
+          git config user.name "slingshot-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add -A
+          git commit -q -m "fix: self-heal after a failed generation [skip ci]" || echo "nothing to commit"
+          git push || (git pull --rebase origin main && git push) || echo "push failed"

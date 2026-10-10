@@ -806,5 +806,66 @@
     ],
     "detects": "recurs if an argument position is used for a value that also has flags",
     "verified": true
+  },
+  {
+    "id": "B065",
+    "date": "2026-10-10",
+    "symptom": "the two leftover prototype channels could not be deleted, because Discord's Community mode pins the rules and system channels",
+    "cause": "the server was set up as a Community server, which reserves two channels and refuses any delete on them",
+    "fix": "turned Community mode off and set the server description, which released both channels",
+    "files": [
+      "DISCORD_BOT_SETUP.md"
+    ],
+    "detects": "recurs if a server is a Community server and an automated job tries to tidy its channels",
+    "verified": true
+  },
+  {
+    "id": "B066",
+    "date": "2026-10-10",
+    "symptom": "the Discord bot posted nothing in CI, because every posting script required a webhook and the pipeline had only a bot token",
+    "cause": "each script carried its own webhook-only transport with no shared fallback",
+    "fix": "discord_post.py tries the webhook then the bot token, and resolves channels by name with the emoji prefix stripped",
+    "files": [
+      "discord_post.py"
+    ],
+    "detects": "recurs if a channel is renamed for looks and lookup stops matching it",
+    "verified": true
+  },
+  {
+    "id": "B067",
+    "date": "2026-10-10",
+    "symptom": "retiring a product was impossible even after a year of no sales, because any sale at all blocked it forever",
+    "cause": "the rule compared lifetime sales against zero, so one sale in five hundred days was treated as a reason to keep it",
+    "fix": "allow at most two lifetime sales and none in the last 365 days, which is what 'nobody wants it' actually means",
+    "files": [
+      "retire_product.py"
+    ],
+    "detects": "recurs if the retirement bar is stricter than the evidence warrants",
+    "verified": true
+  },
+  {
+    "id": "B068",
+    "date": "2026-10-10",
+    "symptom": "the self-upgrade pass threw away every good patch, because it treated the repository's own new files as a dirty tree",
+    "cause": "it checked git status for the whole repository instead of only the files the patch had touched",
+    "fix": "ask git about the patched paths alone, and keep a separate whole-tree check as the precondition",
+    "files": [
+      "self_upgrade.py"
+    ],
+    "detects": "recurs if a cleanliness check is broader than the change it is judging",
+    "verified": true
+  },
+  {
+    "id": "B069",
+    "date": "2026-10-10",
+    "symptom": "the tests failed after the weekly cycle replaced the monthly workflows, because they named workflow files that no longer exist",
+    "cause": "the test suite hard-coded monday-build.yml and monday-verify.yml",
+    "fix": "the tests now discover the workflow files and require the four weekly stages to be present and to name the scripts they run",
+    "files": [
+      "selftest.py",
+      "selftest_audit.py"
+    ],
+    "detects": "recurs if a workflow is renamed without updating what the tests check for",
+    "verified": true
   }
 ]

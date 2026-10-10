@@ -577,3 +577,48 @@ One entry per bug that actually happened. Newest last.
 - **Files:** discord_article.py
 - **Detects:** recurs if an argument position is used for a value that also has flags
 - **Verified:** yes
+
+## B065 - the two leftover prototype channels could not be deleted, because Discord's Community mode pins the rules and system channels
+
+- **Date:** 2026-10-10
+- **Cause:** the server was set up as a Community server, which reserves two channels and refuses any delete on them
+- **Fix:** turned Community mode off and set the server description, which released both channels
+- **Files:** DISCORD_BOT_SETUP.md
+- **Detects:** recurs if a server is a Community server and an automated job tries to tidy its channels
+- **Verified:** yes
+
+## B066 - the Discord bot posted nothing in CI, because every posting script required a webhook and the pipeline had only a bot token
+
+- **Date:** 2026-10-10
+- **Cause:** each script carried its own webhook-only transport with no shared fallback
+- **Fix:** discord_post.py tries the webhook then the bot token, and resolves channels by name with the emoji prefix stripped
+- **Files:** discord_post.py
+- **Detects:** recurs if a channel is renamed for looks and lookup stops matching it
+- **Verified:** yes
+
+## B067 - retiring a product was impossible even after a year of no sales, because any sale at all blocked it forever
+
+- **Date:** 2026-10-10
+- **Cause:** the rule compared lifetime sales against zero, so one sale in five hundred days was treated as a reason to keep it
+- **Fix:** allow at most two lifetime sales and none in the last 365 days, which is what 'nobody wants it' actually means
+- **Files:** retire_product.py
+- **Detects:** recurs if the retirement bar is stricter than the evidence warrants
+- **Verified:** yes
+
+## B068 - the self-upgrade pass threw away every good patch, because it treated the repository's own new files as a dirty tree
+
+- **Date:** 2026-10-10
+- **Cause:** it checked git status for the whole repository instead of only the files the patch had touched
+- **Fix:** ask git about the patched paths alone, and keep a separate whole-tree check as the precondition
+- **Files:** self_upgrade.py
+- **Detects:** recurs if a cleanliness check is broader than the change it is judging
+- **Verified:** yes
+
+## B069 - the tests failed after the weekly cycle replaced the monthly workflows, because they named workflow files that no longer exist
+
+- **Date:** 2026-10-10
+- **Cause:** the test suite hard-coded monday-build.yml and monday-verify.yml
+- **Fix:** the tests now discover the workflow files and require the four weekly stages to be present and to name the scripts they run
+- **Files:** selftest.py, selftest_audit.py
+- **Detects:** recurs if a workflow is renamed without updating what the tests check for
+- **Verified:** yes
