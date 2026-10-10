@@ -640,3 +640,21 @@ One entry per bug that actually happened. Newest last.
 - **Files:** weekly_guard.py
 - **Detects:** recurs when a destructive test runs while other edits are uncommitted
 - **Verified:** yes
+
+## B072 - the public repository tracked apps/, which held the complete native source of nine paid products including the full-edition launcher and installer script
+
+- **Date:** 2026-10-10
+- **Cause:** apps/ was the staging folder from the older itch.io era and was never added to .gitignore once the pipeline moved to paid/ and site/apps/
+- **Fix:** untracked apps/ and every stale backup and scratch script, added them to .gitignore, and check_repo_hygiene.py now fails the build if any of them comes back
+- **Files:** .gitignore, check_repo_hygiene.py
+- **Detects:** recurs if a new staging folder is created and not added to .gitignore
+- **Verified:** yes
+
+## B073 - check_repo_hygiene.py crashed on a binary file in the git log because the console encoding could not decode it
+
+- **Date:** 2026-10-10
+- **Cause:** git output was decoded with text=True, which uses the console encoding and fails on non-UTF-8 bytes
+- **Fix:** read git output as bytes and decode with errors='replace', since the history legitimately contains binaries
+- **Files:** check_repo_hygiene.py
+- **Detects:** recurs whenever subprocess output is assumed to be valid text
+- **Verified:** yes

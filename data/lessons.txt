@@ -394,3 +394,14 @@ B071: an edit to weekly_guard.py silently disappeared, because the upgrade test 
   cause: the self-upgrade test cleans the tree with a blanket checkout, which also reverts changes made in the same working copy beforehand
   fix:   the guard change was re-applied and committed before running the destructive test again
   file:  weekly_guard.py
+
+B072: the public repository tracked apps/, which held the complete native source of nine paid products including the full-edition launcher and installer script
+  cause: apps/ was the staging folder from the older itch.io era and was never added to .gitignore once the pipeline moved to paid/ and site/apps/
+  fix:   untracked apps/ and every stale backup and scratch script, added them to .gitignore, and check_repo_hygiene.py now fails the build if any of them comes back
+  file:  .gitignore
+  file:  check_repo_hygiene.py
+
+B073: check_repo_hygiene.py crashed on a binary file in the git log because the console encoding could not decode it
+  cause: git output was decoded with text=True, which uses the console encoding and fails on non-UTF-8 bytes
+  fix:   read git output as bytes and decode with errors='replace', since the history legitimately contains binaries
+  file:  check_repo_hygiene.py

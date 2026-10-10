@@ -892,5 +892,30 @@
     ],
     "detects": "recurs when a destructive test runs while other edits are uncommitted",
     "verified": true
+  },
+  {
+    "id": "B072",
+    "date": "2026-10-10",
+    "symptom": "the public repository tracked apps/, which held the complete native source of nine paid products including the full-edition launcher and installer script",
+    "cause": "apps/ was the staging folder from the older itch.io era and was never added to .gitignore once the pipeline moved to paid/ and site/apps/",
+    "fix": "untracked apps/ and every stale backup and scratch script, added them to .gitignore, and check_repo_hygiene.py now fails the build if any of them comes back",
+    "files": [
+      ".gitignore",
+      "check_repo_hygiene.py"
+    ],
+    "detects": "recurs if a new staging folder is created and not added to .gitignore",
+    "verified": true
+  },
+  {
+    "id": "B073",
+    "date": "2026-10-10",
+    "symptom": "check_repo_hygiene.py crashed on a binary file in the git log because the console encoding could not decode it",
+    "cause": "git output was decoded with text=True, which uses the console encoding and fails on non-UTF-8 bytes",
+    "fix": "read git output as bytes and decode with errors='replace', since the history legitimately contains binaries",
+    "files": [
+      "check_repo_hygiene.py"
+    ],
+    "detects": "recurs whenever subprocess output is assumed to be valid text",
+    "verified": true
   }
 ]

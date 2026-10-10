@@ -63,6 +63,9 @@ jobs:
       - name: The public site never leaks a paid build
         run: python check_exposure.py
 
+      - name: Nothing private is tracked
+        run: python check_repo_hygiene.py
+
       - name: Commit the review
         run: |
           git config user.name "slingshot-bot"

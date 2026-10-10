@@ -31,6 +31,35 @@ site/licenses/
 # Paid editions must never be published
 paid/
 
+# The full native source of the paid products. These are dead products that are
+# not for sale and are not deployed, but their source has no business being in
+# a public repository. Only the free editions under site/apps/ are public.
+apps/
+
+# The company's money: revenue, margins, prices, budget and public metrics.
+# Useful to a competitor, worthless to a customer.
+data/earnings.json
+data/prices.json
+data/price_log.json
+data/budget.json
+data/reputation.json
+
+# Stale copies of the generator from earlier runs.
+*.bak
+*.bak2
+*.bak3
+
+# One-off scripts kept while building this. Not needed to run anything.
+PATTERN_CARD.txt
+PATTERNS.md
+debug_team.py
+debug_team2.py
+seed_fixbook.py
+mark_verified.py
+groq_check.py
+itch_login.py
+paypal_check.py
+
 # regenerated from the fixbook at build time
 data/lessons.txt
 

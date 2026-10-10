@@ -63,6 +63,9 @@ jobs:
       - name: Confirm nothing paid is public
         run: python check_exposure.py
 
+      - name: Confirm no paid source, money or credential is tracked
+        run: python check_repo_hygiene.py
+
       - name: Nothing protected was touched
         run: python weekly_guard.py check
 

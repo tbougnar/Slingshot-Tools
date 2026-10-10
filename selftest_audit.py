@@ -94,6 +94,21 @@ for f in ("make_app.py", "stage_app.py", "verify_app.py", "pricing.py",
     if not (R / f).exists():
         problems.append(("-", f"referenced script missing: {f}"))
 
+# ---- the repository must never track anything private ----
+# The repo is public on purpose, because GitHub Pages serves the site from it,
+# so this checks that the paid source, the money and the credentials stay out.
+try:
+    sys.path.insert(0, str(R))
+    import check_repo_hygiene as _h
+    for _p in _h.check_tracked(_h.tracked()):
+        problems.append(("-", f"tracked but must not be: {_p}"))
+    for _p in _h.check_ignore_rules():
+        problems.append(("-", _p))
+    for _p in _h.check_secrets(_h.tracked()):
+        problems.append(("-", _p))
+except Exception as _e:  # noqa: BLE001
+    problems.append(("-", f"repo hygiene check failed: {_e}"))
+
 # ---- the weekly cycle is wired up ----
 # Every stage names the file that runs it, so a renamed or deleted script is
 # caught here rather than silently doing nothing on schedule.
