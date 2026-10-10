@@ -40,7 +40,13 @@ jobs:
       - name: Open this week's ballot in #polls
         run: python weekly_cycle.py monday
 
-      - name: Announce the ballot on the site roadmap
+      - name: No channel is left empty
+        continue-on-error: true
+        run: |
+          python discord_intro.py
+          python discord_intro.py --check
+
+      - name: Record the ballot
         continue-on-error: true
         run: python discord_polls.py
 

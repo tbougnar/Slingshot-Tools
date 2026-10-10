@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import time
 import urllib.error
 import urllib.request
 
@@ -37,6 +38,11 @@ CHANNELS = {
     "store": os.environ.get("DISCORD_STORE_CHANNEL_ID", "").strip(),
     "roadmap": os.environ.get("DISCORD_ROADMAP_CHANNEL_ID", "").strip(),
 }
+
+# The catalog channel was renamed from "tools" to "catalog", so a lookup for
+# either name has to land on the same channel. Kept here so the old name keeps
+# working for anything that still asks for it.
+ALIASES = {"tools": "catalog"}
 
 
 def log(msg: str) -> None:
@@ -82,24 +88,41 @@ def post_webhook(url: str, payload: dict) -> bool:
 # ---------------------------------------------------------------- bot token
 
 def _rest(method: str, path: str, body: dict | None = None) -> tuple[int, object]:
-    """One REST call, synchronous, so callers do not need an event loop."""
+    """One REST call, synchronous, so callers do not need an event loop.
+
+    Discord rate limits per route. A 429 comes back with a ``retry_after``, and
+    answering it here means one slow call cannot turn into a burst of failures
+    across the whole weekly cycle.
+    """
+    import time as _time
     import urllib.request as ur
 
     data = json.dumps(body).encode("utf-8") if body is not None else None
-    req = ur.Request(
-        API + path, data=data, method=method,
-        headers={"Authorization": f"Bot {TOKEN}",
-                 "Content-Type": "application/json",
-                 "User-Agent": "slingshot-tools/1.0"})
-    try:
-        with ur.urlopen(req, timeout=TIMEOUT) as r:
-            text = r.read().decode("utf-8")
-            return r.status, (json.loads(text) if text else None)
-    except urllib.error.HTTPError as e:
-        return e.code, e.read().decode("utf-8", "replace")[:200]
-    except Exception as e:  # noqa: BLE001
-        log(f"discord unreachable: {e}")
-        return 0, str(e)[:200]
+    for attempt in range(4):
+        req = ur.Request(
+            API + path, data=data, method=method,
+            headers={"Authorization": f"Bot {TOKEN}",
+                     "Content-Type": "application/json",
+                     "User-Agent": "slingshot-tools/1.0"})
+        try:
+            with ur.urlopen(req, timeout=TIMEOUT) as r:
+                text = r.read().decode("utf-8")
+                return r.status, (json.loads(text) if text else None)
+        except urllib.error.HTTPError as e:
+            raw = e.read().decode("utf-8", "replace")[:200]
+            if e.code == 429 and attempt < 3:
+                try:
+                    wait = float(json.loads(raw).get("retry_after", 1.0))
+                except (ValueError, TypeError, AttributeError):
+                    wait = 1.0
+                log(f"rate limited, waiting {wait:.1f}s")
+                _time.sleep(min(wait, 10.0) + 0.2)
+                continue
+            return e.code, raw
+        except Exception as e:  # noqa: BLE001
+            log(f"discord unreachable: {e}")
+            return 0, str(e)[:200]
+    return 429, "rate limited"
 
 
 def strip_emoji(name: str) -> str:
@@ -121,12 +144,19 @@ def strip_emoji(name: str) -> str:
     return text.lstrip("-_ ").strip()
 
 
-def find_channel(name: str) -> str | None:
+_CHANNEL_CACHE: dict[str, str | None] = {}
+_CACHE_STAMP = 0.0
+
+
+def find_channel(name: str, fresh: bool = False) -> str | None:
     """The channel id for a name, preferring an explicit id from the env.
 
     Channels are named with an emoji prefix, so matching is done on the plain
     part as well. Renaming a channel for looks must not silently stop the
     announcements.
+
+    The channel list is cached for a minute, because a job that touches
+    nineteen channels would otherwise be rate limited twenty times over.
     """
     explicit = CHANNELS.get(name, "").strip()
     if explicit and explicit.isdigit():
@@ -134,21 +164,25 @@ def find_channel(name: str) -> str | None:
     if not TOKEN or not GUILD_ID:
         return None
 
-    st, data = _rest("GET", f"/guilds/{GUILD_ID}/channels")
-    if st != 200 or not isinstance(data, list):
-        return None
-
-    text = [c for c in data if c.get("type") in (0, 5)]
-
-    # an exact match wins, so a channel called "tools" beats "my-tools"
-    for c in text:
-        if c.get("name") == name:
-            return c["id"]
-    # then the same name once the emoji prefix is taken off
-    wanted = name.lower()
-    for c in text:
-        if strip_emoji(c.get("name", "")).lower() == wanted:
-            return c["id"]
+    global _CACHE_STAMP
+    now = time.monotonic()
+    if fresh or now - _CACHE_STAMP > 60 or not _CHANNEL_CACHE:
+        _CACHE_STAMP = now
+        st, data = _rest("GET", f"/guilds/{GUILD_ID}/channels")
+        _CHANNEL_CACHE.clear()
+        if st == 200 and isinstance(data, list):
+            text = [c for c in data if c.get("type") in (0, 5)]
+            for c in text:
+                _CHANNEL_CACHE.setdefault(c.get("name", ""), c["id"])
+            for c in text:
+                _CHANNEL_CACHE.setdefault(
+                    strip_emoji(c.get("name", "")).lower(), c["id"])
+    hit = (_CHANNEL_CACHE.get(name) or _CHANNEL_CACHE.get(name.lower()))
+    if hit:
+        return hit
+    alias = ALIASES.get(name.lower())
+    if alias:
+        return _CHANNEL_CACHE.get(alias) or _CHANNEL_CACHE.get(alias.lower())
     return None
 
 
@@ -165,7 +199,13 @@ def messages(channel: str, limit: int = 100) -> list:
     if not cid:
         return []
     st, data = _rest("GET", f"/channels/{cid}/messages?limit={int(limit)}")
-    return data if st == 200 and isinstance(data, list) else []
+    if st == 200 and isinstance(data, list):
+        return data
+    if st == 403:
+        # members are not meant to type here, and the bot lacks View Channel
+        # in some setups; an empty list is the honest answer rather than a lie
+        log(f"cannot read #{name}: no access")
+    return []
 
 
 def find_message(channel: str, needle: str = "") -> str | None:

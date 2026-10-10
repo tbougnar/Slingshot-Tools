@@ -156,6 +156,14 @@ jobs:
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
 
+      - name: Refresh the channels that go stale as tools ship
+        continue-on-error: true
+        run: python discord_intro.py
+
+      - name: No channel is left empty
+        continue-on-error: true
+        run: python discord_intro.py --check
+
       - name: Can any product be retired
         continue-on-error: true
         run: python retire_product.py --list

@@ -54,65 +54,84 @@ BOT_BITS = (VIEW_CHANNEL | SEND_MESSAGES | EMBED_LINKS | ATTACH_FILES
             | READ_HISTORY | ADD_REACTIONS | USE_APPLICATION_COMMANDS
             | MANAGE_WEBHOOKS | MANAGE_CHANNELS)
 
-# members in a human channel
+# Members in a chat channel: talk and react
 MEMBER_WRITE = (VIEW_CHANNEL | SEND_MESSAGES | EMBED_LINKS | ATTACH_FILES
                 | READ_HISTORY | ADD_REACTIONS)
 
-# members in a bot channel: read and react, but posting is denied outright,
-# because leaving it unmentioned would let it come from the base role
-MEMBER_READ = VIEW_CHANNEL | READ_HISTORY | ADD_REACTIONS
-MEMBER_READ_DENY = SEND_MESSAGES
+# Members in a ballot channel: they vote by replying, so posting is allowed
+# there and nowhere else.
+MEMBER_VOTE = (VIEW_CHANNEL | SEND_MESSAGES | EMBED_LINKS | ADD_REACTIONS
+               | READ_HISTORY)
+
+# Members in a read-only channel: reading and reacting, never typing. Reacting
+# is how somebody answers an announcement.
+MEMBER_REACT = VIEW_CHANNEL | READ_HISTORY | ADD_REACTIONS
+MEMBER_REACT_DENY = SEND_MESSAGES
 
 # kind, name, topic, type
+#
+# The emoji prefix is part of the name. The bot looks its channels up by name,
+# so the names here and the ones on the server have to match.
+#
+# kind:
+#   "bot"   the bot posts; members read and react, but cannot type
+#   "vote"  members reply, because a reply is how a ballot is cast
+#   "chat"  members talk and react
+#   "human" members talk
+#   "owner" only the server owner (an Administrator) and the bot
 LAYOUT = [
-    ("START HERE", None, None, None),
-    ("welcome", "human",
-     "What Slingshot Tools is, and how one tool ships every month.", TEXT),
-    ("rules", "human",
+    ("\U0001f3e0-start-here", None, None, None),
+    ("\U0001f44b-welcome", "chat",
+     "What Slingshot Tools is, and how one tool ships every week.", TEXT),
+    ("\U0001f4d3-rules", "human",
      "Short and practical. Be decent, no spam.", TEXT),
-    ("announcements", "bot",
-     "Every new tool, posted here the moment it goes live.", ANNOUNCEMENT),
-    ("roadmap", "bot",
+    ("\U0001f4e3-announcements", "bot",
+     "Every new tool, posted the moment it goes live. React with an emoji to "
+     "tell us what you think.", ANNOUNCEMENT),
+    ("\U0001f5fa\ufe0f-roadmap", "bot",
      "What is being built now, and what comes after it.", TEXT),
 
-    ("TOOLS", None, None, None),
-    ("tools", "bot",
+    ("\U0001f6e0\ufe0f-tools", None, None, None),
+    ("\U0001f6e0\ufe0f-catalog", "bot",
      "The whole catalog. Use /tools in this server.", TEXT),
-    ("articles", "bot",
+    ("\U0001f4da-articles", "bot",
      "A longer write-up for each tool. Use /article <slug>.", TEXT),
-    ("downloads", "bot",
+    ("\U0001f4e9-downloads", "bot",
      "Free downloads, one installer per tool.", TEXT),
-    ("showcase", "human",
+    ("\U0001f4e4-showcase", "human",
      "Screenshots, tips, and what you built with these.", TEXT),
-    ("support", "human",
+    ("\U0001f198-support", "human",
      "Bugs, questions and feature requests.", TEXT),
 
-    ("SHOP", None, None, None),
-    ("store", "bot",
+    ("\U0001f6d2-shop", None, None, None),
+    ("\U0001f6d2-store", "bot",
      "Buy the Full edition of any tool. Checkout runs on the website.", TEXT),
-    ("checkout-help", "human",
+    ("\U0001f6d2-checkout-help", "human",
      "Stuck at payment? Say it here and it gets sorted.", TEXT),
 
-    ("VOTING", None, None, None),
-    ("polls", "bot",
-     "The ballot for next month's tool. Use /vote to have your say.", TEXT),
-    ("ideas", "human",
-     "Tools you want that are not on the ballot yet.", TEXT),
-    ("idea-rating", "bot",
-     "How the community ranks the ideas above. Rate with a reaction.", TEXT),
-    ("results", "bot",
+    ("\U0001f5f3\ufe0f-voting", None, None, None),
+    ("\U0001f5f3\ufe0f-polls", "vote",
+     "The ballot for next week's tool. Reply to the ballot with the emoji of "
+     "the one you want.", TEXT),
+    ("\U0001f4a1-ideas", "chat",
+     "Tools you want that are not on the ballot yet. Talk about them here, "
+     "and react to what you like.", TEXT),
+    ("\U0001f451-idea-rating", "bot",
+     "How the community ranks the ideas above.", TEXT),
+    ("\U0001f3c6-results", "bot",
      "How each ballot turned out, and what it decided.", TEXT),
 
-    ("ABOUT", None, None, None),
-    ("how-it-works", "bot",
-     "Generate, verify, build, publish: the pipeline, explained.", TEXT),
-    ("changelog", "bot",
+    ("\U0001f4d6-about", None, None, None),
+    ("\u2699\ufe0f-how-it-works", "bot",
+     "Monday ballot, Wednesday review, Friday release: the week, explained.",
+     TEXT),
+    ("\U0001f4dd-changelog", "bot",
      "Changes worth knowing about.", TEXT),
-    ("links", "human",
+    ("\U0001f517-links", "human",
      "Website, repository and contact.", TEXT),
 
-    ("OWNER", None, None, None),
-    ("owner-room", "owner",
+    ("\U0001f512-owner", None, None, None),
+    ("\U0001f512-owner-room", "owner",
      "Private. Notes, and the Discord secrets you need to paste here.", TEXT),
 ]
 
@@ -230,16 +249,21 @@ def overwrites_for(kind: str, everyone_id: str, bot_role_id: str) -> list[dict]:
     """Permission overwrites for one channel.
 
     A bit left out of both allow and deny is inherited from the base role,
-    which here would leave Send Messages on. So a bot channel denies it.
+    which here would leave Send Messages on. So a read-only channel denies it
+    outright rather than relying on the base role staying quiet.
     """
     if kind == "owner":
         member_allow = "0"
-        member_deny = str(VIEW_CHANNEL | SEND_MESSAGES)
-    elif kind == "human":
+        member_deny = str(VIEW_CHANNEL | SEND_MESSAGES | ADD_REACTIONS)
+    elif kind in ("chat", "human"):
         member_allow, member_deny = str(MEMBER_WRITE), "0"
+    elif kind == "vote":
+        member_allow, member_deny = str(MEMBER_VOTE), "0"
     else:
-        member_allow = str(MEMBER_READ)
-        member_deny = str(MEMBER_READ_DENY)
+        # "bot": read and react, never type. Reacting is how people answer an
+        # announcement, so ADD_REACTIONS is granted on purpose.
+        member_allow = str(MEMBER_REACT)
+        member_deny = str(MEMBER_REACT_DENY)
     return [
         {"id": everyone_id, "type": 0,
          "allow": member_allow, "deny": member_deny},

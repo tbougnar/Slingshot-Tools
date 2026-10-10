@@ -81,8 +81,8 @@ def open_ballot(force: bool = False) -> dict | None:
         pid,
         "What should Slingshot Tools build next week?",
         labels,
-        notes=("One new tool every week. Reply with the number of the one "
-               "you want and Friday builds exactly that."))
+        notes=("One new tool every week. Reply with the emoji of the one you want "
+               "and Friday builds exactly that."))
 
     # Record the concept slugs the labels stand for, and that voting happens by
     # reply. This has to edit the stored poll, not the dict create_poll
@@ -125,17 +125,17 @@ def find_ballot_message(poll: dict) -> str:
 
 
 def poll_message(poll: dict) -> dict:
-    lines = [f"**{i}. {o['label']}**" for i, o in enumerate(poll["options"], 1)]
-    # the marker goes in the footer, which is rendered dimmed rather than in
-    # the middle of the options
+    import discord_tally as dt
+
+    lines = []
+    for i, o in enumerate(poll["options"], 1):
+        lines.append(f"{dt.option_emoji(i)} **{o['label']}**")
     body = ("\n".join(lines)
             + f"\n\n{ballot_marker(poll.get('id',''))}\n"
-            + f"{poll.get('notes','')}\n\n"
-            + "**How to vote:** reply to this message with just the number, "
-              "like `3`. You can change your mind by replying again, and only "
-              "your last reply counts. The ballot closes on Friday and that "
-              "is what gets built.")
-# the marker is a Discord spoiler, so it is invisible once rendered
+            + "One new tool every week, and Friday builds whatever wins.\n\n"
+            + "**To vote:** reply to this message with the emoji of the one "
+              "you want. Reply again if you change your mind, and only your "
+              "last reply counts.")
     return dp.embed_message({
         "title": poll["question"],
         "description": body[:4000],

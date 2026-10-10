@@ -2,17 +2,22 @@
 
 Voting has to work without anything staying online, because the only thing that
 runs on a schedule is a job. So the ballot is an ordinary message in `#polls`
-and members vote by replying to it:
+listing the options with their emoji, and members vote by replying with that
+emoji:
 
-    2
+    1️⃣
 
-    # or
-    vote 2
-    2 - because I need this one
+    # or the plain number, which reads the same
+    1
 
 The Monday job posts the ballot and remembers its message id. The Friday job
-reads the replies through the REST API, counts them, and closes the ballot.
-No bot has to be awake while anybody is voting.
+reads the replies through the REST API, counts them, and closes the ballot. No
+bot has to be awake while anybody is voting.
+
+Emoji are the ballot's language, but the vote itself is a reply rather than a
+reaction on the message. That is not a preference: Discord answers 405 for a
+bot reading reaction counts, so a reaction ballot could be voted in and never
+counted. A reply is readable, so the tally is real.
 
 Rules that matter:
 
@@ -32,10 +37,16 @@ import discord_post as dp
 BALLOT_CHANNEL = "polls"
 BOT_ID = "1558114060178821251"        # Slingshot Tools, so it never votes itself
 
-# A reply is a vote if it starts with the option number, optionally after
-# "vote", and may carry a short reason after a dash.
+# The emoji the ballot lists its options with. Members reply with the same one.
+OPTION_EMOJIS = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣",
+                 "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
+
+# A reply is a vote if it is one of the option emoji, or the bare number, with
+# an optional short reason after a dash.
 VOTE_RE = re.compile(
-    r"^\s*(?:vote\s*)?(?:#\s*)?(\d{1,2})\s*(?:[-–—:.)].*)?$",
+    r"^\s*(?:vote\s*)?(?:#\s*)?(?:"
+    r"([1-9]\uFE0F?\u20E3|🔟|[1-9]|10)"      # 1️⃣ .. 🔟 or a plain number
+    r")\s*(?:[-–—:.)].*)?$",
     re.IGNORECASE)
 
 
@@ -53,13 +64,36 @@ def ballot_marker(pid: str) -> str:
     return f"||ballot-{pid}||"
 
 
+def option_emoji(index: int) -> str:
+    """The emoji for option N, counting from one."""
+    if 1 <= index <= len(OPTION_EMOJIS):
+        return OPTION_EMOJIS[index - 1]
+    return str(index)          # beyond ten, the plain number still works
+
+
+def _emoji_index(text: str) -> int | None:
+    """Turn a vote emoji into an option number."""
+    if text in OPTION_EMOJIS:
+        return OPTION_EMOJIS.index(text) + 1
+    digits = "".join(ch for ch in text if ch.isdigit())
+    if digits and digits.isascii():
+        n = int(digits)
+        if 1 <= n <= len(OPTION_EMOJIS):
+            return n
+    return None
+
+
 def parse_vote(text: str, options: int) -> int | None:
-    """The option a reply votes for, or None if it is not a vote."""
+    """The option a reply votes for, or None if it is not a vote.
+
+    Accepts the option emoji, the plain number, and either with a short reason
+    after it, so "3️⃣" and "3 - because I need this" both count.
+    """
     m = VOTE_RE.match((text or "").strip())
     if not m:
         return None
-    n = int(m.group(1))
-    return n if 1 <= n <= options else None
+    n = _emoji_index(m.group(1))
+    return n if n and n <= options else None
 
 
 def collect(pid: str, options: list, message_id: str = "") -> dict:

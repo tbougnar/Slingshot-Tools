@@ -676,3 +676,30 @@ One entry per bug that actually happened. Newest last.
 - **Files:** discord_post.py
 - **Detects:** recurs when a test that resets the tree runs while other edits are uncommitted
 - **Verified:** yes
+
+## B076 - the weekly cycle was rate limited by Discord partway through, so most channels never got their first message
+
+- **Date:** 2026-10-10
+- **Cause:** every channel lookup made its own call to the channel list, and a job touching nineteen channels tripped the per-route limit
+- **Fix:** cached the channel list for a minute, and made the REST layer wait out a 429 instead of failing
+- **Files:** discord_post.py
+- **Detects:** recurs whenever a job makes many calls to the same route
+- **Verified:** yes
+
+## B077 - sixteen of nineteen channels were empty because nothing had ever posted an introduction
+
+- **Date:** 2026-10-10
+- **Cause:** the setup script built the structure but only the ballot and article scripts ever wrote to a channel
+- **Fix:** discord_intro.py fills any empty channel, and both Monday and Friday run it so none can be empty again
+- **Files:** discord_intro.py
+- **Detects:** recurs if a new channel is added without an introduction
+- **Verified:** yes
+
+## B078 - renaming a channel to add an emoji orphaned its content and emptied it
+
+- **Date:** 2026-10-10
+- **Cause:** the intro script looked the channel up by its old name, so after a rename it found nothing and skipped posting
+- **Fix:** channel lookup strips the emoji prefix and falls back through an alias map, so a rename cannot empty a channel
+- **Files:** discord_post.py, discord_intro.py
+- **Detects:** recurs if a channel is renamed without updating what looks it up
+- **Verified:** yes
