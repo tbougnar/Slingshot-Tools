@@ -308,84 +308,49 @@ def check_site() -> bool:
 
 
 def describe_discord_permissions(token: str, guild: str) -> None:
-    """Say exactly which permission is missing, instead of asking for a guess.
+    """Print what Discord actually says, instead of inferring a cause.
 
-    Discord answers a bare 403 for a channel list, which leaves the cause wide
-    open: no role at all, a deny higher up, or a missing View Channel. The bot
-    can always read its own member record, so that is read first: it names the
-    roles involved, which is the part a screenshot of the wrong page misses.
+    Guessing wrong here wastes the user's time: they grant permissions that
+    were never the problem, see no change, and lose faith in the report. Every
+    endpoint below is called with the status and body recorded, so the next
+    round of guessing is grounded in what the API returned.
     """
     head = {"Authorization": f"Bot {token}"}
+    base = "https://discord.com/api/v10"
 
-    # the bot's own member object: survives even when channels are hidden
-    roles = None
-    for path in (f"/users/@me/guilds/{guild}/member",
-                 f"/guilds/{guild}/members/@me"):
+    print("        --- what discord actually returned ---")
+
+    def probe(label: str, path: str) -> object | None:
         try:
-            with get(f"https://discord.com/api/v10{path}", head) as r:
-                roles = json.loads(r.read().decode("utf-8")).get("roles", [])
-            break
-        except Exception:  # noqa: BLE001
-            continue
+            with get(f"{base}{path}", head) as r:
+                body = r.read().decode("utf-8", "replace")
+                print(f"        {label}: {r.status}")
+                return json.loads(body)
+        except urllib.error.HTTPError as e:
+            try:
+                body = e.read().decode("utf-8", "replace")
+            except Exception:  # noqa: BLE001
+                body = ""
+            print(f"        {label}: HTTP {e.code} {body[:120]}")
+        except Exception as e:  # noqa: BLE001
+            print(f"        {label}: {str(e)[:90]}")
+        return None
 
-    if roles is None:
-        print("        the bot cannot even read its own member record, so "
-              "it has no")
-        print("        role in this server. Re-invite it: Server Settings, "
-              "Integrations,")
-        print("        Apps, invite Slingshot Tools with the bot scope and "
-              "View Channel")
-        print("        and Send Messages ticked.")
-        return
+    gs = probe("guilds this token belongs to", "/users/@me/guilds")
+    if isinstance(gs, list):
+        print(f"          count: {len(gs)}")
+        for g in gs:
+            mark = "   <- the guild the secret names" \
+                if g.get("id") == guild else ""
+            print(f"          {g.get('id')}  {g.get('name')}{mark}")
 
-    print(f"        the bot holds {len(roles)} role id(s) here")
-    view = 1 << 10
-    send = 1 << 11
-    try:
-        with get(f"https://discord.com/api/v10/guilds/{guild}/roles",
-                 head) as r:
-            all_roles = json.loads(r.read().decode("utf-8"))
-    except Exception:  # noqa: BLE001
-        all_roles = []
-
-    if not all_roles:
-        print("        but the role list is hidden, so an explicit Deny on a "
-              "role it")
-        print("        holds is the likely cause. Look at the bot's role in "
-              "Server")
-        print("        Settings: a grey slash beside View Channel overrides "
-              "everything")
-        print("        granted to @everyone.")
-        return
-
-    by_id = {r["id"]: r for r in all_roles}
-    everyone = by_id.get(str(guild))
-    if everyone:
-        bits = int(everyone.get("permissions", "0"))
-        has_view = "View Channels" if bits & view else "NO View Channels"
-        has_send = "Send Messages" if bits & send else "NO Send Messages"
-        print(f"        @everyone: {has_view}, {has_send}")
-
-    print("        the bot's roles:")
-    for rid in roles:
-        r = by_id.get(rid)
-        if not r:
-            continue
-        bits = int(r.get("permissions", "0"))
-        gap = [n for n, bit in (("View Channels", view), ("Send Messages", send))
-               if not (bits & bit)]
-        line = f"          {r['name']}"
-        line += "  has: " + (", ".join(
-            n for n, b in (("View Channels", view), ("Send Messages", send))
-            if bits & b) or "neither")
-        if gap:
-            line += f"   missing: {', '.join(gap)}"
-        print(line)
-
-    print()
-    print("        If @everyone is correct and the bot's role is correct too,")
-    print("        a per-channel override is denying it: open that channel,")
-    print("        Permissions, and check the bot's role for a grey slash.")
+    probe("bot member record (users route)",
+          f"/users/@me/guilds/{guild}/member")
+    probe("bot member record (guild route)",
+          f"/guilds/{guild}/members/@me")
+    probe("channel list", f"/guilds/{guild}/channels")
+    probe("role list", f"/guilds/{guild}/roles")
+    print("        --- end ---")
 
 
 def check_paid_build() -> bool:
