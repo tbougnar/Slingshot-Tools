@@ -64,8 +64,19 @@ quietly spent on new work.
 
 ### Monday
 
-`discord_polls.py` opens a ballot in `#polls` with the unbuilt concepts as
-options. Members vote with `/vote` buttons. Nothing else happens.
+`discord_polls.py` posts a ballot in `#polls` listing the unbuilt concepts as
+numbered options. Members vote by **replying to that message with the number**:
+
+```
+3
+```
+
+That is the whole vote. Change your mind by replying again — only your last
+reply counts. One vote per person.
+
+Nothing has to be running while people vote. The replies sit in the channel,
+and Friday's job reads them over the REST API. That is what lets the week work
+on a schedule with no server and no always-on bot.
 
 ### Wednesday
 
@@ -93,6 +104,11 @@ NSIS installer on a Windows runner, uploads it to the private store, and posts
 to `#announcements`.
 
 The ballot closes first, so the votes from that week are what steer the build.
+Most votes wins. **If the top two are level, one is picked at random** rather
+than refusing to build anything — seeded from the ballot id, so the same ballot
+always resolves the same way and a rerun cannot quietly pick a different tool.
+The result is posted either way, with the tally, so nobody has to guess why
+their tool won or lost.
 
 If any of it fails, one repair attempt runs against the emergency reserve.
 

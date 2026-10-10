@@ -25,6 +25,7 @@ import discord_post as dp
 POLLS_WEBHOOK = os.environ.get("DISCORD_POLL_WEBHOOK_URL", "").strip()
 RESULTS_WEBHOOK = os.environ.get("DISCORD_RESULTS_WEBHOOK_URL", "").strip()
 BALLOT_SIZE = 5
+BALLOT_CHANNEL = "polls"
 
 sys.path.insert(0, ".")
 try:
@@ -35,6 +36,12 @@ except Exception:  # noqa: BLE001
 
 def log(msg: str) -> None:
     print(f"[polls] {msg}", flush=True)
+
+
+def ballot_marker(pid: str) -> str:
+    """The call to discord_tally, re-exported so there is one source of truth."""
+    import discord_tally as dt
+    return dt.ballot_marker(pid)
 
 
 def _post(channel: str, payload: dict, webhook: str = "") -> bool:
@@ -72,37 +79,68 @@ def open_ballot(force: bool = False) -> dict | None:
     labels = [c[0].replace("-", " ") for c in opts]
     dd.create_poll(
         pid,
-        "What should Slingshot Tools build next month?",
+        "What should Slingshot Tools build next week?",
         labels,
-        notes=("One new tool every month. The winner is built next, so vote "
-               "for whatever you actually want."))
+        notes=("One new tool every week. Reply with the number of the one "
+               "you want and Friday builds exactly that."))
 
-    # Record the concept slugs the labels stand for. This has to edit the
-    # stored poll, not the dict create_poll returned, or the reload inside
-    # _save_polls would drop them and the winner could never be resolved.
+    # Record the concept slugs the labels stand for, and that voting happens by
+    # reply. This has to edit the stored poll, not the dict create_poll
+    # returned, or the reload inside _save_polls would drop them and the winner
+    # could never be resolved.
     data = dd.polls()
     if pid in data and isinstance(data[pid], dict):
         data[pid]["slugs"] = [c[0] for c in opts]
+        data[pid]["method"] = "reply"
+        data[pid]["channel"] = BALLOT_CHANNEL
         dd._save_polls(data)
     poll = dd.polls().get(pid)
 
     if _post("polls", poll_message(poll), POLLS_WEBHOOK):
         log(f"posted ballot {pid}")
+        remember_message(pid)
     else:
         log(f"ballot recorded locally (discord: {dp.describe()})")
     return poll
 
 
+def remember_message(pid: str) -> str | None:
+    """Store the ballot's message id once it can be found."""
+    mid = dp.find_message(BALLOT_CHANNEL, ballot_marker(pid))
+    if not mid:
+        log("ballot posted but not yet findable; Friday will search for it")
+        return None
+    data = dd.polls()
+    if isinstance(data.get(pid), dict):
+        data[pid]["message_id"] = mid
+        dd._save_polls(data)
+        log(f"ballot message {mid} recorded")
+    return mid
+
+
+def find_ballot_message(poll: dict) -> str:
+    """The ballot's message id: stored if possible, searched for otherwise."""
+    return (poll or {}).get("message_id") or dp.find_message(
+        BALLOT_CHANNEL, ballot_marker((poll or {}).get("id", "")))
+
+
 def poll_message(poll: dict) -> dict:
     lines = [f"**{i}. {o['label']}**" for i, o in enumerate(poll["options"], 1)]
+    # the marker goes in the footer, which is rendered dimmed rather than in
+    # the middle of the options
     body = ("\n".join(lines)
-            + f"\n\n{poll.get('notes','')}\n"
-            + "React with the number of your choice, or use `/vote` in the server.")
+            + f"\n\n{ballot_marker(poll.get('id',''))}\n"
+            + f"{poll.get('notes','')}\n\n"
+            + "**How to vote:** reply to this message with just the number, "
+              "like `3`. You can change your mind by replying again, and only "
+              "your last reply counts. The ballot closes on Friday and that "
+              "is what gets built.")
+# the marker is a Discord spoiler, so it is invisible once rendered
     return dp.embed_message({
         "title": poll["question"],
         "description": body[:4000],
         "color": BRAND(),
-        "footer": {"text": f"Ballot {poll['id']} - closes automatically"},
+        "footer": {"text": f"Ballot {poll['id']} - closes Friday"},
     })
 
 
@@ -130,7 +168,23 @@ def close_ballot(force: bool = False, pid: str = "") -> dict | None:
         log(f"ballot {poll['id']} is still open")
         return None
 
-    closed = dd.close_poll(poll["id"])
+    # count the votes from the replies people left, so nothing had to be
+    # running while they voted
+    import discord_tally as dt
+    labels = [o["label"] for o in poll.get("options", [])]
+    counts = dt.collect(poll["id"], poll.get("options", []),
+                        poll.get("message_id", ""))
+    win_label, tie_broken = dt.decide(counts, labels, poll["id"])
+
+    # write the counts onto the stored poll, so the result survives the runner
+    data = dd.polls()
+    if isinstance(data.get(poll["id"]), dict):
+        for opt in data[poll["id"]].get("options", []):
+            opt["votes"] = counts.get(opt.get("label"), 0)
+        dd._save_polls(data)
+
+    closed = dd.close_votes(poll["id"], counts, win_label, tie_broken,
+                            find_ballot_message(poll))
     if not closed:
         return None
 
@@ -145,12 +199,16 @@ def close_ballot(force: bool = False, pid: str = "") -> dict | None:
             closed["winner_slug"] = slug
             log(f"ballot winner steers the next build: {slug}")
 
-    rows = closed.get("result") or []
-    lines = [f"- {r['label']}: {r['votes']} vote(s)" for r in rows]
+    body = dt.report(counts, labels)
     win = closed.get("winner")
-    body = "\n".join(lines)
-    body += (f"\n\nWinner: **{win}** - it is on the build list for next month."
-             if win else "\n\nIt was a tie, so the next ballot decides.")
+    if win:
+        tail = ("That is what gets built this week."
+                + (" The vote was tied, so it was picked at random."
+                   if tie_broken else ""))
+    else:
+        tail = ("Nobody voted, so the usual rotation is used and the next "
+                "ballot decides.")
+    body += f"\n\n**{win}** - {tail}" if win else f"\n\n{tail}"
 
     _post("results", dp.embed_message({
         "title": f"Ballot closed: {closed['question']}",

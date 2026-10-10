@@ -152,6 +152,38 @@ def find_channel(name: str) -> str | None:
     return None
 
 
+def messages(channel: str, limit: int = 100) -> list:
+    """Recent messages in a channel, newest first.
+
+    This is how a ballot collects votes without anybody having to keep a bot
+    running: members reply to the ballot message, and Friday reads the replies
+    through the REST API.
+    """
+    if not TOKEN or not GUILD_ID:
+        return []
+    cid = find_channel(channel)
+    if not cid:
+        return []
+    st, data = _rest("GET", f"/channels/{cid}/messages?limit={int(limit)}")
+    return data if st == 200 and isinstance(data, list) else []
+
+
+def find_message(channel: str, needle: str = "") -> str | None:
+    """The id of the most recent message in a channel.
+
+    A webhook returns no message id, so a ballot posted that way still has to
+    be found again before its replies can be counted. ``needle`` narrows the
+    search to messages whose content or embeds hold that text.
+    """
+    for m in messages(channel, 50):
+        if not needle:
+            return m.get("id")
+        blob = (m.get("content") or "") + json.dumps(m.get("embeds") or [])
+        if needle.lower() in blob.lower():
+            return m.get("id")
+    return None
+
+
 def post_channel(name: str, payload: dict) -> bool:
     """Post through the bot, resolving the channel by name."""
     if not TOKEN:

@@ -917,5 +917,31 @@
     ],
     "detects": "recurs whenever subprocess output is assumed to be valid text",
     "verified": true
+  },
+  {
+    "id": "B074",
+    "date": "2026-10-10",
+    "symptom": "voting by reaction could never work: Discord returns 405 for reading reactions over REST, and 404 for creating a native poll, so a scheduled job could not count a single vote",
+    "cause": "the REST API will not let a bot read reaction counts at all, and the poll endpoint is not available to bots",
+    "fix": "voting is by reply instead: the ballot is a message, members reply with a number, and Friday reads those replies over REST, which does work",
+    "files": [
+      "discord_tally.py",
+      "discord_polls.py",
+      "discord_post.py"
+    ],
+    "detects": "recurs if a design assumes a bot can read reactions or create native polls over REST",
+    "verified": true
+  },
+  {
+    "id": "B075",
+    "date": "2026-10-10",
+    "symptom": "an earlier attempt at channel lookup stopped working entirely, and announcements would have posted nothing while CI carried on",
+    "cause": "the emoji-tolerant find_channel was reverted when a destructive test ran git checkout over the uncommitted working tree",
+    "fix": "re-applied the lookup and committed it before running any test that cleans the tree",
+    "files": [
+      "discord_post.py"
+    ],
+    "detects": "recurs when a test that resets the tree runs while other edits are uncommitted",
+    "verified": true
   }
 ]

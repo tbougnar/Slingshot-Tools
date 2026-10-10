@@ -405,3 +405,15 @@ B073: check_repo_hygiene.py crashed on a binary file in the git log because the 
   cause: git output was decoded with text=True, which uses the console encoding and fails on non-UTF-8 bytes
   fix:   read git output as bytes and decode with errors='replace', since the history legitimately contains binaries
   file:  check_repo_hygiene.py
+
+B074: voting by reaction could never work: Discord returns 405 for reading reactions over REST, and 404 for creating a native poll, so a scheduled job could not count a single vote
+  cause: the REST API will not let a bot read reaction counts at all, and the poll endpoint is not available to bots
+  fix:   voting is by reply instead: the ballot is a message, members reply with a number, and Friday reads those replies over REST, which does work
+  file:  discord_tally.py
+  file:  discord_polls.py
+  file:  discord_post.py
+
+B075: an earlier attempt at channel lookup stopped working entirely, and announcements would have posted nothing while CI carried on
+  cause: the emoji-tolerant find_channel was reverted when a destructive test ran git checkout over the uncommitted working tree
+  fix:   re-applied the lookup and committed it before running any test that cleans the tree
+  file:  discord_post.py

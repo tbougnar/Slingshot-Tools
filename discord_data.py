@@ -204,6 +204,45 @@ def winner(pid: str) -> str | None:
     return rows[0]["label"]
 
 
+def close_votes(pid: str, counts: dict, winner_label: str = "",
+                tie_broken: bool = False,
+                message_id: str = "") -> dict | None:
+    """Close a ballot whose votes were counted from the replies.
+
+    ``counts`` maps an option label to how many people voted for it. The
+    winner is passed in because deciding it needs the tie-break, which lives
+    with the tallying code, not here.
+    """
+    data = polls()
+    poll = data.get(pid)
+    if not isinstance(poll, dict) or poll.get("status") != "open":
+        return None
+
+    for opt in poll.get("options", []):
+        n = int(counts.get(opt.get("label"), 0) or 0)
+        opt["votes"] = n
+        # keep the voters list the same length as the count so tally() agrees,
+        # but label the entries so nobody mistakes them for real user ids
+        opt["voters"] = [f"reply:{i}" for i in range(n)]
+
+    if message_id:
+        poll["message_id"] = message_id
+    poll["counted_from"] = "replies"
+    if tie_broken:
+        poll["tie_broken"] = True
+
+    poll["status"] = "closed"
+    poll["closed"] = int(time.time())
+    poll["result"] = [{"label": o.get("label"), "votes": o.get("votes", 0)}
+                      for o in poll.get("options", [])]
+    poll["result"].sort(key=lambda r: -r["votes"])
+    poll["winner"] = winner_label or None
+
+    _save_polls(data)
+    log(f"closed poll {pid}; winner={poll['winner'] or 'no votes'}")
+    return poll
+
+
 def close_poll(pid: str) -> dict | None:
     data = polls()
     poll = data.get(pid)

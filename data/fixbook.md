@@ -658,3 +658,21 @@ One entry per bug that actually happened. Newest last.
 - **Files:** check_repo_hygiene.py
 - **Detects:** recurs whenever subprocess output is assumed to be valid text
 - **Verified:** yes
+
+## B074 - voting by reaction could never work: Discord returns 405 for reading reactions over REST, and 404 for creating a native poll, so a scheduled job could not count a single vote
+
+- **Date:** 2026-10-10
+- **Cause:** the REST API will not let a bot read reaction counts at all, and the poll endpoint is not available to bots
+- **Fix:** voting is by reply instead: the ballot is a message, members reply with a number, and Friday reads those replies over REST, which does work
+- **Files:** discord_tally.py, discord_polls.py, discord_post.py
+- **Detects:** recurs if a design assumes a bot can read reactions or create native polls over REST
+- **Verified:** yes
+
+## B075 - an earlier attempt at channel lookup stopped working entirely, and announcements would have posted nothing while CI carried on
+
+- **Date:** 2026-10-10
+- **Cause:** the emoji-tolerant find_channel was reverted when a destructive test ran git checkout over the uncommitted working tree
+- **Fix:** re-applied the lookup and committed it before running any test that cleans the tree
+- **Files:** discord_post.py
+- **Detects:** recurs when a test that resets the tree runs while other edits are uncommitted
+- **Verified:** yes
