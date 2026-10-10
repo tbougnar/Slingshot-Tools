@@ -12,7 +12,6 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
-import wave
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -30,27 +29,27 @@ def ffmpeg() -> str:
     return exe
 
 
-def mp3_seconds(path: Path) -> float:
-    """Length of an mp3, measured rather than assumed.
+def ffprobe() -> str:
+    exe = shutil.which("ffprobe")
+    if not exe:
+        raise SystemExit("[mux] ffprobe is not installed")
+    return exe
 
-    ffprobe is the accurate way, but a plain wave read of the decoded audio is
-    enough here and needs nothing extra.
+
+def media_seconds(path: Path) -> float:
+    """Exact length, read by ffprobe rather than parsed out of ffmpeg's log.
+
+    ffmpeg's stderr format for the progress line has changed between releases,
+    so scraping it breaks on a runner image update. ffprobe returns a number.
     """
+    out = subprocess.run(
+        [ffprobe(), "-v", "error", "-show_entries", "format=duration",
+         "-of", "default=noprint_wrappers=1:nokey=1", str(path)],
+        capture_output=True, text=True, errors="replace")
     try:
-        out = subprocess.run(
-            [ffmpeg(), "-i", str(path), "-f", "null", "-"],
-            capture_output=True, text=True, errors="replace")
-        for line in (out.stderr or "").splitlines():
-            if "time=" in line and "Duration" not in line:
-                stamp = line.split("time=")[1].split(" ")[0].strip()
-                try:
-                    h, m, s = stamp.split(":")
-                    return int(h) * 3600 + int(m) * 60 + float(s)
-                except ValueError:
-                    pass
-    except Exception:  # noqa: BLE001
-        pass
-    return 0.0
+        return float((out.stdout or "").strip())
+    except ValueError:
+        return 0.0
 
 
 def build_audio(parts: list[dict], dest: Path) -> float:
@@ -69,10 +68,9 @@ def build_audio(parts: list[dict], dest: Path) -> float:
          "-c:a", "aac", "-b:a", "192k", str(dest)],
         cwd=listing.parent, capture_output=True, check=True)
 
-    total = 0.0
-    for c in clips:
-        total += mp3_seconds(c)
-    return total
+    if not dest.exists() or dest.stat().st_size < 512:
+        raise SystemExit("[mux] the joined audio came out empty")
+    return media_seconds(dest)
 
 
 def main() -> int:
