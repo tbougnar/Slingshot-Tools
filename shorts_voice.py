@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+import shutil
+import subprocess
 from pathlib import Path
 
 import edge_tts
@@ -29,6 +31,25 @@ def log(m: str) -> None:
     print(f"[voice] {m}", flush=True)
 
 
+def seconds(path: Path) -> float:
+    """Real length of a clip, so the timeline is measured rather than guessed.
+
+    An estimate that runs a second long leaves the last scene talking over
+    silence; one that runs short cuts the call to action off.
+    """
+    probe = shutil.which("ffprobe")
+    if probe:
+        out = subprocess.run(
+            [probe, "-v", "error", "-show_entries", "format=duration",
+             "-of", "default=noprint_wrappers=1:nokey=1", str(path)],
+            capture_output=True, text=True, errors="replace")
+        try:
+            return float((out.stdout or "").strip())
+        except ValueError:
+            pass
+    return 0.0
+
+
 async def _one(line: str, dest: Path, index: int) -> dict:
     """Synthesise one line and return where it sits in the timeline."""
     marks: list[dict] = []
@@ -43,7 +64,8 @@ async def _one(line: str, dest: Path, index: int) -> dict:
 
     if not dest.exists() or dest.stat().st_size < 512:
         raise SystemExit(f"[voice] line {index} produced no audio")
-    return {"file": dest.name, "offset": marks, "text": line}
+    return {"file": dest.name, "offset": marks, "text": line,
+            "seconds": seconds(dest)}
 
 
 async def _all(lines: list[str], work: Path) -> list[dict]:
@@ -71,11 +93,27 @@ def main() -> int:
     if not parts:
         raise SystemExit("[voice] nothing to say")
 
+    # a short breath between lines, so the call to action does not run into
+    # the previous sentence
+    gap = 0.22
+    start = 0.0
+    for p in parts:
+        dur = p.get("seconds") or 0.0
+        p["start"] = round(start, 3)
+        if dur <= 0:
+            # no ffprobe: fall back to the marker span plus a tail
+            marks = p.get("offset") or []
+            dur = (marks[-1]["offset"] + 0.4) if marks else 2.0
+            p["seconds"] = round(dur, 3)
+        start += dur + gap
+
+    total = round(start - gap, 2)
     dest = ROOT / "data" / "shorts_voice.json"
-    dest.write_text(json.dumps({"voice": VOICE, "parts": parts},
+    dest.write_text(json.dumps({"voice": VOICE, "parts": parts,
+                                "seconds": total, "gap": gap},
                                indent=2, ensure_ascii=False),
                     encoding="utf-8")
-    log(f"{len(parts)} clips -> {dest.name}")
+    log(f"{len(parts)} clips, {total:.1f}s total -> {dest.name}")
     return 0
 
 

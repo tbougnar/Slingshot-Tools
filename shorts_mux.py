@@ -88,6 +88,8 @@ def main() -> int:
     if seconds <= 0:
         raise SystemExit("[mux] could not measure the audio")
     log(f"audio {seconds:.1f}s")
+    (ROOT / "data" / "shorts_audio_seconds.json").write_text(
+        json.dumps({"seconds": round(seconds, 3)}), encoding="utf-8")
 
     # trust the measured audio over the estimate, and leave a short tail
     want = seconds + 0.6

@@ -209,28 +209,54 @@ def main() -> int:
         old.unlink()
 
     total = float(script.get("seconds") or 30)
-    n = int(total * FPS)
+    nlines = max(1, len(voice["parts"]))
+
+    # the synthesiser measured each clip; trust that over the word estimate
+    measured = voice.get("seconds")
+    if measured and 3 < float(measured) < 180:
+        if abs(float(measured) - total) > 0.3:
+            log(f"narration is {float(measured):.1f}s, not the "
+                f"{total:.1f}s estimate")
+        total = float(measured)
+    n = int(round(total * FPS))
+
     name = script.get("name") or "Slingshot Tool"
     price = script.get("price") or ""
-
-    # a scene per narration line, so the copy changes with the speech
-    nlines = max(1, len(voice["parts"]))
-    spans = [i / nlines for i in range(nlines + 1)]
 
     base = background(1)
     log(f"{n} frames at {W}x{H}, {n} // {FPS}")
 
+    # how many words will actually be captioned, reported rather than assumed
+    words = _words(voice["parts"], 0.0, total)
+    shown = [w for w in words if w["end"] > 0 and w["start"] < total]
+    log(f"{len(shown)} words to caption")
+    if not shown:
+        raise SystemExit("[render] no caption timings; check shorts_voice.py")
+
+    # scene bounds, so the headline changes when the speech does
+    bounds = []
+    at = 0.0
+    for p in voice["parts"]:
+        d = float(p.get("seconds") or 0.0)
+        bounds.append((at, at + max(d, 0.4)))
+        at += max(d, 0.4) + float(voice.get("gap") or 0.22)
+
     for i in range(n):
-        t = i / n
-        which = min(nlines - 1, int(t * nlines))
-        local = (t - spans[which]) / max(1e-6, spans[which + 1] - spans[which])
-        img = fit(base, t, 1.7)
-        img = blooms(img, t, 1.7)
+        t = i / FPS
+        which = 0
+        local = 0.0
+        for idx, (b0, b1) in enumerate(bounds):
+            if t >= b0:
+                which = idx
+                local = (t - b0) / max(1e-6, b1 - b0)
+
+        img = fit(base, t / max(total, 1e-6), 1.7)
+        img = blooms(img, t / max(total, 1e-6), 1.7)
 
         line = voice["parts"][which]["text"]
         big = which == 0
-        img = scene_text(img, line if big else line,
-                         name if big else "", ease(local / 0.22), big)
+        img = scene_text(img, line, name if big else "",
+                         ease(local / 0.22), big)
         if which == nlines - 1 and price:
             d = ImageDraw.Draw(img, "RGBA")
             pf = font(66, bold=True)
@@ -252,8 +278,8 @@ def main() -> int:
                 y += line_h
 
         d = ImageDraw.Draw(img, "RGBA")
-        caption(d, _words(voice["parts"], t, total), t, 1.0)
-        progress(img, t)
+        caption(d, words, t, 1.0)
+        progress(img, t / max(total, 1e-6))
 
         img.save(out / f"{i:05d}.jpg", quality=88)
 
@@ -270,28 +296,31 @@ def main() -> int:
 def _words(parts: list[dict], t: float, total: float) -> list[dict]:
     """Rebuild a word clock across the whole clip from the per-line offsets.
 
-    The synthesiser's last mark sits before the audio actually ends, because a
-    clip trails off after the final word. Scaling offsets by that last mark
-    squeezes every word into the front of its slot and leaves the tail silent
-    on screen, so the last word is stretched to fill the slot instead.
+    Lines are placed at their measured start times, not at an even share of the
+    timeline. Even shares drift the moment one sentence runs long, and by the
+    sixth line the captions are seconds away from the speech.
     """
     if not parts:
         return []
     each = total / len(parts)
     words: list[dict] = []
+
+    starts = [p.get("start") for p in parts]
+    have_starts = all(s is not None for s in starts)
+
     for idx, part in enumerate(parts):
-        base = idx * each
+        base = float(starts[idx]) if have_starts else idx * each
+        span_total = float(part.get("seconds") or each)
         marks = part.get("offset") or []
         if not marks:
             continue
         span = marks[-1]["offset"] or 0.001
         for j, m in enumerate(marks):
-            start = base + (m["offset"] / span) * each
+            start = base + (m["offset"] / span) * span_total
             if j + 1 < len(marks):
-                end = base + (marks[j + 1]["offset"] / span) * each
+                end = base + (marks[j + 1]["offset"] / span) * span_total
             else:
-                end = base + each          # hold the last word to the cut
-            # a word spoken quickly still has to be readable
+                end = base + span_total
             words.append({"t": m["text"], "start": start,
                           "end": max(end, start + 0.25)})
     return words
