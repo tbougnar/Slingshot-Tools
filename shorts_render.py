@@ -235,11 +235,14 @@ def main() -> int:
             d = ImageDraw.Draw(img, "RGBA")
             pf = font(66, bold=True)
             a = ease((local - 0.28) / 0.4)
-            tw = d.textlength(price, font=pf)
+            # the price may arrive as a number, so it is coerced before any
+            # measuring: textlength on a float raises deep in Pillow
+            label = str(price)
+            tw = d.textlength(label, font=pf)
             px, py = (W - tw) / 2, int(H * 0.56)
             d.rounded_rectangle([px - 40, py - 24, px + tw + 40, py + 104],
                                 radius=40, fill=(*DEEP, int(236 * a)))
-            d.text((px, py), price, font=pf, fill=(*ACCENT, int(255 * a)))
+            d.text((px, py), label, font=pf, fill=(*ACCENT, int(255 * a)))
 
         d = ImageDraw.Draw(img, "RGBA")
         caption(d, _words(voice["parts"], t, total), t, 1.0)

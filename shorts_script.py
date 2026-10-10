@@ -39,6 +39,25 @@ def log(m: str) -> None:
     print(f"[shorts] {m}", flush=True)
 
 
+def price_label(raw) -> str:
+    """A price a person would say, not the raw number from the product record.
+
+    The record holds 3.0 because it is used for arithmetic. Spoken aloud that
+    becomes "three point oh", which is exactly the sort of detail that makes a
+    video feel machine made, so it is formatted once and used everywhere.
+    """
+    if raw is None or raw == "":
+        return "free"
+    if isinstance(raw, (int, float)):
+        v = float(raw)
+        if v <= 0:
+            return "free"
+        dollars = f"${v:.0f}" if abs(v - round(v)) < 0.005 else f"${v:.2f}"
+        return f"{dollars} for the lifetime licence" \
+            if v < 100 else f"{dollars}"
+    return str(raw)
+
+
 def product() -> dict:
     """The product as published, so the video cannot invent features."""
     stage = ROOT / "data" / "published.json"
@@ -49,8 +68,8 @@ def product() -> dict:
 
 def ask(model: str) -> dict:
     p = product()
-    name = p.get("name") or p.get("slug", "this tool")
-    price = p.get("price") or "free"
+    name = p.get("name") or p.get("title") or p.get("slug", "this tool")
+    price = price_label(p.get("price"))
     blurb = (p.get("blurb") or p.get("description") or "")[:400]
 
     prompt = f"""Tool: {name}
@@ -61,16 +80,19 @@ Produce a JSON object with exactly these keys:
   "hook"    - under 8 words, the opening line
   "beats"   - a list of 3 to 4 strings, each under 16 words, the middle of \
 the video
-  "price"   - how to say the price in one short sentence
+  "price"   - one short sentence that says the price exactly as written above
   "cta"     - under 8 words, what to do now
+
+The price sentence must contain the price exactly as given. Do not turn it \
+into words, do not round it, do not invent a discount.
 
 {RULES}"""
     raw = providers.groq_chat(model, f"You are a direct response copywriter. "
                                     f"{RULES}", prompt, 0.8, 700)
-    return _clean(raw, p)
+    return _clean(raw, p, name, price)
 
 
-def _clean(raw: str, p: dict) -> dict:
+def _clean(raw: str, p: dict, name: str, price: str) -> dict:
     """Pull the JSON out of whatever the model wrapped it in."""
     m = re.search(r"\{.*\}", raw, re.S)
     if not m:
@@ -88,15 +110,15 @@ def _clean(raw: str, p: dict) -> dict:
         "cta": str(d.get("cta", "")).strip(),
     }
     # fall back to the product's own words rather than shipping a hole
-    out["hook"] = out["hook"] or f"Stop doing {p.get('name', 'this')} by hand."
-    out["price"] = out["price"] or f"It is {p.get('price', 'free')}."
+    out["hook"] = out["hook"] or f"Stop doing {name} by hand."
+    out["price"] = out["price"] or f"It is {price}, one off."
     out["cta"] = out["cta"] or "Link in the bio."
 
-    # a price in the narration has to match the price sold
-    sold = str(p.get("price", "")).strip()
-    if sold and sold.lower() not in out["price"].lower() \
-            and not any(c.isdigit() for c in out["price"]):
-        out["price"] = f"It is {sold}, one off."
+    # the number shown has to be the number sold, whatever the model wrote
+    digits = re.findall(r"\$?\d+(?:\.\d+)?", out["price"])
+    want = re.findall(r"\$?\d+(?:\.\d+)?", price)
+    if want and (not digits or digits[0] != want[0]):
+        out["price"] = f"It is {price}. One off, yours forever."
 
     return out
 
@@ -122,12 +144,13 @@ def main() -> int:
         or "openai/gpt-oss-120b"
     d = ask(model)
     p = product()
+    name = p.get("name") or p.get("title") or p.get("slug")
 
     out = {
         "slug": p.get("slug"),
-        "name": p.get("name"),
-        "price": p.get("price"),
-        "blurb": p.get("blurb"),
+        "name": name,
+        "price": price_label(p.get("price")),
+        "blurb": p.get("blurb") or p.get("description") or "",
         "seconds": duration_estimate(d),
         "narration": lines(d),
         "beats": d,
