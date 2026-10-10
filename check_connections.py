@@ -278,12 +278,10 @@ def check_discord() -> bool:
     except Exception as e:  # noqa: BLE001
         code = getattr(e, "code", None)
         if code == 403:
-            return bad("discord channels",
-                       "the bot is in the server but cannot see its channels",
-                       "Discord hides channels from a bot whose role lacks "
-                       "View Channel: Server Settings, Roles, click the bot's "
-                       "role, Channel Permissions, allow it on every channel "
-                       "it posts to")
+            bad("discord channels",
+                "the bot is in the server but cannot list its channels")
+            describe_discord_permissions(token, guild)
+            return False
         return bad("discord channels", str(e)[:80])
 
     import discord_post as dp
@@ -307,6 +305,66 @@ def check_site() -> bool:
         return ok("website", f"{r.status}, {len(body)} bytes")
     except Exception as e:  # noqa: BLE001
         return bad("website", str(e)[:80])
+
+
+def describe_discord_permissions(token: str, guild: str) -> None:
+    """Say exactly which permission is missing, instead of asking for a guess.
+
+    Discord answers a bare 403 for a channel list, which leaves the cause wide
+    open: a wrong guild id, a missing role, or a missing View Channel. Reading
+    the guild's own role list usually still works, so it tells us which.
+    """
+    head = {"Authorization": f"Bot {token}"}
+    try:
+        with get(f"https://discord.com/api/v10/guilds/{guild}/roles",
+                 head) as r:
+            roles = json.loads(r.read().decode("utf-8"))
+    except Exception as e:  # noqa: BLE001
+        print(f"        could not read roles either: {str(e)[:60]}")
+        print("        that usually means the bot is not in this server at "
+              "all, or")
+        print("        the guild id is wrong.")
+        return
+
+    view = 1 << 10   # VIEW_CHANNEL
+    send = 1 << 11   # SEND_MESSAGES
+    want = [("View Channels", view), ("Send Messages", send)]
+    everyone = str(guild)
+
+    print("        roles in this server:")
+    for role in sorted(roles, key=lambda r: -int(r.get("position", 0))):
+        bits = int(role.get("permissions", "0"))
+        have = [n for n, bit in want if bits & bit]
+        gap = [n for n, bit in want if not (bits & bit)]
+        mark = "everyone" if role["id"] == everyone else "bot role?" \
+            if "slingshot" in role["name"].lower() else ""
+        line = f"          {role['name']}"
+        if mark:
+            line += f"  <- {mark}"
+        line += "  has: " + (", ".join(have) if have else "neither")
+        if gap:
+            line += f"   missing: {', '.join(gap)}"
+        print(line)
+
+    print()
+    print("        Discord applies a deny from a higher role over an allow "
+          "from a")
+    print("        lower one. If @everyone lacks View Channel, granting it "
+          "on the")
+    print("        bot role below still will not help, and that is the usual "
+          "reason")
+    print("        a fix appears to do nothing.")
+    print()
+    print("        Fix, in order:")
+    print("          1. Server Settings, Roles, @everyone, Permissions, turn "
+          "ON")
+    print("             View Channel and Send Messages.")
+    print("          2. Then the bot's own role, Channel Permissions, the "
+          "same two,")
+    print("             on every channel it should post in.")
+    print("          3. If the bot role does not exist, invite the bot again "
+          "with")
+    print("             the bot scope and those two permissions ticked.")
 
 
 def check_paid_build() -> bool:
