@@ -311,60 +311,81 @@ def describe_discord_permissions(token: str, guild: str) -> None:
     """Say exactly which permission is missing, instead of asking for a guess.
 
     Discord answers a bare 403 for a channel list, which leaves the cause wide
-    open: a wrong guild id, a missing role, or a missing View Channel. Reading
-    the guild's own role list usually still works, so it tells us which.
+    open: no role at all, a deny higher up, or a missing View Channel. The bot
+    can always read its own member record, so that is read first: it names the
+    roles involved, which is the part a screenshot of the wrong page misses.
     """
     head = {"Authorization": f"Bot {token}"}
+
+    # the bot's own member object: survives even when channels are hidden
+    roles = None
+    for path in (f"/users/@me/guilds/{guild}/member",
+                 f"/guilds/{guild}/members/@me"):
+        try:
+            with get(f"https://discord.com/api/v10{path}", head) as r:
+                roles = json.loads(r.read().decode("utf-8")).get("roles", [])
+            break
+        except Exception:  # noqa: BLE001
+            continue
+
+    if roles is None:
+        print("        the bot cannot even read its own member record, so "
+              "it has no")
+        print("        role in this server. Re-invite it: Server Settings, "
+              "Integrations,")
+        print("        Apps, invite Slingshot Tools with the bot scope and "
+              "View Channel")
+        print("        and Send Messages ticked.")
+        return
+
+    print(f"        the bot holds {len(roles)} role id(s) here")
+    view = 1 << 10
+    send = 1 << 11
     try:
         with get(f"https://discord.com/api/v10/guilds/{guild}/roles",
                  head) as r:
-            roles = json.loads(r.read().decode("utf-8"))
-    except Exception as e:  # noqa: BLE001
-        print(f"        could not read roles either: {str(e)[:60]}")
-        print("        that usually means the bot is not in this server at "
-              "all, or")
-        print("        the guild id is wrong.")
+            all_roles = json.loads(r.read().decode("utf-8"))
+    except Exception:  # noqa: BLE001
+        all_roles = []
+
+    if not all_roles:
+        print("        but the role list is hidden, so an explicit Deny on a "
+              "role it")
+        print("        holds is the likely cause. Look at the bot's role in "
+              "Server")
+        print("        Settings: a grey slash beside View Channel overrides "
+              "everything")
+        print("        granted to @everyone.")
         return
 
-    view = 1 << 10   # VIEW_CHANNEL
-    send = 1 << 11   # SEND_MESSAGES
-    want = [("View Channels", view), ("Send Messages", send)]
-    everyone = str(guild)
+    by_id = {r["id"]: r for r in all_roles}
+    everyone = by_id.get(str(guild))
+    if everyone:
+        bits = int(everyone.get("permissions", "0"))
+        print(f"        @everyone: {'View Channels' if bits & view else 'NO "
+              "View Channels'}, "
+              f"{'Send Messages' if bits & send else 'NO Send Messages'}")
 
-    print("        roles in this server:")
-    for role in sorted(roles, key=lambda r: -int(r.get("position", 0))):
-        bits = int(role.get("permissions", "0"))
-        have = [n for n, bit in want if bits & bit]
-        gap = [n for n, bit in want if not (bits & bit)]
-        mark = "everyone" if role["id"] == everyone else "bot role?" \
-            if "slingshot" in role["name"].lower() else ""
-        line = f"          {role['name']}"
-        if mark:
-            line += f"  <- {mark}"
-        line += "  has: " + (", ".join(have) if have else "neither")
+    print("        the bot's roles:")
+    for rid in roles:
+        r = by_id.get(rid)
+        if not r:
+            continue
+        bits = int(r.get("permissions", "0"))
+        gap = [n for n, bit in (("View Channels", view), ("Send Messages", send))
+               if not (bits & bit)]
+        line = f"          {r['name']}"
+        line += "  has: " + (", ".join(
+            n for n, b in (("View Channels", view), ("Send Messages", send))
+            if bits & b) or "neither")
         if gap:
             line += f"   missing: {', '.join(gap)}"
         print(line)
 
     print()
-    print("        Discord applies a deny from a higher role over an allow "
-          "from a")
-    print("        lower one. If @everyone lacks View Channel, granting it "
-          "on the")
-    print("        bot role below still will not help, and that is the usual "
-          "reason")
-    print("        a fix appears to do nothing.")
-    print()
-    print("        Fix, in order:")
-    print("          1. Server Settings, Roles, @everyone, Permissions, turn "
-          "ON")
-    print("             View Channel and Send Messages.")
-    print("          2. Then the bot's own role, Channel Permissions, the "
-          "same two,")
-    print("             on every channel it should post in.")
-    print("          3. If the bot role does not exist, invite the bot again "
-          "with")
-    print("             the bot scope and those two permissions ticked.")
+    print("        If @everyone is correct and the bot's role is correct too,")
+    print("        a per-channel override is denying it: open that channel,")
+    print("        Permissions, and check the bot's role for a grey slash.")
 
 
 def check_paid_build() -> bool:
