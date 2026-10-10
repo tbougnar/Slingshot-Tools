@@ -739,3 +739,12 @@ One entry per bug that actually happened. Newest last.
 - **Files:** itch_publish.py
 - **Detects:** recurs if a plan assumes itch.io has a project-creation API
 - **Verified:** yes
+
+## B083 - the browser automation would never have logged in, because it set a cookie named itch.io while itch.io's session cookie is actually itchio_token
+
+- **Date:** 2026-10-10
+- **Cause:** the cookie name was guessed from the domain instead of read from a real request, and nothing tested it against a live login
+- **Fix:** use itchio_token, accept either a bare value or a whole pasted Cookie header, and drop cf_clearance because it is bound to one IP and gets a runner blocked
+- **Files:** itch_publish.py
+- **Detects:** recurs if browser automation sets a cookie by guessing its name
+- **Verified:** yes

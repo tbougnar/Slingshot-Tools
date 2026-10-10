@@ -111,6 +111,28 @@ def page_is_live(url: str) -> bool:
 
 # ------------------------------------------------------- create with a browser
 
+def session_cookie() -> str:
+    """The itch.io login session, from whatever shape it arrives in.
+
+    The cookie is named ``itchio_token``, not ``itch.io``. A pasted browser
+    Cookie header often arrives whole, so the value is pulled out of it and
+    everything else dropped: analytics cookies are noise, and Cloudflare's
+    ``cf_clearance`` is bound to one IP and browser, so sending it from a
+    runner on a different IP gets the request blocked outright.
+    """
+    raw = (SESSION or "").strip()
+    if not raw:
+        return ""
+    for part in raw.split(";"):
+        part = part.strip()
+        if part.startswith("itchio_token="):
+            return part.split("=", 1)[1].strip()
+        # a bare value was pasted instead of a header
+        if "=" not in part and "itchio" not in part and len(part) > 20:
+            return part
+    return ""
+
+
 def create_project(title: str, slug: str, price: float,
                    icon: Path | None = None) -> str:
     """Create the project page in a real browser, and return its URL.
@@ -119,8 +141,9 @@ def create_project(title: str, slug: str, price: float,
     way is to drive the page a person would use. That needs a signed-in
     session, which is why it comes from a secret rather than being typed here.
     """
-    if not SESSION:
-        log("no ITCH_SESSION_COOKIE, so the project cannot be created")
+    cookie = session_cookie()
+    if not cookie:
+        log("no itch.io session cookie, so the project cannot be created")
         log("see ITCH_SELLING.md for the one-time setup")
         return ""
     try:
@@ -132,17 +155,18 @@ def create_project(title: str, slug: str, price: float,
     with sync_playwright() as pw:
         browser = pw.chromium.launch()
         ctx = browser.new_context()
-        # itch.io keeps the session in a plain cookie called itch.io
+        # the name matters: the session cookie is "itchio_token"
         ctx.add_cookies([{
-            "name": "itch.io", "value": SESSION, "domain": ".itch.io",
-            "path": "/",
+            "name": "itchio_token", "value": cookie,
+            "domain": ".itch.io", "path": "/",
         }])
         page = ctx.new_page()
         page.goto("https://itch.io/settings/mine/new/game",
                   wait_until="domcontentloaded", timeout=TIMEOUT * 1000)
 
-        if "/login" in page.url:
-            log("the session cookie was refused; it has probably expired")
+        if "/login" in page.url or "itch.io/login" in page.url:
+            log("the session cookie was refused; it has expired or was "
+                "invalidated by logging out")
             browser.close()
             return ""
 

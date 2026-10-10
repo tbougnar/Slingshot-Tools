@@ -458,3 +458,8 @@ B082: itch.io looked automatable but cannot create a project at all: the API is 
   cause: itch.io only exposes reads plus collection editing; project creation is a browser page, so any plan to automate it has to drive a browser
   fix:   create the project with Playwright using a session cookie, then push the file with butler
   file:  itch_publish.py
+
+B083: the browser automation would never have logged in, because it set a cookie named itch.io while itch.io's session cookie is actually itchio_token
+  cause: the cookie name was guessed from the domain instead of read from a real request, and nothing tested it against a live login
+  fix:   use itchio_token, accept either a bare value or a whole pasted Cookie header, and drop cf_clearance because it is bound to one IP and gets a runner blocked
+  file:  itch_publish.py

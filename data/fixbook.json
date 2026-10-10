@@ -1033,5 +1033,17 @@
     ],
     "detects": "recurs if a plan assumes itch.io has a project-creation API",
     "verified": true
+  },
+  {
+    "id": "B083",
+    "date": "2026-10-10",
+    "symptom": "the browser automation would never have logged in, because it set a cookie named itch.io while itch.io's session cookie is actually itchio_token",
+    "cause": "the cookie name was guessed from the domain instead of read from a real request, and nothing tested it against a live login",
+    "fix": "use itchio_token, accept either a bare value or a whole pasted Cookie header, and drop cf_clearance because it is bound to one IP and gets a runner blocked",
+    "files": [
+      "itch_publish.py"
+    ],
+    "detects": "recurs if browser automation sets a cookie by guessing its name",
+    "verified": true
   }
 ]
