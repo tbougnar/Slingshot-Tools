@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -29,11 +30,32 @@ UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
 
 def get(url: str, headers: dict | None = None, data: bytes | None = None,
          timeout: int = TIMEOUT):
-    """urllib with the User-Agent Cloudflare expects."""
+    """urllib with the User-Agent Cloudflare expects.
+
+    Discord rate limits hard, and answers a burst with 429. Waiting out the
+    retry_after it asks for is the difference between a truthful report and a
+    cascade of 403s that look like a permissions fault.
+    """
     h = {"User-Agent": UA, "Accept": "application/json"}
     h.update(headers or {})
     req = urllib.request.Request(url, data=data, headers=h)
-    return urllib.request.urlopen(req, timeout=timeout)
+
+    for attempt in range(4):
+        try:
+            return urllib.request.urlopen(req, timeout=timeout)
+        except urllib.error.HTTPError as e:
+            if e.code != 429:
+                raise
+            try:
+                raw = json.loads(e.read().decode("utf-8", "replace"))
+                wait = min(float(raw.get("retry_after", 1.0)) + 0.2, 8.0)
+            except Exception:  # noqa: BLE001
+                wait = 1.5 * (attempt + 1)
+            time.sleep(wait)
+            # a 429 body is consumed, so rebuild the request
+            req = urllib.request.Request(url, data=data, headers=h)
+    # out of retries: let the caller see the original condition
+    raise urllib.error.HTTPError(url, 429, "rate limited", {}, None)
 
 
 def log(msg: str) -> None:
@@ -321,6 +343,7 @@ def describe_discord_permissions(token: str, guild: str) -> None:
     print("        --- what discord actually returned ---")
 
     def probe(label: str, path: str) -> object | None:
+        time.sleep(1.2)  # Discord's limit is tight; stay well under it
         try:
             with get(f"{base}{path}", head) as r:
                 body = r.read().decode("utf-8", "replace")
