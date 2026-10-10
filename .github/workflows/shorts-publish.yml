@@ -91,10 +91,22 @@ jobs:
         if: always()
         run: python shorts_announce.py
 
+      # a single image of the whole clip, so the look can be judged from the
+      # Actions tab without downloading anything
+      - name: Contact sheet
+        if: always()
+        run: |
+          mkdir -p dist/shorts/sheets
+          ffmpeg -hide_banner -loglevel error -y \
+            -i dist/shorts/*.mp4 -vf "fps=1/3,scale=270:480,tile=3x3" \
+            -frames:v 1 dist/shorts/sheets/contact.png || true
+
       - name: Keep the mp4
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: short-${{ github.run_number }}
-          path: dist/shorts/*.mp4
+          path: |
+            dist/shorts/*.mp4
+            dist/shorts/sheets/*.png
           retention-days: 14
