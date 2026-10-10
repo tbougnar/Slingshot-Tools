@@ -276,8 +276,15 @@ def check_discord() -> bool:
                  head) as r:
             chans = json.loads(r.read().decode("utf-8"))
     except Exception as e:  # noqa: BLE001
+        code = getattr(e, "code", None)
+        if code == 403:
+            return bad("discord channels",
+                       "the bot is in the server but cannot see its channels",
+                       "Discord hides channels from a bot whose role lacks "
+                       "View Channel: Server Settings, Roles, click the bot's "
+                       "role, Channel Permissions, allow it on every channel "
+                       "it posts to")
         return bad("discord channels", str(e)[:80])
-        return False
 
     import discord_post as dp
     wanted = ("announcements", "polls", "results", "articles", "catalog",
