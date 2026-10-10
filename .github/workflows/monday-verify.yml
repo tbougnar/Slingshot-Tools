@@ -128,16 +128,27 @@ jobs:
       #     github-token: ${{ secrets.GITHUB_TOKEN }}
 
         run: python build_paid_only.py
-      # Discord is best-effort: a missing webhook or a Discord outage must never
-      # stop a release. Ballots are NOT handled here: votes hold Discord user
-      # ids and a CI runner is thrown away when the job ends, so the long-lived
-      # bot host owns the poll lifecycle (see DISCORD_BOT_SETUP.md).
-      - name: Write the Discord article for the new tool
+      # Discord is best-effort: no credentials, or a Discord outage, must never
+      # stop a release. discord_post.py posts through DISCORD_WEBHOOK_URL when
+      # one is set and falls back to the bot token, so either credential works.
+      # Ballots are NOT handled here: votes hold Discord user ids and a CI
+      # runner is thrown away when the job ends, so the long-lived bot host owns
+      # the poll lifecycle (see DISCORD_BOT_SETUP.md).
+      - name: Write and post the Discord article
         run: python discord_article.py
         continue-on-error: true
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
       - name: Announce the new tool in Discord
         run: python discord_announce.py
         continue-on-error: true
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
       - name: Commit the store manifest
         run: |
           git config user.name "slingshot-bot"

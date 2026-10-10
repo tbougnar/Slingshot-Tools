@@ -12,8 +12,6 @@ from __future__ import annotations
 import json
 import os
 import sys
-import urllib.error
-import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -22,12 +20,16 @@ PUBLISHED = ROOT / "data" / "published.json"
 SENT = ROOT / "data" / "discord_sent.json"
 
 import discord_data as dd
+import discord_post as dp
 
 SITE_URL = dd.SITE_URL
-WEBHOOK = os.environ.get("DISCORD_WEBHOOK_URL", "").strip()
 
 BRAND = 0xC1272D
 OK = 0x2ECC71
+
+
+def log(msg: str) -> None:
+    dp.log(msg)
 
 
 def log(msg: str) -> None:
@@ -104,39 +106,18 @@ def build_embed(prod: dict) -> dict:
     footer = "Slingshot Tools" + ("  |  " + " / ".join(tags[:3]) if tags else "")
     blurb = full.get("blurb") or basic.get("blurb") or ""
 
-    return {
-        "username": "Slingshot Tools",
-        "avatar_url": f"{SITE_URL}/icon-512.png",
-        "embeds": [{
-            "title": f"New tool: {title}",
-            "description": blurb or "A new free tool is live.",
-            "url": f"{SITE_URL}/",
-            "color": OK,
-            "fields": fields,
-            "footer": {"text": footer},
-            "timestamp": full.get("date") or None,
-        }],
-        # keeps the channel tidy when several tools land at once
-        "allowed_mentions": {"parse": []},
+    embed = {
+        "title": f"New tool: {title}",
+        "description": blurb or "A new free tool is live.",
+        "url": f"{SITE_URL}/",
+        "color": OK,
+        "fields": fields,
+        "footer": {"text": footer},
     }
-
-
-def post(payload: dict) -> bool:
-    req = urllib.request.Request(
-        WEBHOOK,
-        data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json",
-                 "User-Agent": "slingshot-tools/1.0"},
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=30) as r:
-            return 200 <= r.status < 300
-    except urllib.error.HTTPError as e:
-        log(f"discord rejected the message: HTTP {e.code}")
-    except Exception as e:  # noqa: BLE001
-        log(f"discord unreachable: {e}")
-    return False
+    # Discord rejects a null timestamp, so only send a real one
+    if full.get("date"):
+        embed["timestamp"] = full["date"]
+    return dp.embed_message(embed)
 
 
 def main() -> int:
@@ -155,8 +136,8 @@ def main() -> int:
         print(json.dumps(build_embed(prod), indent=2, ensure_ascii=False))
         return 0
 
-    if not WEBHOOK:
-        log("no DISCORD_WEBHOOK_URL set - nothing to do")
+    if not dp.available():
+        log(f"nothing configured ({dp.describe()}) - nothing to do")
         return 0
 
     stage = _load(PUBLISHED, {})
@@ -179,7 +160,7 @@ def main() -> int:
         log(f"{slug} paid tier is not live yet - not announcing")
         return 0
 
-    if post(build_embed(prod)):
+    if dp.post("announcements", build_embed(prod)):
         _remember(slug)
         log(f"announced {slug} ({prod['title']})")
         return 0

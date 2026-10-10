@@ -753,5 +753,58 @@
     ],
     "detects": "recurs if a rename builds the new name from the old one without normalising it first",
     "verified": true
+  },
+  {
+    "id": "B061",
+    "date": "2026-10-10",
+    "symptom": "worker/wrangler.toml bound the KV namespace as KEYS while worker.js reads env.BUILDS, so a deploy from the repo would answer 'Store is not configured' and every paid download would 404",
+    "cause": "the binding was renamed in the worker code but the manifest kept the old name, and nothing checked the two against each other",
+    "fix": "bound the namespace as BUILDS in wrangler.toml with the same id paid_store.py uploads to",
+    "files": [
+      "worker/wrangler.toml",
+      "worker/worker.js"
+    ],
+    "detects": "recurs if a worker binding is renamed in code but not in the manifest",
+    "verified": true
+  },
+  {
+    "id": "B062",
+    "date": "2026-10-10",
+    "symptom": "a second, stray ballot shadowed the live one, and closing the wrong ballot left the community vote unable to steer the build",
+    "cause": "open_poll() returned the first open ballot it found, and close_ballot() always took that one, so a test ballot and the real one raced",
+    "fix": "open_poll() returns the newest open ballot, and close_ballot() accepts a poll id so a specific one can be closed",
+    "files": [
+      "discord_data.py",
+      "discord_polls.py"
+    ],
+    "detects": "recurs if more than one ballot is ever open at the same time",
+    "verified": true
+  },
+  {
+    "id": "B063",
+    "date": "2026-10-10",
+    "symptom": "Discord announcements and articles silently did nothing in CI, because every posting script only spoke to a webhook and the pipeline had no webhook",
+    "cause": "each script carried its own webhook-only poster, so there was no path to Discord through the bot token the pipeline already had",
+    "fix": "one discord_post.py now handles both transports, trying the webhook then the bot, and every posting script calls it",
+    "files": [
+      "discord_post.py",
+      "discord_announce.py",
+      "discord_article.py",
+      "discord_polls.py"
+    ],
+    "detects": "recurs if a new script posts to Discord without going through discord_post",
+    "verified": true
+  },
+  {
+    "id": "B064",
+    "date": "2026-10-10",
+    "symptom": "discord_article.py read --dry-run as the product slug and refused to run",
+    "cause": "the slug was taken from argv[1] without skipping flags",
+    "fix": "take the first argument that is not a flag as the slug",
+    "files": [
+      "discord_article.py"
+    ],
+    "detects": "recurs if an argument position is used for a value that also has flags",
+    "verified": true
   }
 ]

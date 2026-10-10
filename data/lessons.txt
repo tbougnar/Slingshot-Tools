@@ -332,3 +332,28 @@ B060: re-running the setup script renamed leftover channels old-items, then old-
   cause: the rename always prepended old- to whatever the current name was, including a name it had already renamed
   fix:   strip every existing old- prefix before adding one, so the name stays stable
   file:  discord_setup_server.py
+
+B061: worker/wrangler.toml bound the KV namespace as KEYS while worker.js reads env.BUILDS, so a deploy from the repo would answer 'Store is not configured' and every paid download would 404
+  cause: the binding was renamed in the worker code but the manifest kept the old name, and nothing checked the two against each other
+  fix:   bound the namespace as BUILDS in wrangler.toml with the same id paid_store.py uploads to
+  file:  worker/wrangler.toml
+  file:  worker/worker.js
+
+B062: a second, stray ballot shadowed the live one, and closing the wrong ballot left the community vote unable to steer the build
+  cause: open_poll() returned the first open ballot it found, and close_ballot() always took that one, so a test ballot and the real one raced
+  fix:   open_poll() returns the newest open ballot, and close_ballot() accepts a poll id so a specific one can be closed
+  file:  discord_data.py
+  file:  discord_polls.py
+
+B063: Discord announcements and articles silently did nothing in CI, because every posting script only spoke to a webhook and the pipeline had no webhook
+  cause: each script carried its own webhook-only poster, so there was no path to Discord through the bot token the pipeline already had
+  fix:   one discord_post.py now handles both transports, trying the webhook then the bot, and every posting script calls it
+  file:  discord_post.py
+  file:  discord_announce.py
+  file:  discord_article.py
+  file:  discord_polls.py
+
+B064: discord_article.py read --dry-run as the product slug and refused to run
+  cause: the slug was taken from argv[1] without skipping flags
+  fix:   take the first argument that is not a flag as the slug
+  file:  discord_article.py

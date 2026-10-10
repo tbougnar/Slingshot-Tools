@@ -27,6 +27,19 @@ SITE_URL = "https://tbougnar.github.io/Slingshot-Tools"
 # ballot lifetime; after this a run may close the poll and report it
 POLL_LIFETIME_DAYS = 21
 
+# Ballots and votes hold Discord user ids, so they must stay off git. The
+# catalog is public, but these are not.
+GITIGNORE = ROOT / ".gitignore"
+_IGNORED = {
+    "data/polls.json",
+    "data/discord_sent.json",
+}
+
+
+def ignored_paths() -> set:
+    """Ballot and vote files that must never be committed."""
+    return {p for p in _IGNORED if (ROOT / p).exists()}
+
 
 def log(msg: str) -> None:
     print(f"[discord] {msg}", flush=True)
@@ -99,11 +112,22 @@ def _save_polls(data: dict) -> None:
     _save(POLLS, data)
 
 
+def open_polls() -> list:
+    """Every ballot still open, newest last."""
+    out = [p for p in polls().values()
+           if isinstance(p, dict) and p.get("status") == "open"]
+    out.sort(key=lambda p: p.get("created") or 0)
+    return out
+
+
 def open_poll() -> dict | None:
-    for p in polls().values():
-        if isinstance(p, dict) and p.get("status") == "open":
-            return p
-    return None
+    """The ballot to show and vote on: the most recent one still open.
+
+    Newest rather than first, because a stray second ballot must not shadow
+    the live one.
+    """
+    live = open_polls()
+    return live[-1] if live else None
 
 
 def create_poll(pid: str, question: str, options: list, notes: str = "") -> dict:

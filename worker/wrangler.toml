@@ -2,8 +2,11 @@ name = "slingshot-pay"
 main = "worker.js"
 compatibility_date = "2026-10-03"
 
+# worker.js reads env.BUILDS for the paid installer chunks. The binding name
+# has to match, or /api/order answers "Store is not configured" and every paid
+# download 404s. paid_store.py uploads to the same namespace id.
 kv_namespaces = [
-  { binding = "KEYS", id = "2628d5a9a3f942449279770b2568d216" }
+  { binding = "BUILDS", id = "3d55488f7d384ce3ad51c0ba34afeade" }
 ]
 
 [vars]

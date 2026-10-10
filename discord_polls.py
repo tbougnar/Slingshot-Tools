@@ -17,15 +17,13 @@ import json
 import os
 import sys
 import time
-import urllib.error
-import urllib.request
 
 import discord_data as dd
+import discord_post as dp
 
-POLLS_WEBHOOK = os.environ.get("DISCORD_POLL_WEBHOOK_URL", "").strip() \
-    or os.environ.get("DISCORD_WEBHOOK_URL", "").strip()
-RESULTS_WEBHOOK = os.environ.get("DISCORD_RESULTS_WEBHOOK_URL", "").strip() \
-    or POLLS_WEBHOOK
+# a separate webhook per channel is optional; the bot resolves them by name
+POLLS_WEBHOOK = os.environ.get("DISCORD_POLL_WEBHOOK_URL", "").strip()
+RESULTS_WEBHOOK = os.environ.get("DISCORD_RESULTS_WEBHOOK_URL", "").strip()
 BALLOT_SIZE = 5
 
 sys.path.insert(0, ".")
@@ -39,23 +37,8 @@ def log(msg: str) -> None:
     print(f"[polls] {msg}", flush=True)
 
 
-def _post(webhook: str, payload: dict) -> bool:
-    if not webhook:
-        return False
-    req = urllib.request.Request(
-        webhook,
-        data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json",
-                 "User-Agent": "slingshot-tools/1.0"},
-        method="POST")
-    try:
-        with urllib.request.urlopen(req, timeout=30) as r:
-            return 200 <= r.status < 300
-    except urllib.error.HTTPError as e:
-        log(f"discord rejected the message: HTTP {e.code}")
-    except Exception as e:  # noqa: BLE001
-        log(f"discord unreachable: {e}")
-    return False
+def _post(channel: str, payload: dict, webhook: str = "") -> bool:
+    return dp.post(channel, payload, webhook)
 
 
 def candidates(limit: int = BALLOT_SIZE) -> list:
@@ -103,10 +86,10 @@ def open_ballot(force: bool = False) -> dict | None:
         dd._save_polls(data)
     poll = dd.polls().get(pid)
 
-    if _post(POLLS_WEBHOOK, poll_message(poll)):
+    if _post("polls", poll_message(poll), POLLS_WEBHOOK):
         log(f"posted ballot {pid}")
     else:
-        log("ballot recorded locally (no webhook configured)")
+        log(f"ballot recorded locally (discord: {dp.describe()})")
     return poll
 
 
@@ -115,26 +98,31 @@ def poll_message(poll: dict) -> dict:
     body = ("\n".join(lines)
             + f"\n\n{poll.get('notes','')}\n"
             + "React with the number of your choice, or use `/vote` in the server.")
-    return {
-        "username": "Slingshot Tools",
-        "avatar_url": f"{dd.SITE_URL}/icon-512.png",
-        "embeds": [{
-            "title": poll["question"],
-            "description": body[:4000],
-            "color": BRAND(),
-            "footer": {"text": f"Ballot {poll['id']} - closes automatically"},
-        }],
-        "allowed_mentions": {"parse": []},
-    }
+    return dp.embed_message({
+        "title": poll["question"],
+        "description": body[:4000],
+        "color": BRAND(),
+        "footer": {"text": f"Ballot {poll['id']} - closes automatically"},
+    })
 
 
 def BRAND() -> int:
     return 0xC1272D
 
 
-def close_ballot(force: bool = False) -> dict | None:
-    """Close an open ballot, post the outcome, and record the winner."""
-    poll = dd.open_poll()
+def close_ballot(force: bool = False, pid: str = "") -> dict | None:
+    """Close an open ballot, post the outcome, and record the winner.
+
+    ``pid`` names the ballot to close; without it the live one is used.
+    """
+    poll = None
+    if pid:
+        poll = dd.polls().get(pid)
+        if not isinstance(poll, dict):
+            log(f"no ballot called {pid}")
+            return None
+    else:
+        poll = dd.open_poll()
     if not poll:
         log("no ballot is open")
         return None
@@ -164,16 +152,11 @@ def close_ballot(force: bool = False) -> dict | None:
     body += (f"\n\nWinner: **{win}** - it is on the build list for next month."
              if win else "\n\nIt was a tie, so the next ballot decides.")
 
-    _post(RESULTS_WEBHOOK, {
-        "username": "Slingshot Tools",
-        "avatar_url": f"{dd.SITE_URL}/icon-512.png",
-        "embeds": [{
-            "title": f"Ballot closed: {closed['question']}",
-            "description": body[:4000],
-            "color": 0x2ECC71,
-        }],
-        "allowed_mentions": {"parse": []},
-    })
+    _post("results", dp.embed_message({
+        "title": f"Ballot closed: {closed['question']}",
+        "description": body[:4000],
+        "color": 0x2ECC71,
+    }), RESULTS_WEBHOOK)
     return closed
 
 
@@ -190,7 +173,22 @@ def resolve_slug(poll: dict) -> str:
 
 
 def main() -> int:
-    close_ballot()
+    # --dry-run shows what would be posted and changes nothing
+    dry = "--dry-run" in sys.argv
+    if dry:
+        log(f"DRY RUN - discord is {dp.describe()}")
+        poll = dd.open_poll()
+        if poll:
+            print(json.dumps(poll_message(poll), indent=2, ensure_ascii=False))
+        else:
+            log("no ballot is open; one would be created")
+        return 0
+
+    # close any aged ballot first, so a winner can steer the build that the
+    # new ballot is being raised for
+    closed = close_ballot()
+    if closed:
+        log(f"winner: {closed.get('winner') or 'tie'}")
     open_ballot()
     return 0
 

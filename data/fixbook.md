@@ -541,3 +541,39 @@ One entry per bug that actually happened. Newest last.
 - **Files:** discord_setup_server.py
 - **Detects:** recurs if a rename builds the new name from the old one without normalising it first
 - **Verified:** yes
+
+## B061 - worker/wrangler.toml bound the KV namespace as KEYS while worker.js reads env.BUILDS, so a deploy from the repo would answer 'Store is not configured' and every paid download would 404
+
+- **Date:** 2026-10-10
+- **Cause:** the binding was renamed in the worker code but the manifest kept the old name, and nothing checked the two against each other
+- **Fix:** bound the namespace as BUILDS in wrangler.toml with the same id paid_store.py uploads to
+- **Files:** worker/wrangler.toml, worker/worker.js
+- **Detects:** recurs if a worker binding is renamed in code but not in the manifest
+- **Verified:** yes
+
+## B062 - a second, stray ballot shadowed the live one, and closing the wrong ballot left the community vote unable to steer the build
+
+- **Date:** 2026-10-10
+- **Cause:** open_poll() returned the first open ballot it found, and close_ballot() always took that one, so a test ballot and the real one raced
+- **Fix:** open_poll() returns the newest open ballot, and close_ballot() accepts a poll id so a specific one can be closed
+- **Files:** discord_data.py, discord_polls.py
+- **Detects:** recurs if more than one ballot is ever open at the same time
+- **Verified:** yes
+
+## B063 - Discord announcements and articles silently did nothing in CI, because every posting script only spoke to a webhook and the pipeline had no webhook
+
+- **Date:** 2026-10-10
+- **Cause:** each script carried its own webhook-only poster, so there was no path to Discord through the bot token the pipeline already had
+- **Fix:** one discord_post.py now handles both transports, trying the webhook then the bot, and every posting script calls it
+- **Files:** discord_post.py, discord_announce.py, discord_article.py, discord_polls.py
+- **Detects:** recurs if a new script posts to Discord without going through discord_post
+- **Verified:** yes
+
+## B064 - discord_article.py read --dry-run as the product slug and refused to run
+
+- **Date:** 2026-10-10
+- **Cause:** the slug was taken from argv[1] without skipping flags
+- **Fix:** take the first argument that is not a flag as the slug
+- **Files:** discord_article.py
+- **Detects:** recurs if an argument position is used for a value that also has flags
+- **Verified:** yes

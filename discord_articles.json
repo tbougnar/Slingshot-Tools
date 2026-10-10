@@ -1,6 +1,6 @@
 {
   "password-manager": {
     "body": "**Offline password manager** \u2014 A small, focused password tool. Offline password manager does one job properly, runs offline, and keeps your data on your device.\n\n**Why it exists**\nPassword is one of those small irritations that eats a little attention every\nsingle day. This is a single-purpose tool for it: no setup, no sign-in, no\nnetwork calls. Open the page and it works.\n\n**What the free edition does**\nEverything you need for the job itself. It runs straight in the browser and\nyour data never leaves your device.\n\n**What the full edition adds**\nThe full edition is a native Windows app: a real installer, a desktop shortcut,\nand no browser tab to hunt down. It also carries the extra features listed on\nthe product page.\n\n**Get it**\n- Free: https://tbougnar.github.io/Slingshot-Tools/apps/password-manager-basic/\n- Full edition: https://tbougnar.github.io/Slingshot-Tools/checkout.html?slug=password-manager\n\nOne new tool lands every month. Use `/vote` in the server to pick what comes\nnext.",
-    "written": 1791498114
+    "written": 1791637959
   }
 }
