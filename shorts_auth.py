@@ -37,24 +37,38 @@ class Handler(http.server.BaseHTTPRequestHandler):
     """Catches the redirect once, with whatever Google sends back."""
 
     code: str | None = None
+    error: str | None = None
+    done = threading.Event()
 
     def do_GET(self) -> None:  # noqa: N802
         q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
         Handler.code = (q.get("code") or [None])[0]
-        body = (b"<html><body style='font-family:sans-serif;padding:40px'>"
-                b"<h2>Done</h2><p>You can close this tab and go back to "
-                b"PowerShell.</p></body></html>")
+        Handler.error = (q.get("error") or [None])[0]
+        reason = {
+            "access_denied": "you said no, which is fine",
+            "invalid_scope": "the scope was rejected",
+        }.get(Handler.error or "", "Google did not send a code")
+
+        body = (f"<html><body style='font-family:sans-serif;padding:40px'>"
+                f"<h2>Done</h2><p>{'Authorised.' if Handler.code else reason}"
+                f"</p><p>Close this tab and go back to PowerShell.</p>"
+                f"</body></html>").encode()
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+        Handler.done.set()
 
     def log_message(self, *a) -> None:   # silence the request spam
         return
 
 
 def ask_for_code(client_id: str) -> str:
+    Handler.code = None
+    Handler.error = None
+    Handler.done.clear()
+
     state = secrets.token_urlsafe(24)
     srv = http.server.HTTPServer(("localhost", PORT), Handler)
     threading.Thread(target=srv.handle_request, daemon=True).start()
@@ -63,20 +77,33 @@ def ask_for_code(client_id: str) -> str:
            f"&redirect_uri={urllib.parse.quote(REDIRECT)}"
            f"&response_type=code&scope={urllib.parse.quote(SCOPE)}"
            f"&access_type=offline&prompt=consent&state={state}")
-    log("a browser tab is opening")
-    log("sign in as the YouTube channel you want the videos on")
-    log("then press Allow, and come back here")
+
+    log("if the browser did not open, paste this into it yourself:")
+    log("")
+    log(url)
+    log("")
+    log("Sign in as the YouTube channel account, press Allow, then wait.")
+    log("")
     try:
         webbrowser.open(url)
     except Exception:  # noqa: BLE001
-        log("the browser would not open, so paste this into it instead:")
-        log(url)
+        pass
 
+    # wait for the redirect before closing, or the callback has nowhere to
+    # land and the run always fails even though consent succeeded
+    got = Handler.done.wait(timeout=300)
     srv.server_close()
-    code = Handler.code
-    if not code:
-        raise SystemExit("[auth] no code came back; try again")
-    return code
+
+    if Handler.error:
+        raise SystemExit(f"[auth] {Handler.error}: "
+                         f"nothing was saved, just run it again")
+    if not got or not Handler.code:
+        log("nothing came back within five minutes.")
+        log("the tab has to stay open until it says Done.")
+        log("if you pressed Allow but this said no code, run it once more:")
+        log("Google only issues a refresh token on a fresh consent.")
+        raise SystemExit("[auth] no code received")
+    return Handler.code
 
 
 def trade(client_id: str, client_secret: str, code: str) -> dict:
