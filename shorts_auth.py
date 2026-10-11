@@ -175,22 +175,24 @@ def main() -> int:
         return 1
 
     log("")
-    log("That is the token. Store all three now:")
+    log("Now store all three. Each asks you to paste, then press Enter:")
     log("")
     log("  gh secret set YOUTUBE_CLIENT_ID --repo tbougnar/Slingshot-Tools")
     log("  gh secret set YOUTUBE_CLIENT_SECRET --repo tbougnar/Slingshot-Tools")
-    log(f"  gh secret set YOUTUBE_REFRESH_TOKEN --repo "
-        f"tbougnar/Slingshot-Tools   # then paste {refresh[:12]}...")
+    log("  gh secret set YOUTUBE_REFRESH_TOKEN --repo tbougnar/Slingshot-Tools")
     log("")
-    log("For the token one, type this and paste when prompted:")
-    log("  gh secret set YOUTUBE_REFRESH_TOKEN --repo "
-        "tbougnar/Slingshot-Tools")
+    log(f"When it prompts, paste this for the last one:")
     log("")
-    log("And the privacy level, which is a variable rather than a secret:")
+    log(f"  {refresh}")
+    log("")
+    log("Paste it after the prompt appears, not on the command line.")
+    log("A value typed onto the command itself stays in your history.")
+    log("")
+    log("Then the privacy level, which is a variable, not a secret:")
     log("  gh variable set YOUTUBE_PRIVACY --body unlisted "
         "--repo tbougnar/Slingshot-Tools")
     log("")
-    log("valid values: private, unlisted, public")
+    log("valid: private, unlisted, public")
     log("start with unlisted until you have watched a full video")
     return 0
 
