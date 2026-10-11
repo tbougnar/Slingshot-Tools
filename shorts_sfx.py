@@ -24,6 +24,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 API = "https://api.elevenlabs.io/v1"
 
+# A licensed bed checked into the repo. Generating one costs credits that come
+# and go, and an exhausted account silently ships the Short with no music at
+# all, so the dependable source is the one that is always there. CC0, and the
+# licence is written down next to the file.
+LOCAL_BED = ROOT / "assets" / "music" / "dark_place_bed.mp3"
+
 # Each cue says what it is for. The effect text is what the model is asked to
 # produce, and the kind decides which lane it lands in.
 CUES = [
@@ -113,13 +119,46 @@ def sound_effect(text: str, dest: Path) -> bool:
     return True
 
 
+def local_music(dest: Path, seconds: int) -> bool:
+    """Cut the checked-in bed to length, looping it if it is too short.
+
+    The bed is already faded at both ends, so looping it never clicks and
+    cutting it early never lands on a hard stop.
+    """
+    if not LOCAL_BED.exists():
+        return False
+    want = max(6, int(seconds) + 2)
+    exe = shutil.which("ffmpeg")
+    if not exe:
+        try:
+            import imageio_ffmpeg
+            exe = imageio_ffmpeg.get_ffmpeg_exe()
+        except Exception:  # noqa: BLE001
+            exe = None
+    if not exe:
+        log("no ffmpeg, so the local bed cannot be cut")
+        return False
+
+    cmd = [exe, "-y", "-stream_loop", "-1", "-i", str(LOCAL_BED),
+           "-t", str(want), "-c:a", "libmp3lame", "-q:a", "4", str(dest)]
+    try:
+        subprocess.run(cmd, capture_output=True, check=True)
+    except Exception as e:  # noqa: BLE001
+        log(f"could not cut the local bed: {str(e)[:70]}")
+        return False
+    return dest.exists() and dest.stat().st_size > 4096
+
+
 def music(dest: Path, seconds: int) -> bool:
     """A bed long enough to cover the clip, with room to spare.
 
-    Generated beds come back at roughly the requested length and sometimes
-    short of it. A bed that stops early leaves the last seconds of the clip in
-    dead air, so it is asked for a margin and then looped to fill.
+    The checked-in CC0 track is preferred, because it costs nothing and never
+    runs out. ElevenLabs is the fallback for when the file is missing or the
+    local cut fails.
     """
+    if local_music(dest, seconds):
+        log(f"local bed {LOCAL_BED.name}")
+        return True
     want = max(6, int(seconds) + 6)
     raw = _post("/music", {
         "prompt": MUSIC_PROMPT,
