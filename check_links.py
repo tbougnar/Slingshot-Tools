@@ -29,18 +29,31 @@ def log(m: str) -> None:
     print(f"[link] {m}", flush=True)
 
 
-def fetch(url: str, method: str = "GET") -> tuple[int, str, str]:
-    """Status, where it ended up, and a short body."""
+def fetch(url: str, method: str = "GET", bust: bool = False,
+          limit: int = 4000) -> tuple[int, str, str]:
+    """Status, where it ended up, and a short body.
+
+    A cache-busting query is added when asked for: a page CDN will happily
+    serve a stale copy, and reporting "the links are not deployed yet" about a
+    page that has had them for an hour is worse than not checking.
+
+    The body limit matters. The footer sits at the end of a page, so reading
+    only the first few kilobytes reports a link row as missing on a page that
+    has one, which is how this check lied about a working deploy.
+    """
+    if bust:
+        url += ("&" if "?" in url else "?") + "cb=check"
     req = urllib.request.Request(url, method=method,
                                  headers={"User-Agent": UA,
-                                          "Accept": "*/*"})
+                                          "Accept": "*/*",
+                                          "Cache-Control": "no-cache"})
     try:
         with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
-            body = r.read(4000).decode("utf-8", "replace")
+            body = r.read(limit).decode("utf-8", "replace")
             return r.status, r.geturl(), body
     except urllib.error.HTTPError as e:
         try:
-            return e.code, getattr(e, "url", url), e.read(4000).decode(
+            return e.code, getattr(e, "url", url), e.read(limit).decode(
                 "utf-8", "replace")
         except Exception:  # noqa: BLE001
             return e.code, url, ""
@@ -97,17 +110,26 @@ def check_one(c: dict) -> tuple[bool, str]:
     detail = ""
     if c["key"] == "youtube":
         # a handle that does not exist still returns 200 with a notice
-        if "does not exist" in body.lower() or "404" == body.strip()[:3]:
+        status, landed, body = fetch(c["url"], bust=True)
+        if "does not exist" in body.lower():
             return False, "this channel handle does not exist"
         m = re.search(r"<title>([^<]{0,70})", body)
         detail = (m.group(1).strip() if m else landed)[:52]
     elif c["key"] == "website":
+        # the whole page: the footer is at the end, and a truncated read
+        # calls a working deploy broken
+        status, landed, body = fetch(c["url"], bust=True, limit=200_000)
         m = re.search(r"<title>([^<]{0,70})", body)
         detail = (m.group(1).strip() if m else "")[:52]
-        if "site-links" not in fetch(c["url"])[2] and \
-                "site-links" not in body:
-            log(f"note: the live page has no link row yet; it ships on the "
-                f"next deploy")
+        # the live page has to carry the link row, or the footer's promise of
+        # everywhere-else is not being kept
+        if "site-links" not in body:
+            return False, ("the deployed page has no link row; push site/** "
+                           "so the footer ships")
+        gone = [k for k in ("discord", "youtube", "itch")
+                if __import__("links").url(k) not in body]
+        if gone:
+            return False, f"the live footer is missing: {', '.join(gone)}"
     else:
         detail = landed[:52]
     return True, detail or f"HTTP {status}"
