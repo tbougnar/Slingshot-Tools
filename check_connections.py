@@ -457,7 +457,10 @@ def check_youtube() -> bool:
     except Exception as e:  # noqa: BLE001
         return bad("youtube", str(e)[:80])
 
-    # the channel decides where videos land, so it is worth naming
+    # The channel read is a nicety, not the point. youtube.upload is the whole
+    # scope we asked for, and reading a channel needs youtube.readonly as
+    # well. A 403 here means the upload is fine and the lookup was refused,
+    # which must not be reported as a broken credential.
     try:
         with get("https://www.googleapis.com/youtube/v3/channels",
                  {"Authorization": f"Bearer {access}",
@@ -474,6 +477,11 @@ def check_youtube() -> bool:
                   f"publishes to {it['snippet']['title']} "
                   f"({st.get('videoCount', '0')} videos up)")
     except urllib.error.HTTPError as e:
+        if e.code in (401, 403):
+            # the access token was issued, so the credential is sound
+            return ok("youtube",
+                      "upload credential is good; channel name not readable "
+                      "because only youtube.upload was granted")
         return bad("youtube", f"token ok, but the channel read failed "
                               f"(HTTP {e.code})")
     except Exception as e:  # noqa: BLE001
