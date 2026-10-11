@@ -95,6 +95,88 @@ def product() -> dict:
     return json.loads(stage.read_text(encoding="utf-8"))
 
 
+def real_features(slug: str, limit: int = 10) -> list[str]:
+    """What the app actually does, read from the app itself.
+
+    A tour mode needs a minute of material and the product record holds three
+    fields, so asking the model to fill 60 seconds from a blurb makes it
+    invent features. The app's own interface is the one place the real
+    capabilities are written down, so that is what gets read.
+
+    Three sources, in order of how much they can be trusted: the catalog's
+    difference list, the app's feature markup, then anything the page labels.
+    """
+    root = ROOT / "site" / "apps"
+    if not root.exists():
+        return []
+
+    dirs = [d for d in sorted(root.iterdir())
+            if d.is_dir() and slug.startswith(d.name[:len(slug)])] \
+        or [d for d in sorted(root.iterdir()) if d.is_dir()]
+    if not dirs:
+        return []
+
+    app = dirs[0]
+    out: list[str] = []
+
+    # control names that describe chrome rather than capability. Kept out because
+    # "Delete" and "Toggle Theme" are not things to advertise.
+    CHROME = {"delete", "cancel", "close", "menu", "toggle theme",
+              "toggle dark mode", "theme", "close dialog", "open",
+              "edit", "save", "back", "next", "settings", "help", "about"}
+
+    def add(text: str) -> None:
+        t = " ".join(str(text).split()).strip(" .—-*")
+        if len(t) < 4 or len(t) > 68:
+            return
+        if t.lower() in CHROME:
+            return
+        if t.lower() not in [x.lower() for x in out]:
+            out.append(t)
+
+    # the catalog's own difference list, which is curated
+    try:
+        cat = json.loads((ROOT / "site" / "apps.json").read_text(
+            encoding="utf-8"))
+        for a in (cat if isinstance(cat, list) else cat.get("apps", [])):
+            if a.get("base_slug") == slug or a.get("slug") == slug:
+                for d in (a.get("differences") or []):
+                    add(d if isinstance(d, str) else d.get("text", ""))
+    except (json.JSONDecodeError, OSError):
+        pass
+
+    page = app / "index.html"
+    if page.exists() and len(out) < limit:
+        html = page.read_text(encoding="utf-8", errors="replace")
+        for m in re.finditer(r"<li[^>]*>(.*?)</li>", html, re.S | re.I):
+            add(re.sub(r"<[^>]+>", " ", m.group(1)))
+            if len(out) >= limit:
+                break
+
+    # the app's own controls are the one place its capabilities are written
+    if len(out) < limit:
+        for sub in ("app/index.html", "index.html"):
+            ui = app / sub
+            if not ui.exists():
+                continue
+            try:
+                html = ui.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            labels = (re.findall(r'aria-label="([^"]+)"', html)
+                      + re.findall(r'placeholder="([^"]+)"', html)
+                      + re.findall(r"<button[^>]*>([^<]{2,40})</button>",
+                                   html))
+            for raw in labels:
+                add(re.sub(r"\s+", " ", raw))
+                if len(out) >= limit:
+                    break
+            if out:
+                break
+
+    return out[:limit]
+
+
 def ask(model: str, mode: str = "short") -> dict:
     p = product()
     name = p.get("name") or p.get("title") or p.get("slug", "this tool")
@@ -102,6 +184,10 @@ def ask(model: str, mode: str = "short") -> dict:
     blurb = (p.get("blurb") or p.get("description") or "")[:400]
 
     tour = mode == "tour"
+    known = real_features(str(p.get("slug", ""))) if tour else []
+    if tour:
+        log(f"{len(known)} real features found to write the tour from")
+
     shape = ("""  "tour"    a list of 6 to 8 strings, each under 12 words
   "proof"   one sentence
   "ask"     under 8 words
@@ -109,15 +195,21 @@ def ask(model: str, mode: str = "short") -> dict:
   "ask"     under 7 words
 """)
 
+    facts = ("\n".join(f"- {f}" for f in known) if known
+             else "(none available, write only what the blurb supports)")
+
     prompt = f"""Tool: {name}
 What it does: {blurb}
 Price, shown on screen only: {price}
+
+These are the features it genuinely has. Use them and nothing else:
+{facts}
 
 Produce a JSON object with exactly these keys:
   "hook"    under 7 words, the pain in plain words
   "problem" one sentence
 {shape}
-The tour lines must cover the tool's real capabilities. Use the description.
+{"Every tour line must correspond to one of the features listed above." if known else "Keep it short; do not invent capabilities."}
 
 {RULES}"""
     raw = providers.groq_chat(model, f"You are a direct response copywriter. "
