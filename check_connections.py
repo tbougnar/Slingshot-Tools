@@ -14,6 +14,7 @@ import os
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -413,6 +414,72 @@ def check_webhook() -> bool:
         return bad("discord webhook", str(e)[:80])
 
 
+def check_youtube() -> bool:
+    """Is the upload credential good, and which channel would it publish to?
+
+    Worth proving on its own: the first thing anyone learns from a bad refresh
+    token is that the video went nowhere, and by then the render is already
+    done. Reading the channel costs no quota against the upload allowance.
+    """
+    cid = os.environ.get("YOUTUBE_CLIENT_ID", "").strip()
+    csec = os.environ.get("YOUTUBE_CLIENT_SECRET", "").strip()
+    tok = os.environ.get("YOUTUBE_REFRESH_TOKEN", "").strip()
+
+    if not (cid and csec and tok):
+        missing = [n for n, v in (("YOUTUBE_CLIENT_ID", cid),
+                                  ("YOUTUBE_CLIENT_SECRET", csec),
+                                  ("YOUTUBE_REFRESH_TOKEN", tok)) if not v]
+        log(f"YouTube: {', '.join(missing)} not set, so Shorts will render "
+            f"but not upload")
+        return True
+
+    body = urllib.parse.urlencode({
+        "client_id": cid, "client_secret": csec, "refresh_token": tok,
+        "grant_type": "refresh_token",
+    }).encode()
+    req = urllib.request.Request(
+        "https://oauth2.googleapis.com/token", data=body,
+        headers={"Content-Type": "application/x-www-form-urlencoded"})
+
+    try:
+        with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+            access = json.loads(r.read().decode("utf-8"))["access_token"]
+    except urllib.error.HTTPError as e:
+        try:
+            detail = json.loads(e.read().decode("utf-8", "replace")) \
+                .get("error_description", "")[:100]
+        except Exception:  # noqa: BLE001
+            detail = ""
+        if "revoked" in detail or e.code == 400:
+            return bad("youtube", "the refresh token was revoked or expired",
+                       "run python shorts_auth.py again")
+        return bad("youtube", f"HTTP {e.code} {detail}".strip())
+    except Exception as e:  # noqa: BLE001
+        return bad("youtube", str(e)[:80])
+
+    # the channel decides where videos land, so it is worth naming
+    try:
+        with get("https://www.googleapis.com/youtube/v3/channels",
+                 {"Authorization": f"Bearer {access}",
+                  "part": "snippet,statistics"}) as r:
+            d = json.loads(r.read().decode("utf-8"))
+        items = d.get("items") or []
+        if not items:
+            return bad("youtube", "the token works but has no channel",
+                       "it must be authorised as the account that owns the "
+                       "channel")
+        it = items[0]
+        st = it.get("statistics") or {}
+        return ok("youtube",
+                  f"publishes to {it['snippet']['title']} "
+                  f"({st.get('videoCount', '0')} videos up)")
+    except urllib.error.HTTPError as e:
+        return bad("youtube", f"token ok, but the channel read failed "
+                              f"(HTTP {e.code})")
+    except Exception as e:  # noqa: BLE001
+        return bad("youtube", str(e)[:80])
+
+
 def check_paid_build() -> bool:
     """Is there an installer ready for itch.io?
 
@@ -455,6 +522,7 @@ def main() -> int:
         "itch session": check_itch_session(),
         "discord": check_discord(),
         "webhook": check_webhook(),
+        "youtube": check_youtube(),
         "website": check_site(),
         "installer": check_paid_build(),
     }
