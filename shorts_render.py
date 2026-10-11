@@ -573,16 +573,16 @@ def main() -> int:
                     86, appear, WHITE)
 
         # the window carries the proof; it steps aside for the price card
-        #
         # A long headline and the window cannot both have the middle of the
         # frame, so the window yields. Half a window hidden behind a headline
-        # looks broken; a headline alone looks deliberate.
+        # looks broken; a headline alone looks deliberate. Two lines still fit
+        # above the window, three do not.
         long_head = len(wrap(d, parts[which]["text"], font(86)[0],
-                             W - 200)) >= 2
+                             W - 200)) >= 3
         # the closing card owns the middle band outright, so the window is
         # gone before the call to action lands on top of it
         if ((which >= 1 and not closing) and not show_price
-                and not long_head):
+                and not long_head and _shot_for(str(script.get("slug") or ""))):
             rev = min(1.0, 0.25 + local * 0.5 + (which - 1) * 0.22)
             img = app_window(img, str(script.get("slug") or ""), rev,
                              feats, BAND_WINDOW[0])
