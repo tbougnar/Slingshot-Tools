@@ -273,8 +273,18 @@ def app_window(img: Image.Image, slug: str, reveal: float,
 
     # the frame is taller than the content now that the caption band is gone,
     # so the window is given the room it would have shared with captions
-    cw = int(W * 0.84)
-    ch = 700
+    # the window matches the screenshot's shape so the app fills it; a wide
+    # window around a tall screenshot leaves grey bars and a postage stamp
+    cw = int(W * 0.80)
+    shot = _shot_for(slug)
+    if shot is not None:
+        # room for the title bar, then the image at its own proportions
+        bar_h = 66
+        avail = int(W * 0.80 * (shot.height / shot.width)) + bar_h + 20
+        ch = max(480, min(avail, BAND_WINDOW[1] - BAND_WINDOW[0] + 420))
+    else:
+        ch = 620
+        bar_h = 66
     cx = (W - cw) // 2
 
     sc = 0.95 + 0.05 * a
@@ -579,11 +589,16 @@ def main() -> int:
         # above the window, three do not.
         long_head = len(wrap(d, parts[which]["text"], font(86)[0],
                              W - 200)) >= 3
-        # the closing card owns the middle band outright, so the window is
-        # gone before the call to action lands on top of it
-        if ((which >= 1 and not closing) and not show_price
-                and not long_head and _shot_for(str(script.get("slug") or ""))):
-            rev = min(1.0, 0.25 + local * 0.5 + (which - 1) * 0.22)
+        # The window shows for most of the video, not just where a headline
+        # happens to be short. It only steps aside for the price card, for a
+        # three line headline, and for the closing card.
+        has_shot = bool(_shot_for(str(script.get("slug") or "")))
+        # from the very first line after the hook, so the app is on screen for
+        # most of the video. It only steps aside for the price card, for a
+        # three line headline, and for the closing card.
+        if (not closing and not show_price and not long_head and has_shot
+                and which >= 1):
+            rev = min(1.0, 0.25 + local * 0.55)
             img = app_window(img, str(script.get("slug") or ""), rev,
                              feats, BAND_WINDOW[0])
 
