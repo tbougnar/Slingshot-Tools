@@ -279,8 +279,8 @@ def wants_theme(text: str) -> bool:
 
 
 def app_window(img: Image.Image, slug: str, reveal: float,
-               features: list[str], top: int,
-               small: bool = False) -> Image.Image:
+               features: list[str], top: int, small: bool = False,
+               theme: str = "base") -> Image.Image:
     """The real interface, inside a window frame.
 
     The screenshot is what the app genuinely looks like: its own colours, its

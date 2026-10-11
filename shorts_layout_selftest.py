@@ -4,11 +4,29 @@ They did: the price badge landed on a three line headline, and the URL sat
 underneath the captions. Fixed bands make that impossible, but only if the
 bands themselves are correct, so they are checked here.
 """
+import inspect
 import sys
 
 import shorts_render as sr
 
 fails = []
+
+# every keyword the render loop passes must exist. A signature and its call
+# site were edited apart once, and the crash only appeared after four minutes
+# of CI. Checking it here costs nothing.
+sig = inspect.signature(sr.app_window)
+for kw in ("small", "theme"):
+    ok = kw in sig.parameters
+    print(("  ok   " if ok else "  FAIL ") + f"app_window accepts {kw}")
+    if not ok:
+        fails.append(f"signature/{kw}")
+
+if "theme" in sig.parameters:
+    ok = "theme" in inspect.signature(sr._shot_for).parameters
+    print(("  ok   " if ok else "  FAIL ")
+          + "_shot_for accepts theme")
+    if not ok:
+        fails.append("signature/_shot_for theme")
 
 bands = [
     ("logo", sr.BAND_LOGO),
