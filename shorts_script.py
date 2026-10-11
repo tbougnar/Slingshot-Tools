@@ -188,7 +188,15 @@ def ask(model: str, mode: str = "short") -> dict:
     if tour:
         log(f"{len(known)} real features found to write the tour from")
 
-    shape = ("""  "tour"    a list of 6 to 8 strings, each under 12 words
+    # Asking for more lines than there is material for gets nothing back at
+    # all: the model declines rather than inventing. The count is derived from
+    # what was actually found, so the request is always answerable.
+    want = min(8, max(3, len(known))) if tour else 0
+    if tour:
+        log(f"asking for {want} tour line(s), which is what the material "
+            f"supports")
+
+    shape = (f"""  "tour"    a list of {want} strings, each under 16 words
   "proof"   one sentence
   "ask"     under 8 words
 """ if tour else """  "proof"   one sentence
@@ -209,16 +217,20 @@ Produce a JSON object with exactly these keys:
   "hook"    under 7 words, the pain in plain words
   "problem" one sentence
 {shape}
-{"Every tour line must correspond to one of the features listed above." if known else "Keep it short; do not invent capabilities."}
+{"Write one tour line for each feature listed above, and no others. "
+  "Use the whole of each line: say what the feature does for the person, "
+  "not just its name." if known
+ else "Keep it short; do not invent capabilities."}
 
 {RULES}"""
     raw = providers.groq_chat(model, f"You are a direct response copywriter. "
                                     f"{RULES}", prompt, 0.85,
                               1100 if tour else 600)
-    return _clean(raw, p, mode)
+    return _clean(raw, p, mode, want)
 
 
-def _clean(raw: str, p: dict, mode: str = "short") -> dict:
+def _clean(raw: str, p: dict, mode: str = "short",
+           want: int = 0) -> dict:
     """Pull the JSON out of whatever the model wrapped it in."""
     m = re.search(r"\{.*\}", raw, re.S)
     if not m:
@@ -239,8 +251,12 @@ def _clean(raw: str, p: dict, mode: str = "short") -> dict:
         "tour": tour[:9] if mode == "tour" else [],
     }
     if mode == "tour" and not out["tour"]:
-        log("the model returned no tour lines, so this will be a short")
-        out["tour"] = []
+        # saying "tour" while shipping a four line short is how an 11 second
+        # clip gets called a 60 second one, so the fallback says what it is
+        log(f"no tour lines came back (asked for {want}), so this is a short")
+        out["mode"] = "short"
+    else:
+        out["mode"] = mode
 
     fields = [k for k, v in out.items() if k != "tour" and v]
     for k in fields:
@@ -282,11 +298,19 @@ def lines(d: dict) -> list[str]:
 def duration_estimate(d: dict) -> float:
     """Rough spoken length, so the render knows how long to hold the last card.
 
-    Narration pace lands near 2.6 words a second for these voices, plus a beat
-    of silence at each scene change.
+    Narration pace lands near 2.4 words a second for these voices, plus a beat
+    of silence at each scene change. A tour that reports 60 seconds and comes
+    back at 12 is worse than a short number, so this is reported honestly and
+    the runtime is measured later anyway.
     """
     words = sum(len(s.split()) for s in lines(d))
-    return round(words / 2.6 + 0.8 * (len(lines(d)) - 1), 1)
+    return round(words / 2.4 + 0.55 * max(1, len(lines(d)) - 1), 1)
+
+
+def runtime_note(secs: float, mode: str) -> str:
+    """What the caller wanted, against what is actually there."""
+    want = 60 if mode == "tour" else 20
+    return f"{secs:.0f}s of about {want}s"
 
 
 def main() -> int:
@@ -299,13 +323,15 @@ def main() -> int:
     d = ask(model, mode)
     p = product()
     name = p.get("name") or p.get("title") or p.get("slug")
+    got = d.get("mode", mode)
 
     out = {
         "slug": p.get("slug"),
         "name": name,
         "price": price_label(p.get("price")),
         "blurb": p.get("blurb") or p.get("description") or "",
-        "mode": mode,
+        "mode": got,
+        "requested_mode": mode,
         "seconds": duration_estimate(d),
         "narration": lines(d),
         "beats": d,
@@ -314,8 +340,10 @@ def main() -> int:
     dest = ROOT / "data" / "shorts_script.json"
     dest.write_text(json.dumps(out, indent=2, ensure_ascii=False),
                     encoding="utf-8")
-    log(f"{mode}, {out['seconds']}s, {len(out['narration'])} lines "
-        f"-> {dest.name}")
+    log(f"{runtime_note(out['seconds'], got)}, "
+        f"{len(out['narration'])} lines -> {dest.name}")
+    if got != mode:
+        log(f"asked for {mode}, produced {got}")
     for s in out["narration"]:
         log(f"   {s}")
     return 0
