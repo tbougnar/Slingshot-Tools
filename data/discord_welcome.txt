@@ -1,0 +1,11 @@
+Welcome to **Slingshot Tools**.
+
+Everything we make is here, and everything here links to everything else:
+
+Website  ->  https://tbougnar.github.io/Slingshot-Tools/
+itch.io  ->  https://slingshot-tools.itch.io/
+YouTube  ->  https://www.youtube.com/@slingshottools
+Discord  ->  https://discord.gg/slingshot
+GitHub  ->  https://github.com/tbougnar/Slingshot-Tools
+
+Vote on what gets built next in #polls, and read the weekly notes in #announcements.

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import urllib.error
 import urllib.request
@@ -90,14 +91,35 @@ def sound_effect(text: str, dest: Path) -> bool:
 
 
 def music(dest: Path, seconds: int) -> bool:
+    """A bed long enough to cover the clip, with room to spare.
+
+    Generated beds come back at roughly the requested length and sometimes
+    short of it. A bed that stops early leaves the last seconds of the clip in
+    dead air, so it is asked for a margin and then looped to fill.
+    """
+    want = max(6, int(seconds) + 6)
     raw = _post("/music", {
         "prompt": MUSIC_PROMPT,
-        "music_length_ms": max(5000, min(seconds * 1000, 120_000)),
+        "music_length_ms": min(want * 1000, 300_000),
     }, timeout=240)
     if not raw or len(raw) < 4096:
         return False
-    dest.write_bytes(raw)
-    return True
+
+    # loop the stem until it covers the clip
+    cmd = [shutil.which("ffmpeg") or "", "-y", "-stream_loop", "-1",
+           "-i", str(dest.with_suffix(".raw.mp3")), "-t", str(want + 2),
+           "-c:a", "libmp3lame", "-q:a", "4", str(dest)]
+    tmp = dest.with_suffix(".raw.mp3")
+    tmp.write_bytes(raw)
+    try:
+        subprocess.run(cmd, capture_output=True, check=True)
+        return dest.exists() and dest.stat().st_size > 4096
+    except Exception as e:  # noqa: BLE001
+        log(f"could not loop the bed: {str(e)[:70]}, using it as is")
+        tmp.replace(dest)
+        return True
+    finally:
+        tmp.unlink(missing_ok=True)
 
 
 def main() -> int:

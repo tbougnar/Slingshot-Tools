@@ -34,15 +34,25 @@ import providers
 
 ROOT = Path(__file__).resolve().parent
 
-RULES = """Write narration for a 20 second vertical advert for a desktop tool.
+RULES = """Write narration for a vertical video advert for a desktop tool.
 
-Structure, in order, and nothing else:
+Pick a length mode and follow that structure exactly.
+
+SHORT (about 20 seconds):
   hook    under 7 words. The pain, in the words a real person would use.
   problem one sentence. The cost of living with it today.
   proof   one sentence. What the tool does about it, plainly.
   ask     under 7 words. One action.
 
-Hard rules:
+TOUR (about 60 seconds, a fuller walkthrough):
+  hook     under 7 words. The pain, immediately.
+  problem  one sentence. The cost of living with it.
+  tour     a list of 6 to 8 strings, each under 12 words. One real capability
+           per line. These must be things the tool actually does.
+  proof    one sentence. The strongest thing it does, plainly.
+  ask      under 8 words. One action.
+
+Hard rules for both:
 - Never say the brand or the product name in the narration. It appears on
   screen instead.
 - Never say a price or a number aloud. Prices are shown, not spoken.
@@ -85,11 +95,19 @@ def product() -> dict:
     return json.loads(stage.read_text(encoding="utf-8"))
 
 
-def ask(model: str) -> dict:
+def ask(model: str, mode: str = "short") -> dict:
     p = product()
     name = p.get("name") or p.get("title") or p.get("slug", "this tool")
     price = price_label(p.get("price"))
     blurb = (p.get("blurb") or p.get("description") or "")[:400]
+
+    tour = mode == "tour"
+    shape = ("""  "tour"    a list of 6 to 8 strings, each under 12 words
+  "proof"   one sentence
+  "ask"     under 8 words
+""" if tour else """  "proof"   one sentence
+  "ask"     under 7 words
+""")
 
     prompt = f"""Tool: {name}
 What it does: {blurb}
@@ -98,16 +116,17 @@ Price, shown on screen only: {price}
 Produce a JSON object with exactly these keys:
   "hook"    under 7 words, the pain in plain words
   "problem" one sentence
-  "proof"   one sentence
-  "ask"     under 7 words, one action
+{shape}
+The tour lines must cover the tool's real capabilities. Use the description.
 
 {RULES}"""
     raw = providers.groq_chat(model, f"You are a direct response copywriter. "
-                                    f"{RULES}", prompt, 0.85, 600)
-    return _clean(raw, p)
+                                    f"{RULES}", prompt, 0.85,
+                              1100 if tour else 600)
+    return _clean(raw, p, mode)
 
 
-def _clean(raw: str, p: dict) -> dict:
+def _clean(raw: str, p: dict, mode: str = "short") -> dict:
     """Pull the JSON out of whatever the model wrapped it in."""
     m = re.search(r"\{.*\}", raw, re.S)
     if not m:
@@ -118,34 +137,40 @@ def _clean(raw: str, p: dict) -> dict:
         raise SystemExit(f"[shorts] malformed JSON: {m.group(0)[:120]}")
 
     name = str(p.get("name") or p.get("title") or "this tool").lower()
+    tour = [str(b).strip().rstrip(".")
+            for b in (d.get("tour") or []) if str(b).strip()]
     out = {
         "hook": str(d.get("hook", "")).strip(),
         "problem": str(d.get("problem", "")).strip(),
         "proof": str(d.get("proof", "")).strip(),
         "ask": str(d.get("ask", "")).strip(),
+        "tour": tour[:9] if mode == "tour" else [],
     }
+    if mode == "tour" and not out["tour"]:
+        log("the model returned no tour lines, so this will be a short")
+        out["tour"] = []
 
-    # the brand is on screen, never in the narration
-    name = str(p.get("name") or p.get("title") or "this tool").lower()
-    for k, v in list(out.items()):
-        if name and name in v.lower():
+    fields = [k for k, v in out.items() if k != "tour" and v]
+    for k in fields:
+        # the brand is on screen, never in the narration
+        if name and name in out[k].lower():
             log(f"stripped the brand name out of the {k}")
-            out[k] = re.sub(re.escape(name), "it", v, flags=re.I)
-
-    # a spoken price fights the voice and is forgotten; the card carries it
-    for k, v in list(out.items()):
-        if not re.search(r"\$\s?\d|\b\d+\s?(dollars|pounds|euros|usd)\b", v,
-                         re.I):
-            continue
-        log(f"stripped a spoken price out of the {k}")
-        # drop the whole clause the number sits in, not just the digits: a
-        # sentence whose only content was the price leaves nothing worth
-        # saying, and the card shows it better anyway
-        cleaned = re.sub(r"[^.]*\$\s?\d[^.]*\.?", "", v)
-        if len(cleaned.strip()) < 12:
-            # the whole line was the price; make it a benefit instead
-            cleaned = "It runs on your own machine, not a server."
-        out[k] = cleaned.strip()
+            out[k] = re.sub(re.escape(name), "it", out[k], flags=re.I)
+        # a spoken price fights the voice and is forgotten; the card carries it
+        if re.search(r"\$\s?\d|\b\d+\s?(dollars|pounds|euros|usd)\b",
+                     out[k], re.I):
+            log(f"stripped a spoken price out of the {k}")
+            cleaned = re.sub(r"[^.]*\$\s?\d[^.]*\.?", "", out[k])
+            if len(cleaned.strip()) < 12:
+                cleaned = "It runs on your own machine, not a server."
+            out[k] = cleaned.strip()
+    for i, t in enumerate(out["tour"]):
+        if name and name in t.lower():
+            out["tour"][i] = re.sub(re.escape(name), "it", t, flags=re.I)
+        if re.search(r"\$\s?\d|\b\d+\s?(dollars|pounds|euros|usd)\b",
+                     t, re.I):
+            out["tour"].pop(i)
+            break
 
     if not out["hook"]:
         raise SystemExit("[shorts] the model returned no hook")
@@ -156,7 +181,9 @@ def _clean(raw: str, p: dict) -> dict:
 
 def lines(d: dict) -> list[str]:
     """The narration in the order it is spoken."""
-    seq = [d["hook"], d.get("problem", ""), d.get("proof", ""), d["ask"]]
+    seq = [d["hook"], d.get("problem", "")]
+    seq += list(d.get("tour") or [])
+    seq += [d.get("proof", ""), d["ask"]]
     return [s for s in seq if s]
 
 
@@ -173,7 +200,11 @@ def duration_estimate(d: dict) -> float:
 def main() -> int:
     model = (os.environ.get("GROQ_CHAT_MODEL") or "").strip() \
         or "openai/gpt-oss-120b"
-    d = ask(model)
+    mode = (os.environ.get("SHORTS_MODE") or "short").strip().lower()
+    if mode not in ("short", "tour"):
+        mode = "short"
+
+    d = ask(model, mode)
     p = product()
     name = p.get("name") or p.get("title") or p.get("slug")
 
@@ -182,14 +213,17 @@ def main() -> int:
         "name": name,
         "price": price_label(p.get("price")),
         "blurb": p.get("blurb") or p.get("description") or "",
+        "mode": mode,
         "seconds": duration_estimate(d),
         "narration": lines(d),
         "beats": d,
+        "name": name,
     }
     dest = ROOT / "data" / "shorts_script.json"
     dest.write_text(json.dumps(out, indent=2, ensure_ascii=False),
                     encoding="utf-8")
-    log(f"{out['seconds']}s, {len(out['narration'])} lines -> {dest.name}")
+    log(f"{mode}, {out['seconds']}s, {len(out['narration'])} lines "
+        f"-> {dest.name}")
     for s in out["narration"]:
         log(f"   {s}")
     return 0

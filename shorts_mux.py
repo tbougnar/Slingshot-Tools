@@ -184,22 +184,29 @@ def mix_video(dest: Path, voice: Path) -> list[str]:
           "-c:a", "aac", "-b:a", "192k", str(stem)],
          "building the sound design stem")
 
-    # stage two: narration over the design, normalised for the feed. loudnorm
-    # has to live inside the complex graph, because ffmpeg refuses a simple
-    # -af filter on a stream that came out of one. The result is written to a
-    # new file and swapped in, because ffmpeg will not edit a file it is
-    # reading and refuses the whole command with a bare "exiting".
+    # stage two: narration over the design, normalised for the feed.
+    #
+    # Two things here are load bearing. loudnorm has to live inside the
+    # complex graph, because ffmpeg refuses a simple -af on a stream that
+    # came out of one. And the result is written to a new file and swapped
+    # in, because ffmpeg will not edit a file it is reading and refuses the
+    # whole command with a bare "exiting".
+    #
+    # apad plus -shortest keeps the bed running under the last word and stops
+    # the file the instant the picture ends. Without it the clip ends in dead
+    # air, which is exactly what a viewer notices first.
     final = dest.with_name(dest.stem + "-mix.mp4")
     _run([ffmpeg(), "-y", "-i", str(dest), "-i", str(stem),
           "-i", str(voice),
           "-filter_complex",
-          "[1:a]volume=1.0[bed];[bed][2:a]amix=inputs=2:duration=longest:"
-          "normalize=0,alimiter=limit=0.95[mixed];"
+          "[1:a]volume=1.0,apad[bed];"
+          "[bed][2:a]amix=inputs=2:duration=first:dropout_transition=0:normalize=0,"
+          "alimiter=limit=0.95[mixed];"
           "[mixed]loudnorm=I=-14:TP=-1.5:LRA=11[out]",
           "-map", "0:v", "-map", "[out]",
           "-c:v", "copy",
           "-c:a", "aac", "-b:a", "192k", "-ar", "48000",
-          "-movflags", "+faststart", str(final)],
+          "-shortest", "-movflags", "+faststart", str(final)],
          "mixing narration over the design")
 
     final.replace(dest)

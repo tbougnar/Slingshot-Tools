@@ -40,18 +40,24 @@ def main() -> int:
     name = script.get("name") or "A new tool"
     price = script.get("price") or ""
     secs = (video or {}).get("seconds")
+    import links
 
     if done and done.get("id"):
         fields = [
             {"name": "Price", "value": str(price), "inline": True},
             {"name": "Length", "value": f"{secs:.0f}s", "inline": True}
             if secs else {"name": "Length", "value": "?", "inline": True},
-            {"name": "Channel", "value": "Short", "inline": True},
+            {"name": "Watch", "value": f"[YouTube]({done.get('url')})",
+             "inline": True},
         ]
+        # every platform in the announcement, so one post is a whole map
+        where = "\n".join(
+            f"[{c['label']}]({c['url']})" for c in links.all_links()
+            if c["key"] in ("website", "itch", "youtube", "discord"))
         payload = dp.embed_message({
             "title": f"New Short: {name}",
             "url": done.get("url", ""),
-            "description": (script.get("blurb") or "")[:900],
+            "description": (script.get("blurb") or "")[:700] + "\n\n" + where,
             "fields": fields,
             "color": 0xD6582E,
             "footer": {"text": "slingshot.tools"},

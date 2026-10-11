@@ -127,7 +127,38 @@
       <p><strong>Slingshot Tools</strong> — small apps that just work.</p>
       <p>Free forever. Works offline. Your data stays on your device.</p>
     </div>
-  </footer>
+  
+        <!-- slingshot-links:start -->
+  <style>.site-links {
+  display: flex; flex-wrap: wrap; gap: 10px;
+  justify-content: center; align-items: center; margin: 28px 0 0;
+}
+.site-links a {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 16px; border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.14);
+  color: #f5f1ea; text-decoration: none;
+  font: 500 14px/1 system-ui, sans-serif; letter-spacing: .02em;
+  transition: border-color .18s, background .18s, transform .18s;
+}
+.site-links a:hover {
+  border-color: #e45e5f; background: rgba(228,94,95,.10);
+  transform: translateY(-1px);
+}
+.site-links a.primary { border-color: rgba(228,94,95,.55); }
+.site-links svg { width: 18px; height: 18px; flex: none; }
+.site-links a.primary svg { color: #e45e5f; }
+@media (prefers-reduced-motion: reduce) {
+  .site-links a:hover { transform: none; }
+}</style>
+<nav class="site-links" aria-label="Slingshot Tools">
+  <a href="https://tbougnar.github.io/Slingshot-Tools/" class="primary" rel="noopener" target="_blank" title="Website"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 100 0 10 10 0 000-20zm0 0c2.5 2.4 3.8 5.6 3.8 10S14.5 19.6 12 22m0-20C9.5 4.4 8.2 7.6 8.2 12S9.5 19.6 12 22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Website</span></a>
+  <a href="https://slingshot-tools.itch.io/" class="primary" rel="noopener" target="_blank" title="itch.io"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8h12l1 12H5L6 8zm3 0V6a3 3 0 016 0v2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>itch.io</span></a>
+  <a href="https://www.youtube.com/@slingshottools" rel="noopener" target="_blank" title="YouTube"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 8l6 4-6 4V8zM3 5h18v14H3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>YouTube</span></a>
+  <a href="https://discord.gg/slingshot" rel="noopener" target="_blank" title="Discord"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H8l-4 4V5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Discord</span></a>
+  <a href="https://github.com/tbougnar/Slingshot-Tools" rel="noopener" target="_blank" title="GitHub"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 8l-4 4 4 4m6-8l4 4-4 4m-3-10l-2 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>GitHub</span></a>
+</nav>
+  <!-- slingshot-links:end --></footer>
   <script>
     const THEME_KEY="slingshot-theme"; const btn=document.getElementById("themeBtn"); const root=document.documentElement;
     function paint(t){root.dataset.theme=t; btn.textContent=t==="dark"?"Light mode":"Dark mode";}

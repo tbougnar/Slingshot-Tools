@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - "site/**"
+      - "links.py"
+      - "sync_links.py"
   workflow_dispatch:
 
 permissions:
@@ -24,6 +26,15 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+
+      # the footer links come from links.py, so the site, the Discord welcome
+      # and the YouTube descriptions can never name different addresses
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Refresh the platform links
+        run: python sync_links.py
 
       - uses: actions/configure-pages@v5
 

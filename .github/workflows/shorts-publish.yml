@@ -17,6 +17,14 @@ on:
         required: false
         default: true
         type: boolean
+      mode:
+        description: "short = 20 second ad, tour = 60 second walkthrough"
+        required: false
+        default: short
+        type: choice
+        options:
+          - short
+          - tour
 
 permissions:
   contents: write
@@ -63,6 +71,8 @@ jobs:
 
       - name: Write the script
         run: python shorts_script.py
+        env:
+          SHORTS_MODE: ${{ inputs.mode }}
 
       - name: Record it
         run: |

@@ -124,18 +124,28 @@ def logo(d: ImageDraw.ImageDraw, cx: int, cy: int, s: int,
                         radius=int(s * 0.12), fill=(*BG, a))
 
 
-def kinetic(d: ImageDraw.ImageDraw, text: str, y: int, cx: int,
-            width: int, size: int, appear: float, colour=WHITE,
-            blur: bool = True) -> int:
+def kinetic(d: ImageDraw.ImageDraw, text: str, band: tuple[int, int],
+            cx: int, width: int, size: int, appear: float,
+            colour=WHITE, blur: bool = True) -> int:
     """Type that slides up out of a blur, per line, staggered.
 
-    The stagger is what makes it read as motion design rather than a fade: by
-    the time the third line lands the first is already readable, so the eye
-    travels down instead of waiting.
+    The band is (top, bottom) and the block is centred inside it, so a three
+    line headline is positioned the same way as a one line one. Shrinking the
+    type when the text will not fit beats clipping it, because a cut-off line
+    reads as a bug rather than as a style.
     """
     fnt, _ = font(size, bold=True)
-    lines = wrap(d, text, fnt, width)
     lh = int(size * 1.16)
+    lines = wrap(d, text, fnt, width)
+    while len(lines) * lh > (band[1] - band[0]) and size > 46:
+        size = int(size * 0.9)
+        fnt, _ = font(size, bold=True)
+        lh = int(size * 1.16)
+        lines = wrap(d, text, fnt, width)
+
+    block = len(lines) * lh
+    y = band[0] + (band[1] - band[0] - block) // 2
+
     for i, ln in enumerate(lines):
         p = ease((appear - i * 0.13) / 0.5)
         if p <= 0:
@@ -242,15 +252,19 @@ def mock_window(img: Image.Image, reveal: float, lines_seen: int,
 
 
 def caption(d: ImageDraw.ImageDraw, words: list[dict], now: float) -> None:
-    """The words being spoken, in a fixed band near the bottom."""
+    """The words being spoken, in a fixed band near the bottom.
+
+    The band is high enough to clear the URL on the closing card, which used
+    to sit underneath it.
+    """
     live = [w for w in words if w["start"] <= now <= w["end"]]
     text = " ".join(w["t"] for w in live).strip()
     if not text:
         return
-    fnt, _ = font(58, bold=True)
+    fnt, _ = font(56, bold=True)
     lines = wrap(d, text, fnt, W - 300)
-    lh = 82
-    top = int(H * 0.855)
+    lh = 78
+    top = BAND_CAPTION[1]
     y = top - len(lines) * lh
     for ln in lines:
         tw = d.textlength(ln, font=fnt)
@@ -276,6 +290,68 @@ def _price_line(parts: list[dict], price: str) -> int:
     if n <= 3:
         return 1
     return min(2, n - 2)
+
+
+# The frame is divided into bands and nothing is allowed to leave its own.
+# Elements used to be placed at fixed y values, which collided the moment a
+# headline ran to three lines: the price badge landed on the text, and the
+# third line was cut off at the bottom of its band. Bands make a collision
+# impossible by giving each element a slot it cannot grow out of.
+BAND_LOGO = (220, 420)
+BAND_HEAD = (470, 880)
+BAND_PRICE = (900, 1160)
+BAND_WINDOW = (1180, 1520)
+BAND_URL = (1530, 1650)
+BAND_CAPTION = (1660, 1800)
+
+
+def icon_row(img: Image.Image, y: int, a: float) -> None:
+    """A row of channel marks on the closing card.
+
+    Drawn rather than pasted, because there is no asset library here and an
+    SVG cannot survive the JPEG frame. Each mark is the same simple shape the
+    website uses, so the two read as the same brand.
+    """
+    if a <= 0:
+        return
+    d = ImageDraw.Draw(img, "RGBA")
+    import links
+
+    marks = [c for c in links.all_links() if c["key"] in
+             ("website", "itch", "youtube", "discord", "github")]
+    n = len(marks)
+    box, gap = 78, 26
+    total = n * box + (n - 1) * gap
+    x0 = (W - total) // 2
+
+    for i, c in enumerate(marks):
+        x = x0 + i * (box + gap)
+        col = (*ACCENT, int(230 * a)) if c.get("primary") \
+            else (*MUTED, int(210 * a))
+        d.rounded_rectangle([x, y, x + box, y + box], radius=22,
+                            outline=(*PANEL_EDGE, int(220 * a)), width=2)
+        cx, cy = x + box / 2, y + box / 2
+        if c["icon"] == "globe":
+            d.ellipse([cx - 17, cy - 17, cx + 17, cy + 17], outline=col, width=3)
+            d.ellipse([cx - 7, cy - 17, cx + 7, cy + 17], outline=col, width=2)
+            d.line([cx - 17, cy, cx + 17, cy], fill=col, width=2)
+        elif c["icon"] == "bag":
+            d.rounded_rectangle([cx - 15, cy - 8, cx + 15, cy + 17],
+                                radius=6, outline=col, width=3)
+            d.arc([cx - 9, cy - 19, cx + 9, cy - 3], 180, 360, fill=col, width=3)
+        elif c["icon"] == "play":
+            d.polygon([(cx - 11, cy - 14), (cx + 14, cy), (cx - 11, cy + 14)],
+                      outline=col, width=3)
+        elif c["icon"] == "chat":
+            d.rounded_rectangle([cx - 17, cy - 14, cx + 17, cy + 9],
+                                radius=8, outline=col, width=3)
+            d.polygon([(cx - 9, cy + 8), (cx - 1, cy + 8), (cx - 9, cy + 17)],
+                      fill=col)
+        else:  # code
+            d.line([(cx - 14, cy - 12), (cx - 3, cy),
+                    (cx - 14, cy + 12)], fill=col, width=3)
+            d.line([(cx + 14, cy - 12), (cx + 3, cy),
+                    (cx + 14, cy + 12)], fill=col, width=3)
 
 
 def progress(img: Image.Image, done: float) -> None:
@@ -377,11 +453,13 @@ def main() -> int:
         # gives a scroller no reason to stay.
         if t > 1.0:
             ba = int(255 * ease((t - 1.0) / 0.5))
-            logo(d, W // 2, 300, 30, ba)
+            logo(d, W // 2, BAND_LOGO[0] + 40, 30, ba)
             lf, _ = font(34, bold=True)
-            tracked(d, (W // 2, 352), 'SLINGSHOT', lf, (*WHITE, ba), 5)
+            tracked(d, (W // 2, BAND_LOGO[0] + 92), "SLINGSHOT", lf,
+                    (*WHITE, ba), 5)
             sf, _ = font(20)
-            tracked(d, (W // 2, 396), 'TOOLS', sf, (*ACCENT, ba), 7)
+            tracked(d, (W // 2, BAND_LOGO[0] + 136), "TOOLS", sf,
+                    (*ACCENT, ba), 7)
 
         # the price is shown, not spoken: a number the viewer reads stays, a
         # number the voice says is forgotten
@@ -389,42 +467,54 @@ def main() -> int:
         show_price = (which == price_line and 0.14 < local <= 0.88
                       and bool(price))
         if show_price:
-            pf, _ = font(64, bold=True)
+            pf, _ = font(58, bold=True)
             a = ease((local - 0.14) / 0.2)
             plines = wrap(d, price, pf, W - 300)
-            lh = 98
-            y = 850
+            lh = 84
+            block = len(plines) * lh + 60
+            y = BAND_PRICE[0] + (BAND_PRICE[1] - BAND_PRICE[0] - block) // 2
             for ln in plines:
                 tw = d.textlength(ln, font=pf)
                 x = W / 2 - tw / 2
-                d.rounded_rectangle([x - 40, y - 16, x + tw + 40, y + 96],
-                                    radius=48, fill=(*ACCENT, int(246 * a)))
+                d.rounded_rectangle([x - 38, y - 14, x + tw + 38, y + 84],
+                                    radius=44, fill=(*ACCENT, int(246 * a)))
                 d.text((x, y), ln, font=pf, fill=(*BG, int(255 * a)))
                 y += lh
-            nf, _ = font(26)
-            tracked(d, (W // 2, y + 24), 'one off, yours forever',
+            nf, _ = font(24)
+            tracked(d, (W // 2, y + 14), "one off, yours forever",
                     nf, (*MUTED, int(255 * a)), 2)
 
         if not closing:
             # the headline, staggered, cut to the line being spoken
             appear = ease_in(min(1.0, max(0.0, local / 0.18)))
-            kinetic(d, parts[which]['text'], 660, W // 2, W - 200, 86,
-                    appear, WHITE)
+            kinetic(d, parts[which]["text"], BAND_HEAD, W // 2, W - 200,
+                    86, appear, WHITE)
 
         # the window carries the proof; it steps aside for the price card
-        if (which >= 1 or closing) and not show_price:
+        #
+        # A long headline and the window cannot both have the middle of the
+        # frame, so the window yields. Half a window hidden behind a headline
+        # looks broken; a headline alone looks deliberate.
+        long_head = len(wrap(d, parts[which]["text"], font(86)[0],
+                             W - 200)) >= 2
+        # the closing card owns the middle band outright, so the window is
+        # gone before the call to action lands on top of it
+        if ((which >= 1 and not closing) and not show_price
+                and not long_head):
             rev = min(1.0, 0.25 + local * 0.5 + (which - 1) * 0.22)
-            img = mock_window(img, rev, which, feats, 0)
+            img = mock_window(img, rev, which, feats,
+                              BAND_WINDOW[0] - 900)
 
         # the closing card takes the headline's slot, nothing else on screen
         if closing:
             a = ease((local - 0.72) / 0.16)
-            kinetic(d, f'Get {name}', 660, W // 2, W - 200, 74, a, WHITE)
-            uf, _ = font(30, bold=True)
-            tracked(d, (W // 2, 1500), 'slingshot-security.itch.io',
+            kinetic(d, f"Get {name}", BAND_HEAD, W // 2, W - 200, 74, a, WHITE)
+            icon_row(img, 1180, a)
+            uf, _ = font(26, bold=True)
+            tracked(d, (W // 2, BAND_URL[0]), "slingshot-security.itch.io",
                     uf, (*ACCENT, int(255 * a)), 2)
-            nf, _ = font(24)
-            tracked(d, (W // 2, 1560), 'Windows, Mac and Linux',
+            nf, _ = font(22)
+            tracked(d, (W // 2, BAND_URL[0] + 52), "Windows, Mac and Linux",
                     nf, (*MUTED, int(255 * a)), 3)
 
         caption(d, words, t)

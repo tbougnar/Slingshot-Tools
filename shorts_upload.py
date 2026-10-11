@@ -65,20 +65,20 @@ def privacy() -> str:
 
 
 def metadata(script: dict) -> dict:
-    """Title, description and tags built from the same source as the video."""
+    """Title, description and tags built from the same source as the video.
+
+    Every link the brand has goes into the description, because the viewer's
+    next move after watching is to open one of them and guessing which is the
+    loss. All of it comes from links.py, so the description can never name a
+    different address than the website does.
+    """
+    import links
+
     name = script.get("name") or "Slingshot Tool"
     price = script.get("price") or ""
-    link = os.environ.get("SITE_URL", "").strip() or \
-        "https://tbougnar.github.io/Slingshot-Tools/"
     blurb = (script.get("blurb") or "").strip()
 
-    desc = "\n\n".join(x for x in [
-        blurb,
-        f"Price: {price}" if price else "",
-        "Full details and the download link are on the site.",
-        link,
-        "#shorts",
-    ] if x)
+    desc = links.youtube_description(name, str(price), blurb)
 
     return {
         "snippet": {
