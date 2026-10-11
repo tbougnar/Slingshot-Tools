@@ -118,16 +118,43 @@ def main() -> int:
         log("the Short still gets made, it is just quieter")
         return 0
 
-    # a cue lands on a real moment in the voice, not on a guess
+    # Each cue keeps its own time on the clip's timeline, spread across it, then
+    # nudged into whichever line is speaking so it never falls in a gap. The
+    # nudge only moves a cue by a fraction of the line, so cues that started
+    # apart stay apart: collapsing them onto one instant sounds like a single
+    # stacked hit rather than a designed sequence.
     plan: list[dict] = []
-    for name, text, kind, at in CUES:
-        if at >= total:
-            continue
-        # nearest line start, so effects land with the words they sit under
-        when = min(parts, key=lambda p: abs(float(p.get("start") or 0.0) - at))
-        ts = float(when.get("start") or 0.0)
-        plan.append({"name": name, "text": text, "kind": kind,
-                     "at": round(ts, 2), "line": when["text"][:48]})
+    if parts:
+        spans = [(float(p.get("start") or 0.0),
+                  float(p.get("start") or 0.0)
+                  + float(p.get("seconds") or 0.0)) for p in parts]
+
+        span_cues = max(CUES[-1][3], 0.001)
+        raw = []
+        for name, text, kind, at in CUES:
+            if at >= total:
+                continue
+            at = at / span_cues * max(total - 0.5, 0.5)
+            raw.append([name, text, kind, at])
+
+        # Nudging can push a cue past the next one, so the order is fixed
+        # afterwards. Two hits within a tenth of a second of each other are
+        # one sound with extra work, not a sequence.
+        raw.sort(key=lambda r: r[3])
+        spaced: list[float] = []
+        for r in raw:
+            ts = r[3]
+            if spaced and ts - spaced[-1] < 0.22:
+                ts = spaced[-1] + 0.22
+            spaced.append(ts)
+
+        for (name, text, kind, _), ts in zip(raw, spaced):
+            plan.append({
+                "name": name, "text": text, "kind": kind,
+                "at": round(min(ts, max(total - 0.2, 0.1)), 2),
+                "line": next((p["text"][:48] for p, (b0, b1) in
+                              zip(parts, spans) if b0 <= ts < b1),
+                             parts[0]["text"][:48])})
 
     log(f"generating {len(plan)} cues over {total:.1f}s")
     made = 0

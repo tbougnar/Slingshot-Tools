@@ -126,6 +126,19 @@ def cue_labels() -> list[str]:
         return []
 
 
+def _run(cmd: list[str], what: str) -> None:
+    """Run ffmpeg, showing its own complaint when it refuses.
+
+    check=True on its own produces a bare CalledProcessError with the reason
+    printed nowhere, which is how a filter typo costs twenty minutes.
+    """
+    r = subprocess.run(cmd, capture_output=True)
+    if r.returncode != 0:
+        tail = (r.stderr or b"").decode("utf-8", "replace").strip()
+        tail = "\n".join(tail.splitlines()[-14:])
+        raise SystemExit(f"[mux] {what} failed:\n{tail}")
+
+
 def mix_video(dest: Path, voice: Path) -> list[str]:
     """Lay the sound design under the finished video.
 
@@ -166,24 +179,23 @@ def mix_video(dest: Path, voice: Path) -> list[str]:
                  f"normalize=0[design]")
 
     stem = dest.parent / "design.m4a"
-    subprocess.run(
-        [ffmpeg(), "-y"] + inputs +
-        ["-filter_complex", ";".join(graph), "-map", "[design]",
-         "-c:a", "aac", "-b:a", "192k", str(stem)],
-        capture_output=True, check=True)
+    _run([ffmpeg(), "-y"] + inputs +
+         ["-filter_complex", ";".join(graph), "-map", "[design]",
+          "-c:a", "aac", "-b:a", "192k", str(stem)],
+         "building the sound design stem")
 
     # stage two: narration over the design, normalised for the feed
-    subprocess.run(
-        [ffmpeg(), "-y", "-i", str(dest), "-i", str(stem), "-i", str(voice),
-         "-filter_complex",
-         "[1:a]volume=1.0[bed];[bed][2:a]amix=inputs=2:duration=longest:"
-         "normalize=0[mix]",
-         "-map", "0:v", "-map", "[mix]",
-         "-c:v", "copy",
-         "-c:a", "aac", "-b:a", "192k", "-ar", "48000",
-         "-af", "loudnorm=I=-14:TP=-1.5:LRA=11",
-         "-movflags", "+faststart", "-y", str(dest)],
-        capture_output=True, check=True)
+    _run([ffmpeg(), "-y", "-i", str(dest), "-i", str(stem),
+          "-i", str(voice),
+          "-filter_complex",
+          "[1:a]volume=1.0[bed];[bed][2:a]amix=inputs=2:duration=longest:"
+          "normalize=0[mix]",
+          "-map", "0:v", "-map", "[mix]",
+          "-c:v", "copy",
+          "-c:a", "aac", "-b:a", "192k", "-ar", "48000",
+          "-af", "loudnorm=I=-14:TP=-1.5:LRA=11",
+          "-movflags", "+faststart", str(dest)],
+         "mixing narration over the design")
 
     what = f"{len(cues)} cue(s)" + (" plus a music bed" if bed else "")
     return [f"sound design: {what}"]
