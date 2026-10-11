@@ -1,13 +1,14 @@
-"""Create the Slingshot narration voice, once, and say how to store it.
+"""Pick the Slingshot narration voice, once, and say how to store it.
 
-Two ways in, because ElevenLabs gates them differently:
+    python shorts_clone.py pick British female
+    python shorts_clone.py list narrator
+    python shorts_clone.py clone "C:/path/to/your.wav"
 
-    python shorts_clone.py design "warm confident British narrator, mid twenties"
-    python shorts_clone.py clone  "C:/path/to/your.wav"
-
-design works on the free plan and produces a synthetic voice that belongs to
-this project. clone reproduces a recording of a specific person and needs the
-$6 Starter plan, because instant voice cloning is not in the free tier.
+pick chooses from ElevenLabs' own library, which every plan including free can
+use. It is the reliable route: instant voice cloning is Starter-only, and voice
+design has no published endpoint to call.
+list searches that library so a choice can be made by ear rather than by guess.
+clone reproduces a recording of a specific person and needs the $6 plan.
 
 Prints the voice id and the command to store it. Nothing is written to disk and
 no secret is printed, so running it is safe: the key is read from the
@@ -27,13 +28,16 @@ from pathlib import Path
 import shorts_voice as sv
 
 ROOT = Path(__file__).resolve().parent
-
-# Free-tier defaults that suit a product ad: mid range, unhurried, British,
-# with a little lift at the end of a sentence rather than a flat read.
-DESCRIBE = ("warm confident British narrator, mid twenties, clear and "
-            "friendly, unhurried delivery, slight lift at the end of a "
-            "sentence, no background noise")
 NAME = "Slingshot Notes"
+
+# A short product ad wants a settled, mid-range voice that does not perform.
+# Anything too young or too breathy fights the words on a phone screen, so the
+# search defaults lean older and steadier than the average.
+DEFAULTS = {
+    "accent": "british",
+    "gender": "female",
+    "age": "young",
+}
 
 
 def log(m: str) -> None:
@@ -69,18 +73,77 @@ def _post(path: str, payload: dict) -> dict:
         raise SystemExit(f"[clone] failed: {str(e)[:120]}")
 
 
-def design(text: str = DESCRIBE, name: str = NAME) -> str:
-    """A voice built from a description, which the free plan does allow."""
-    d = _post("/voice-design", {
-        "voice_design": {
-            "description": text,
-            "preview_generate": False,
-        },
-        "model_id": sv.ELEVEN_MODEL,
-        "name": name,
-    })
-    # the shape has changed before; accept either the wrapper or the flat form
-    return str(d.get("voice_id") or (d.get("voice") or {}).get("voice_id") or "")
+def library(**filters) -> list[dict]:
+    """Search ElevenLabs' own voices, which every plan can use.
+
+    The endpoint is v2 and takes accent, gender, age and use case as filters.
+    Filtering hard tends to return nothing, so each constraint is dropped
+    until there is a result: an empty answer is worse than a loose one.
+    """
+    q = {k: v for k, v in filters.items() if v}
+    last = ""
+    for drop in range(len(q)):
+        trial = dict(q)
+        for k in list(trial)[drop:]:
+            trial.pop(k)
+        url = f"{sv.API}/v2/voices?{urllib.parse.urlencode(trial)}"
+        req = urllib.request.Request(url, headers={"xi-api-key": sv.key()})
+        try:
+            with urllib.request.urlopen(req, timeout=60) as r:
+                d = json.loads(r.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            last = f"HTTP {e.code}"
+            break
+        except Exception as e:  # noqa: BLE001
+            last = str(e)[:80]
+            break
+        found = d.get("voices") or []
+        if found:
+            return found
+    log(f"the library search returned nothing ({last})")
+    return []
+
+
+def _say(v: dict) -> str:
+    lab = v.get("labels") or {}
+    bits = [lab.get("accent"), lab.get("gender"), lab.get("age")]
+    bits = [b for b in bits if b]
+    tail = f"  ({', '.join(bits)})" if bits else ""
+    return f"  {v.get('voice_id','?'):22} {v.get('name','?'):28}{tail}"
+
+
+def pick(*terms: str) -> str:
+    """Choose one voice and return its id."""
+    low = [t.lower() for t in terms]
+    filters: dict = {}
+    for key, options in (
+            ("accent", ("british", "american", "australian", "irish")),
+            ("gender", ("female", "male")),
+            ("age", ("young", "middle_aged", "old"))):
+        for term in low:
+            if term in options:
+                filters[key] = term
+                break
+
+    if not filters:
+        filters = dict(DEFAULTS)
+        log(f"no filters given, using {filters}")
+
+    voices = library(**filters)
+    if not voices:
+        log("")
+        log("try naming what you want, for example:")
+        log("  python shorts_clone.py pick british female young")
+        log("  python shorts_clone.py list narrator")
+        return ""
+
+    log(f"{len(voices)} match, the first few:")
+    for v in voices[:5]:
+        log(_say(v))
+    log("")
+    log("each has a sample you can hear at:")
+    log("  https://elevenlabs.io/voice-library")
+    return str(voices[0].get("voice_id", ""))
 
 
 def inspect(path: Path) -> float:
@@ -116,31 +179,26 @@ def main() -> int:
         return 1
 
     args = [a for a in sys.argv[1:] if not a.startswith("-")]
-    if "--list" in sys.argv:
-        if not sv.key():
-            log("ELEVENLABS_API_KEY is not set in this shell")
+
+    if args and args[0].lower() in ("list", "search", "find"):
+        term = " ".join(args[1:])
+        voices = sv.list_voices(search=term) if term else sv.list_voices()
+        if not voices:
+            log("nothing matched")
+            log("try a word like narrator, or leave it off to see everything")
             return 1
-        try:
-            for v in sv.list_voices():
-                log(f"  {v.get('voice_id', '?'):24} {v.get('name', '?')}")
-        except Exception as e:  # noqa: BLE001
-            log(f"could not list voices: {str(e)[:90]}")
-            return 1
+        log(f"{len(voices)} voices:")
+        for v in voices[:20]:
+            log(_say(v))
+        if len(voices) > 20:
+            log(f"  ... and {len(voices) - 20} more")
         return 0
 
-    mode = args[0].lower() if args else "design"
+    mode = args[0].lower() if args else "pick"
 
-    if mode in ("design", "d", "--design"):
-        brief = " ".join(args[1:]) if len(args) > 1 else DESCRIBE
-        log("designing a voice; this is free on any plan")
-        log(f"brief: {brief}")
-        try:
-            vid = design(brief)
-        except SystemExit as e:
-            log(str(e))
-            return 1
+    if mode in ("pick", "p", "choose"):
+        vid = pick(*args[1:])
         if not vid:
-            log("no voice id came back, so nothing was created")
             return 1
         report(vid)
         return 0
@@ -165,22 +223,21 @@ def main() -> int:
         return 0
 
     log("usage:")
-    log("  python shorts_clone.py design <description>")
-    log("  python shorts_clone.py clone  <path to a wav>")
+    log("  python shorts_clone.py pick  british female young")
+    log("  python shorts_clone.py list  narrator")
+    log("  python shorts_clone.py clone <path to a wav>   needs Starter, $6")
     return 1
 
 
 def report(vid: str) -> None:
-    log(f"voice id: {vid}")
+    log(f"using voice id: {vid}")
     log("")
-    log("Store it and the Shorts pipeline will use this voice:")
+    log("Store it and the Shorts pipeline will speak with this voice:")
     log("")
     log("  gh variable set ELEVENLABS_VOICE_ID "
         f"--body {vid} --repo tbougnar/Slingshot-Tools")
     log("")
-    log("To hear it before wiring it up:")
-    log(f"  python shorts_clone.py --list")
-    log("")
+    log("Change your mind later: pick again and set the new id, no harm.")
     log("If ElevenLabs is unreachable the pipeline falls back to Edge TTS on")
     log("its own, so nothing is blocked either way.")
     return None

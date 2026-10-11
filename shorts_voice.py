@@ -133,11 +133,29 @@ def clone_voice(sample: Path, name: str = VOICE_CLONE_NAME) -> str:
     return vid
 
 
-def list_voices() -> list[dict]:
-    req = urllib.request.Request(f"{API}/voices",
-                                 headers={"xi-api-key": key()})
-    with urllib.request.urlopen(req, timeout=60) as r:
-        return json.loads(r.read().decode("utf-8")).get("voices", [])
+def list_voices(search: str = "") -> list[dict]:
+    """The account's voices, plus the library, so there is something to pick.
+
+    v2 is the documented endpoint; v1 is tried too because the API has moved
+    versions before and a 404 on one of them should not read as no voices.
+    """
+    q = {"page_size": "100"}
+    if search:
+        q["search"] = search
+
+    for path in ("/v2/voices", "/v1/voices"):
+        req = urllib.request.Request(
+            f"{API}{path}?{urllib.parse.urlencode(q)}",
+            headers={"xi-api-key": key()})
+        try:
+            with urllib.request.urlopen(req, timeout=60) as r:
+                d = json.loads(r.read().decode("utf-8"))
+            return d.get("voices") or d.get("owned_by_user") or []
+        except urllib.error.HTTPError:
+            continue
+        except Exception:  # noqa: BLE001
+            continue
+    return []
 
 
 # ------------------------------------------------------------- elevenlabs
