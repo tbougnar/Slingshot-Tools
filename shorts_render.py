@@ -220,11 +220,11 @@ def tracked(d: ImageDraw.ImageDraw, xy, text: str, fnt, fill, track: int,
         x += w + track
 
 
-def _shot_for(slug: str) -> Image.Image | None:
-    """The screenshot of the real app, if shots.py managed to take one."""
-    global _SHOT_CACHE
-    if slug in _SHOT_CACHE:
-        return _SHOT_CACHE[slug]
+def _shot_for(slug: str, theme: str = "base") -> Image.Image | None:
+    """A screenshot of the real app, if shots.py managed to take one."""
+    key = f"{slug}|{theme}"
+    if key in _SHOT_CACHE:
+        return _SHOT_CACHE[key]
 
     img = None
     index = ROOT / "data" / "shots.json"
@@ -233,12 +233,25 @@ def _shot_for(slug: str) -> Image.Image | None:
             made = json.loads(index.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
             made = {}
-        rel = made.get(slug) or ""
-        if not rel:
+
+        entry = made.get(slug)
+        if not isinstance(entry, dict):
+            entry = None
             for k, v in made.items():
-                if k.startswith(slug[:12]) and v:
-                    rel = v
+                if k.startswith(slug[:12]):
+                    entry = v
                     break
+
+        rel = ""
+        if isinstance(entry, dict):
+            # fall back through the themes, then to whatever exists
+            for want in (theme, "base", "light", "dark"):
+                if entry.get(want):
+                    rel = entry[want]
+                    break
+        elif isinstance(entry, str):
+            rel = entry
+
         if rel:
             p = ROOT / rel
             if p.exists():
@@ -246,11 +259,23 @@ def _shot_for(slug: str) -> Image.Image | None:
                     img = Image.open(p).convert("RGB")
                 except Exception:  # noqa: BLE001
                     img = None
-    _SHOT_CACHE[slug] = img
+    _SHOT_CACHE[key] = img
     return img
 
 
 _SHOT_CACHE: dict = {}
+
+THEME_WORDS = ("theme", "light", "dark", "colour", "color")
+
+
+def wants_theme(text: str) -> bool:
+    """Is this the line about light and dark?
+
+    When it is, the preview switches to match what is being said. A video that
+    says it and then shows the other one is worse than not saying it at all.
+    """
+    low = text.lower()
+    return any(w in low for w in THEME_WORDS)
 
 
 def app_window(img: Image.Image, slug: str, reveal: float,
@@ -274,12 +299,12 @@ def app_window(img: Image.Image, slug: str, reveal: float,
 
     # the frame is taller than the content now that the caption band is gone,
     # so the window is given the room it would have shared with captions
-    # a fixed window that fits its band. Calculating the height from the
-    # screenshot's aspect overflowed the frame and pushed the window half off
-    # screen, which is worse than letterboxing. small=True is the case where
-    # a three line headline already filled the band above it.
-    cw = int(W * 0.78)
-    ch = int((BAND_WINDOW[1] - BAND_WINDOW[0]) * (0.66 if small else 1.0))
+    # as large as the frame allows, so the app is the subject rather than a
+    # detail. At the old width it read as a thumbnail on a phone.
+    cw = int(W * 0.92)
+    bottom = H - 70 if small else BAND_WINDOW[1]
+    ch = max(420, min(bottom - top, int((bottom - top)
+                                        * (0.72 if small else 1.0))))
     cx = (W - cw) // 2
 
     sc = 0.95 + 0.05 * a
@@ -307,22 +332,28 @@ def app_window(img: Image.Image, slug: str, reveal: float,
     inner_x, inner_y = nx + 14, ny + bar + 10
     inner_w, inner_h = nw - 28, nh - bar - 24
 
-    shot = _shot_for(slug)
+    shot = _shot_for(slug, theme)
     if shot is not None:
-        # letterbox the screenshot into the window's content area, so the
-        # whole interface is visible rather than cropped to the centre
-        ratio = min(inner_w / shot.width, inner_h / shot.height)
-        tw, th = int(shot.width * ratio), int(shot.height * ratio)
+        # cover the content area rather than letterboxing it: a screenshot
+        # shrunk to fit leaves grey bars, and a screenshot cropped to fill
+        # shows the app at full size, which is the whole point
+        ratio = max(inner_w / shot.width, inner_h / shot.height)
+        tw, th = int(shot.width * ratio) + 1, int(shot.height * ratio) + 1
         thumb = shot.resize((tw, th), Image.LANCZOS)
+        # crop the overflow from the top, keeping the header and the form,
+        # which is the part worth showing
+        left = max(0, (tw - inner_w) // 2)
+        topc = max(0, int((th - inner_h) * 0.06))
+        thumb = thumb.crop((left, topc, left + inner_w, topc + inner_h))
         if a < 0.995:
             thumb = thumb.convert("RGBA")
             thumb.putalpha(thumb.getchannel("A").point(
                 lambda v: int(v * a)))
-        mask = Image.new("L", (tw, th), 0)
-        ImageDraw.Draw(mask).rounded_rectangle([0, 0, tw, th], radius=18,
+        mask = Image.new("L", thumb.size, 0)
+        ImageDraw.Draw(mask).rounded_rectangle([0, 0, thumb.width,
+                                               thumb.height], radius=14,
                                                fill=int(255 * a))
-        layer.paste(thumb, (inner_x + (inner_w - tw) // 2,
-                            inner_y + (inner_h - th) // 2), mask)
+        layer.paste(thumb, (inner_x, inner_y), mask)
     else:
         # no screenshot: a stand-in that at least names the real controls
         d.rounded_rectangle([inner_x, inner_y, inner_x + inner_w,
@@ -380,11 +411,11 @@ def _price_line(parts: list[dict], price: str) -> int:
 # headline ran to three lines: the price badge landed on the text, and the
 # third line was cut off at the bottom of its band. Bands make a collision
 # impossible by giving each element a slot it cannot grow out of.
-BAND_LOGO = (200, 400)
-BAND_HEAD = (460, 860)
-BAND_PRICE = (890, 1140)
-BAND_WINDOW = (1170, 1830)
-BAND_URL = (1150, 1300)
+BAND_LOGO = (180, 360)
+BAND_HEAD = (400, 820)
+BAND_PRICE = (850, 1080)
+BAND_WINDOW = (1110, 1860)
+BAND_URL = (1130, 1300)
 
 
 def icon_row(img: Image.Image, y: int, a: float) -> None:
@@ -585,9 +616,12 @@ def main() -> int:
         long_head = len(wrap(d, parts[which]["text"], font(86)[0],
                              W - 200)) >= 3
         has_shot = bool(_shot_for(str(script.get("slug") or "")))
-        # from the very first line after the hook, so the app is on screen for
-        # most of the video. It only steps aside for the price card, for a
-        # three line headline, and for the closing card.
+        # the theme follows the words: when the line is the one about light and
+        # dark, the preview switches to show it, then goes back afterwards so
+        # the rest of the video is consistent
+        theme = "base"
+        if wants_theme(parts[which]["text"]):
+            theme = "light"
         if not closing and not show_price and has_shot and which >= 1:
             rev = min(1.0, 0.25 + local * 0.55)
             # a three line headline fills its band, so the window drops below
@@ -596,7 +630,7 @@ def main() -> int:
                              feats,
                              BAND_HEAD[1] + 60 if long_head
                              else BAND_WINDOW[0],
-                             small=long_head)
+                             small=long_head, theme=theme)
 
         # the closing card takes the headline's slot, nothing else on screen
         if closing:

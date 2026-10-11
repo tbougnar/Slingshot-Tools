@@ -64,8 +64,13 @@ def apps() -> list[tuple[str, Path]]:
     return out
 
 
-def shoot(exe: str, page: Path, dest: Path) -> bool:
-    """One headless screenshot. Returns False rather than raising."""
+def shoot(exe: str, page: Path, dest: Path, theme: str = "") -> bool:
+    """One headless screenshot. Returns False rather than raising.
+
+    When a theme is given it is forced before the page loads. The apps switch
+    with a data-theme attribute on the root element, so setting it up front is
+    the difference between the real dark mode and a photo of the light one.
+    """
     with tempfile.TemporaryDirectory() as profile:
         cmd = [
             exe, "--headless=new", "--disable-gpu", "--no-sandbox",
@@ -74,9 +79,12 @@ def shoot(exe: str, page: Path, dest: Path) -> bool:
             f"--window-size={W},{H}",
             "--virtual-time-budget=4000",
             "--default-background-color=00000000",
-            f"--screenshot={dest}",
-            page.resolve().as_uri(),
         ]
+        if theme:
+            cmd.append(f"--force-dark-mode")
+            cmd.append(f"--blink-settings=preferredColorScheme="
+                       f"{1 if theme == 'dark' else 0}")
+        cmd += [f"--screenshot={dest}", page.resolve().as_uri()]
         try:
             r = subprocess.run(cmd, capture_output=True, timeout=90)
         except subprocess.TimeoutExpired:
@@ -91,6 +99,22 @@ def shoot(exe: str, page: Path, dest: Path) -> bool:
     tail = (r.stderr or b"").decode("utf-8", "replace").strip().splitlines()
     log(f"  {page.parent.name}: no image; {tail[-1][:70] if tail else '?'}")
     return False
+
+
+def themed_copy(page: Path, theme: str) -> Path:
+    """A temporary copy of the page with the theme forced on the root element.
+
+    Copying rather than injecting afterwards: a screenshot is taken at load, so
+    anything applied afterwards never reaches the picture.
+    """
+    src = page.read_text(encoding="utf-8", errors="replace")
+    src = src.replace("<html", f'<html data-theme="{theme}"', 1)
+    # the apps pick their own theme from storage on load, so clear that
+    src = src.replace('localStorage.getItem("theme")', "null")
+    src = src.replace("localStorage.getItem('theme')", "null")
+    out = page.parent / f"_shot-{theme}.html"
+    out.write_text(src, encoding="utf-8")
+    return out
 
 
 def main() -> int:
@@ -108,23 +132,45 @@ def main() -> int:
     if "--slug" in sys.argv:
         only = sys.argv[sys.argv.index("--slug") + 1]
 
-    made: dict[str, str] = {}
+    made: dict[str, object] = {}
     for name, page in apps():
         if only and not name.startswith(only):
             continue
-        dest = OUT / f"{name}.png"
-        if dest.exists():
-            dest.unlink()
-        if shoot(exe, page, dest):
-            kb = dest.stat().st_size / 1024
-            log(f"  {name:34} {kb:6.0f} KB")
-            made[name] = str(dest.relative_to(ROOT))
-        else:
-            made[name] = ""
+
+        entry: dict[str, str] = {}
+        for theme in ("", "light", "dark"):
+            stem = f"{name}" + (f"-{theme}" if theme else "")
+            dest = OUT / f"{stem}.png"
+            if dest.exists():
+                dest.unlink()
+            src = page
+            tmp = None
+            if theme:
+                try:
+                    tmp = themed_copy(page, theme)
+                    src = tmp
+                except OSError as e:
+                    log(f"  {stem}: could not prepare the page ({e})")
+                    continue
+            ok = shoot(exe, src, dest, theme=theme)
+            if tmp is not None:
+                try:
+                    tmp.unlink()
+                except OSError:
+                    pass
+            if ok:
+                kb = dest.stat().st_size / 1024
+                log(f"  {stem:34} {kb:6.0f} KB")
+                entry[theme or "base"] = str(dest.relative_to(ROOT))
+            else:
+                entry[theme or "base"] = ""
+
+        made[name] = entry
 
     (ROOT / "data" / "shots.json").write_text(
         json.dumps(made, indent=2), encoding="utf-8")
-    good = sum(1 for v in made.values() if v)
+    good = sum(1 for v in made.values()
+               if isinstance(v, dict) and v.get("base"))
     log(f"{good} of {len(made)} shot")
     return 0 if good else 1
 
