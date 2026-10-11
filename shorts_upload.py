@@ -64,6 +64,26 @@ def privacy() -> str:
     return "private"
 
 
+def title(script: dict, name: str) -> str:
+    """The one line YouTube shows in the feed, written to be clicked.
+
+    This is the hook, not the product name. A Short's title is read on a phone
+    before anybody has decided to watch, so it has to say the same promise the
+    first spoken line makes; naming the app instead spends the one line on
+    something the viewer has no reason to care about yet.
+    """
+    hook = str((script.get("beats") or {}).get("hook") or "").strip()
+    raw = hook or str(script.get("blurb") or "").strip() or name
+
+    # one line, no trailing punctuation, no shouting. A question mark or an
+    # exclamation is left alone: on a hook they are the tone, and a title that
+    # asks a question gets read as one.
+    line = " ".join(raw.split()).strip(" .,;:-—")
+    if line:
+        line = line[0].upper() + line[1:]
+    return (line or name)[:100]
+
+
 def metadata(script: dict) -> dict:
     """Title, description and tags built from the same source as the video.
 
@@ -82,7 +102,7 @@ def metadata(script: dict) -> dict:
 
     return {
         "snippet": {
-            "title": f"{name} in 30 seconds"[:100],
+            "title": title(script, name),
             "description": desc[:5000],
             "tags": ["shorts", "productivity", "desktop app",
                      "software", name.lower()][:500],
