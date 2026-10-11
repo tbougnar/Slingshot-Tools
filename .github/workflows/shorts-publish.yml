@@ -103,6 +103,9 @@ jobs:
       - name: Join audio and video
         run: python shorts_mux.py
 
+      - name: Compose the thumbnail
+        run: python shorts_thumb.py
+
       - name: Upload
         run: python shorts_upload.py
         env:
@@ -129,5 +132,6 @@ jobs:
           name: short-${{ github.run_number }}
           path: |
             dist/shorts/*.mp4
+            dist/shorts/*-thumb.jpg
             dist/shorts/sheets/*.png
           retention-days: 14

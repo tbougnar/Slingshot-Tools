@@ -128,6 +128,65 @@ def video_id(location: str, token: str, last_body: bytes) -> str:
     return ""
 
 
+def upload_thumbnail(video_id: str, token: str, image: Path) -> bool:
+    """Set the thumbnail YouTube shows in the feed and on the watch page.
+
+    Shorts do get a custom thumbnail, and the default first frame is whatever
+    the renderer happened to produce first, which is usually a half faded
+    headline. This replaces it with the composed card.
+    """
+    if not video_id or not image.exists():
+        return False
+    req = urllib.request.Request(
+        f"https://www.googleapis.com/upload/youtube/v3/thumbnails/set"
+        f"?videoId={urllib.parse.quote(video_id)}",
+        data=image.read_bytes(), method="POST",
+        headers={"Authorization": f"Bearer {token}",
+                 "Content-Type": "image/jpeg"})
+    try:
+        with urllib.request.urlopen(req, timeout=120) as r:
+            r.read()
+        return True
+    except urllib.error.HTTPError as e:
+        detail = ""
+        try:
+            detail = e.read().decode("utf-8", "replace")[:140]
+        except Exception:  # noqa: BLE001
+            pass
+        log(f"thumbnail refused: HTTP {e.code} {detail}")
+    except Exception as e:  # noqa: BLE001
+        log(f"thumbnail failed: {str(e)[:70]}")
+    return False
+
+
+def set_visibility(video_id: str, token: str, status: str) -> bool:
+    """Publish, unlist or privatise a video that has already been uploaded.
+
+    Needed because the visibility is fixed at upload time by YOUTUBE_PRIVACY,
+    so changing your mind later would otherwise mean finding the id by hand.
+    """
+    if not video_id:
+        return False
+    body = json.dumps({"status": {"privacyStatus": status}}).encode()
+    req = urllib.request.Request(
+        f"https://www.googleapis.com/youtube/v3/videos"
+        f"?part=status&id={urllib.parse.quote(video_id)}",
+        data=body, method="PUT",
+        headers={"Authorization": f"Bearer {token}",
+                 "Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=60) as r:
+            r.read()
+        return True
+    except urllib.error.HTTPError as e:
+        try:
+            detail = e.read().decode("utf-8", "replace")[:140]
+        except Exception:  # noqa: BLE001
+            detail = ""
+        log(f"visibility refused: HTTP {e.code} {detail}")
+    return False
+
+
 def main() -> int:
     # checked first, before anything else, so a dry run can never upload
     if (os.environ.get("DRY_RUN", "") or "").strip().lower() in ("1", "true",
@@ -196,6 +255,23 @@ def main() -> int:
 
     vid = video_id(location, token, tail)
     url = f"https://youtu.be/{vid}" if vid else "(id not returned)"
+
+    # the composed card, then the visibility it was uploaded with
+    thumb = ROOT / "data" / "shorts_thumb.json"
+    if vid and thumb.exists():
+        try:
+            info = json.loads(thumb.read_text(encoding="utf-8"))
+            if upload_thumbnail(vid, token, Path(info["file"])):
+                log("thumbnail set")
+        except (json.JSONDecodeError, KeyError, OSError):
+            pass
+
+    want = privacy()
+    if vid and want != "unlisted":
+        # unlisted is the default, so only a deliberate change is worth a call
+        if set_visibility(vid, token, want):
+            log(f"visibility set to {want}")
+
     log(f"published {url}")
 
     (ROOT / "data" / "shorts_published.json").write_text(

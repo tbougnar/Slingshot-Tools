@@ -156,20 +156,41 @@ def discord_welcome() -> str:
 
 def youtube_description(name: str = "", price: str = "",
                        blurb: str = "") -> str:
-    """Every link, in the order a viewer wants them after watching."""
+    """Every link, in the order a viewer wants them after watching.
+
+    Written for a phone screen: short lines, one idea each, and marks that
+    survive being skimmed rather than read. The links sit last because they are
+    the action, not the pitch.
+    """
     head = name or "Slingshot Tools"
-    out = [f"{head} - built for people who would rather not pay a "
-           f"subscription.", ""]
+    out = [
+        f"⚡ {head}",
+        "",
+    ]
     if blurb:
-        out += [blurb, ""]
+        # the blurb is written for the catalogue, so it is shortened to one
+        # readable line rather than pasted whole
+        one = " ".join(blurb.split())
+        if len(one) > 150:
+            one = one[:147].rsplit(" ", 1)[0] + "..."
+        out += [one, ""]
     if price:
-        out += [f"Price: {price}", ""]
-    out += ["Everything, everywhere:", ""]
+        out += [f"💰 {price} — one off, yours forever", ""]
+    out += [
+        "🔒 What it does:",
+        "  • Runs on your own device, nothing sent anywhere",
+        "  • Works with no internet connection",
+        "  • Export your data whenever you want",
+        "",
+        "⬇️ Get it:",
+    ]
     for c in CHANNELS:
         if c["key"] == "youtube":
             continue
-        out.append(f"- {c['label']}: {c['url']}")
-    out += ["", "#shorts"]
+        mark = {"website": "🌐", "itch": "🛍️", "discord": "💬",
+                "github": "💻"}.get(c["key"], "🔗")
+        out.append(f"  {mark} [{c['label']}]({c['url']})")
+    out += ["", "#shorts #productivity #software #privacy"]
     return "\n".join(out)
 
 
