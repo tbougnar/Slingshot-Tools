@@ -155,22 +155,22 @@ def mix_video(dest: Path, voice: Path) -> list[str]:
     times = cue_times()
 
     # stage one: the design on its own, each cue delayed to its own timestamp
+    # ffmpeg numbers inputs from 0, and this filtergraph has no video and no
+    # voice in it, so the bed is input 0 and each cue follows. Off by one here
+    # is rejected wholesale as an invalid file index.
     inputs: list[str] = []
     graph: list[str] = []
     outs: list[str] = []
-    n = 0
 
     if bed:
-        n += 1
         inputs += ["-i", str(sfx / "bed.mp3")]
-        graph.append(f"[{n}:a]volume=0.13[bed]")
+        graph.append("[0:a]volume=0.13[bed]")
         outs.append("[bed]")
 
-    for cue in cues:
-        n += 1
+    for i, cue in enumerate(cues, start=len(inputs) // 2):
         ms = int(times.get(cue, 0.0) * 1000)
         inputs += ["-i", str(sfx / f"{cue}.mp3")]
-        graph.append(f"[{n}:a]volume={cue_gain(cue)},"
+        graph.append(f"[{i}:a]volume={cue_gain(cue)},"
                      f"adelay={ms}|{ms}[c{cue}]")
         outs.append(f"[c{cue}]")
 
