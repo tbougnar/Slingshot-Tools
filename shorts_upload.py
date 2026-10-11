@@ -98,19 +98,49 @@ def metadata(script: dict) -> dict:
     }
 
 
-def final_id(location: str, token: str) -> str:
-    """Ask for the finished resource so the id is certain, not assumed."""
-    req = urllib.request.Request(
-        location, method="GET",
-        headers={"Authorization": f"Bearer {token}"})
+def video_id(location: str, token: str, last_body: bytes) -> str:
+    """The new video's id, taken from the upload's own final response.
+
+    The last chunk of a resumable upload returns the whole video resource, so
+    the id is already in hand. Re-reading the session URL afterwards does not
+    work: YouTube closes it and answers 404, which is how an upload can
+    succeed and still appear to have gone nowhere.
+    """
     try:
+        d = json.loads((last_body or b"").decode("utf-8", "replace"))
+        if isinstance(d, dict) and d.get("id"):
+            return str(d["id"])
+    except (json.JSONDecodeError, ValueError):
+        pass
+
+    # fallback: ask the API for the most recent upload on the channel
+    try:
+        req = urllib.request.Request(
+            "https://www.googleapis.com/youtube/v3/videos"
+            "?part=id,snippet&mine=true&maxResults=1",
+            headers={"Authorization": f"Bearer {token}"})
         with urllib.request.urlopen(req, timeout=45) as r:
-            return json.loads(r.read().decode("utf-8")).get("id", "")
-    except Exception:  # noqa: BLE001
-        return ""
+            items = json.loads(r.read().decode("utf-8")).get("items") or []
+            if items:
+                return str(items[0].get("id", ""))
+    except Exception as e:  # noqa: BLE001
+        log(f"could not confirm the video id: {str(e)[:70]}")
+    return ""
 
 
 def main() -> int:
+    # checked first, before anything else, so a dry run can never upload
+    if (os.environ.get("DRY_RUN", "") or "").strip().lower() in ("1", "true",
+                                                                "yes"):
+        vpath = ROOT / "data" / "shorts_video.json"
+        if vpath.exists():
+            info = json.loads(vpath.read_text(encoding="utf-8"))
+            log(f"dry run: {Path(info['file']).name} was rendered but not "
+                f"uploaded")
+        else:
+            log("dry run: nothing was rendered, and nothing was uploaded")
+        return 0
+
     if not configured():
         log("no YouTube credentials, so nothing was uploaded")
         log("set YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET and "
@@ -148,6 +178,7 @@ def main() -> int:
 
     total = video.stat().st_size
     sent = 0
+    tail = b""
     with video.open("rb") as f:
         while sent < total:
             piece = f.read(CHUNK)
@@ -159,11 +190,11 @@ def main() -> int:
                 headers={"Content-Type": "video/mp4",
                          "Content-Range": f"bytes {sent}-{end}/{total}"})
             with urllib.request.urlopen(req, timeout=300) as r:
-                r.read()
+                tail = r.read()          # the last reply carries the resource
             sent += len(piece)
             log(f"  {sent * 100 / total:5.1f}%")
 
-    vid = final_id(location, token)
+    vid = video_id(location, token, tail)
     url = f"https://youtu.be/{vid}" if vid else "(id not returned)"
     log(f"published {url}")
 
