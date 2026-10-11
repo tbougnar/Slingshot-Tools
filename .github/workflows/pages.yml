@@ -33,6 +33,9 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Confirm the links still work
+        run: python check_links.py
+
       - name: Refresh the platform links
         run: python sync_links.py
 

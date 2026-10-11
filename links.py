@@ -39,14 +39,16 @@ CHANNELS = [
         "key": "youtube",
         "label": "YouTube",
         "url": os.environ.get("YOUTUBE_CHANNEL_URL", "").strip()
-        or "https://www.youtube.com/@slingshottools",
+        or "https://www.youtube.com/@Slingshot_Tools",
         "icon": "play",
     },
     {
         "key": "discord",
         "label": "Discord",
+        # the invite. Discord expires these, so the expiry is watched by
+        # check_links.py rather than trusted.
         "url": os.environ.get("DISCORD_INVITE_URL", "").strip()
-        or "https://discord.gg/slingshot",
+        or "https://discord.gg/uajfhbkMY",
         "icon": "chat",
     },
     {

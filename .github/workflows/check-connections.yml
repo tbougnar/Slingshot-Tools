@@ -48,6 +48,9 @@ jobs:
       - name: Are the credentials good
         run: python check_connections.py
 
+      - name: Are the platform links alive
+        run: python check_links.py
+
       - name: Is the repository sound
         run: |
           python check_exposure.py
