@@ -38,12 +38,14 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
     code: str | None = None
     error: str | None = None
+    detail: str | None = None
     done = threading.Event()
 
     def do_GET(self) -> None:  # noqa: N802
         q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
         Handler.code = (q.get("code") or [None])[0]
         Handler.error = (q.get("error") or [None])[0]
+        Handler.detail = (q.get("error_description") or [None])[0]
         reason = {
             "access_denied": "you said no, which is fine",
             "invalid_scope": "the scope was rejected",
@@ -67,6 +69,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
 def ask_for_code(client_id: str) -> str:
     Handler.code = None
     Handler.error = None
+    Handler.detail = None
     Handler.done.clear()
 
     state = secrets.token_urlsafe(24)
@@ -95,8 +98,31 @@ def ask_for_code(client_id: str) -> str:
     srv.server_close()
 
     if Handler.error:
-        raise SystemExit(f"[auth] {Handler.error}: "
-                         f"nothing was saved, just run it again")
+        log("")
+        log(f"Google said: {Handler.error}")
+        blob = f"{Handler.detail or ''}".lower()
+
+        if "verification" in blob or "developer-approved" in blob \
+                or "testers" in blob:
+            # by far the most common cause, and the message Google sends
+            # does not say what to do about it
+            log("")
+            log("This is the consent screen, not a code problem.")
+            log("The app is in Testing mode, so only test users may allow")
+            log("it. Add the account you are signing in with:")
+            log("")
+            log("  1. console.cloud.google.com/apis/credentials")
+            log("  2. Google Auth Platform, then Test users, Add")
+            log("  3. add the Gmail address that owns the YouTube channel")
+            log("  4. wait a minute, then run this again")
+        elif Handler.error == "access_denied":
+            log("")
+            log("You pressed Cancel, or the wrong account was signed in.")
+            log("Run it again and choose Allow.")
+        else:
+            log("")
+            log("Run it again; the consent screen must reach Allow.")
+        raise SystemExit(f"[auth] {Handler.error}")
     if not got or not Handler.code:
         log("nothing came back within five minutes.")
         log("the tab has to stay open until it says Done.")
