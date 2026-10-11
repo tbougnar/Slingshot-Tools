@@ -184,16 +184,18 @@ def mix_video(dest: Path, voice: Path) -> list[str]:
           "-c:a", "aac", "-b:a", "192k", str(stem)],
          "building the sound design stem")
 
-    # stage two: narration over the design, normalised for the feed
+    # stage two: narration over the design, normalised for the feed. loudnorm
+    # has to live inside the complex graph, because ffmpeg refuses a simple
+    # -af filter on a stream that came out of one.
     _run([ffmpeg(), "-y", "-i", str(dest), "-i", str(stem),
           "-i", str(voice),
           "-filter_complex",
           "[1:a]volume=1.0[bed];[bed][2:a]amix=inputs=2:duration=longest:"
-          "normalize=0[mix]",
-          "-map", "0:v", "-map", "[mix]",
+          "normalize=0,alimiter=limit=0.95[mixed];"
+          "[mixed]loudnorm=I=-14:TP=-1.5:LRA=11[out]",
+          "-map", "0:v", "-map", "[out]",
           "-c:v", "copy",
           "-c:a", "aac", "-b:a", "192k", "-ar", "48000",
-          "-af", "loudnorm=I=-14:TP=-1.5:LRA=11",
           "-movflags", "+faststart", str(dest)],
          "mixing narration over the design")
 
