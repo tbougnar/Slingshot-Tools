@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import os
 import sys
+import urllib.error
 
 import shorts_voice as sv
 
@@ -27,19 +28,28 @@ def log(m: str) -> None:
     print(f"[eleven] {m}", flush=True)
 
 
-def speaks(voice_id: str) -> bool:
-    """One short line through the real synthesis path."""
+def speaks(voice_id: str) -> tuple[bool, int]:
+    """One short line through the real synthesis path.
+
+    Returns the HTTP code too, because the difference matters: 401 is a voice
+    or key the account cannot use, 402 is an account that simply has no
+    credits left. They need opposite fixes and read identically if flattened.
+    """
     dest = sv.ROOT / "data" / "eleven_probe.mp3"
     dest.unlink(missing_ok=True)
     try:
         sv.ELEVEN_VOICE_ID = voice_id
         sv._eleven_speak("Hello.", dest)
+    except urllib.error.HTTPError as e:
+        dest.unlink(missing_ok=True)
+        return False, e.code
     except Exception as e:  # noqa: BLE001
-        log(f"  {voice_id} refused: {str(e)[:90]}")
-        return False
+        dest.unlink(missing_ok=True)
+        log(f"  {voice_id} failed: {str(e)[:90]}")
+        return False, 0
     ok = dest.exists() and dest.stat().st_size > 1024
     dest.unlink(missing_ok=True)
-    return ok
+    return ok, 200 if ok else 0
 
 
 def main() -> int:
@@ -53,11 +63,16 @@ def main() -> int:
         return 0
 
     # does the key work at all?
-    healthy = speaks(KNOWN_GOOD)
+    healthy, code = speaks(KNOWN_GOOD)
     if not healthy:
-        log(f"the key cannot synthesise with a stock public voice either, so "
-            f"{KNOWN_GOOD} is the control that failed")
-        log("the API key is the problem: check it is current and not revoked")
+        if code == 402:
+            log(f"HTTP 402 on a stock public voice: this account has no "
+                f"credits left, so nothing will synthesise")
+            log("top the account up, or the pipeline keeps using the Edge "
+                "voice and the Shorts ship with it")
+            return 0
+        log(f"the key cannot synthesise with a stock public voice either "
+            f"(HTTP {code or 'error'}), so the key itself is the problem")
         return 0
     log(f"the key is healthy (stock voice {KNOWN_GOOD} synthesised)")
 
@@ -69,15 +84,16 @@ def main() -> int:
         mark = " <- ELEVENLABS_VOICE_ID" if vid == want else ""
         log(f"  {vid}  {name}{mark}")
 
-    if speaks(want):
+    works, code = speaks(want)
+    if works:
         log(f"the configured voice {want} works")
         return 0
 
-    log(f"voice {want} was refused by this key, so it belongs to a different "
-        f"ElevenLabs account or was deleted")
+    log(f"voice {want} was refused by this key (HTTP {code or 'error'}), so it "
+        f"belongs to a different ElevenLabs account or was deleted")
     if names:
-        log("set ELEVENLABS_VOICE_ID to one of the ids listed above, or set "
-            "it to the key for the account that owns that voice")
+        log("set ELEVENLABS_VOICE_ID to one of the ids listed above, or use "
+            "the key for the account that owns that voice")
     else:
         log("this plan cannot list voices, so the id has to be copied from "
             "the ElevenLabs site for this same account")
