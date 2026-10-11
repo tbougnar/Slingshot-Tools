@@ -76,31 +76,37 @@ def _post(path: str, payload: dict) -> dict:
 def library(**filters) -> list[dict]:
     """Search ElevenLabs' own voices, which every plan can use.
 
-    The endpoint is v2 and takes accent, gender, age and use case as filters.
-    Filtering hard tends to return nothing, so each constraint is dropped
-    until there is a result: an empty answer is worse than a loose one.
+    Both versions are tried because the API has moved between them and a 404
+    on one says nothing about the other. Filtering hard tends to return
+    nothing, so each constraint is dropped until there is a result: an empty
+    answer is worse than a loose one.
     """
     q = {k: v for k, v in filters.items() if v}
     last = ""
-    for drop in range(len(q)):
-        trial = dict(q)
-        for k in list(trial)[drop:]:
-            trial.pop(k)
-        url = f"{sv.API}/v2/voices?{urllib.parse.urlencode(trial)}"
-        req = urllib.request.Request(url, headers={"xi-api-key": sv.key()})
-        try:
-            with urllib.request.urlopen(req, timeout=60) as r:
-                d = json.loads(r.read().decode("utf-8"))
-        except urllib.error.HTTPError as e:
-            last = f"HTTP {e.code}"
-            break
-        except Exception as e:  # noqa: BLE001
-            last = str(e)[:80]
-            break
-        found = d.get("voices") or []
-        if found:
-            return found
-    log(f"the library search returned nothing ({last})")
+
+    for base in ("/v2/voices", "/v1/voices"):
+        for drop in range(len(q) + 1):
+            trial = dict(q)
+            for k in list(trial)[drop:]:
+                trial.pop(k)
+            params = dict(trial)
+            params["page_size"] = "50"
+            url = f"{sv.API}{base}?{urllib.parse.urlencode(params)}"
+            req = urllib.request.Request(url, headers={"xi-api-key": sv.key()})
+            try:
+                with urllib.request.urlopen(req, timeout=60) as r:
+                    d = json.loads(r.read().decode("utf-8"))
+            except urllib.error.HTTPError as e:
+                last = f"HTTP {e.code}"
+                continue
+            except Exception as e:  # noqa: BLE001
+                last = str(e)[:80]
+                continue
+            found = d.get("voices") or []
+            if found:
+                return found
+
+    log(f"nothing came back ({last})")
     return []
 
 
@@ -132,9 +138,18 @@ def pick(*terms: str) -> str:
     voices = library(**filters)
     if not voices:
         log("")
-        log("try naming what you want, for example:")
-        log("  python shorts_clone.py pick british female young")
-        log("  python shorts_clone.py list narrator")
+        log("If this says HTTP 404 and nothing else, ElevenLabs is probably")
+        log("unreachable from this machine rather than the key being wrong.")
+        log("A quick way to tell the two apart: run")
+        log("  python shorts_probe.py")
+        log("A key problem shows 401. A network problem shows 404 or ERR.")
+        log("")
+        log("Either way the pipeline runs in GitHub Actions, where the same")
+        log("key already returns 200, so nothing is actually blocked.")
+        log("To choose a voice, browse https://elevenlabs.io/voice-library")
+        log("and set the id by hand:")
+        log("  gh variable set ELEVENLABS_VOICE_ID --body <id> "
+            "--repo tbougnar/Slingshot-Tools")
         return ""
 
     log(f"{len(voices)} match, the first few:")
