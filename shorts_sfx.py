@@ -69,13 +69,36 @@ def _post(path: str, payload: dict, timeout: int = 180) -> bytes | None:
             return r.read()
     except urllib.error.HTTPError as e:
         try:
-            detail = e.read().decode("utf-8", "replace")[:120]
+            raw = e.read().decode("utf-8", "replace")
+            d = json.loads(raw).get("detail", {})
+            code = d.get("code", "")
+            msg = d.get("message", raw)[:130]
         except Exception:  # noqa: BLE001
-            detail = ""
-        log(f"{path} refused: HTTP {e.code} {detail}")
+            raw, code, msg = "", "", ""
+
+        if "quota" in (code + msg).lower():
+            # worth saying once, loudly: the account is out of credits and
+            # every cue will be skipped, which looks like a broken pipeline
+            if not OUT_OF_CREDITS:
+                OUT_OF_CREDITS.append(True)
+                log("")
+                log("ElevenLabs has run out of credits on this account, so "
+                    "no")
+                log("sound design can be generated. The Short will still be "
+                    "made,")
+                log("with the voice only.")
+                log("")
+                log("Credits reset monthly, or Starter at $6 adds 30k:")
+                log("  https://elevenlabs.io/app/subscription")
+                log("")
+        else:
+            log(f"{path} refused: HTTP {e.code} {msg}")
     except Exception as e:  # noqa: BLE001
         log(f"{path} failed: {str(e)[:80]}")
     return None
+
+
+OUT_OF_CREDITS: list[bool] = []
 
 
 def sound_effect(text: str, dest: Path) -> bool:
@@ -185,21 +208,30 @@ def main() -> int:
         if sound_effect(cue["text"], dest):
             made += 1
             log(f"  {cue['name']:8} at {cue['at']:5.2f}s")
+        elif OUT_OF_CREDITS:
+            log(f"  {cue['name']:8} skipped, out of credits")
         else:
             log(f"  {cue['name']:8} skipped")
 
     bed = out / "bed.mp3"
     if music(bed, int(total)):
         log(f"music bed {total:.0f}s")
+    elif OUT_OF_CREDITS:
+        log("no music bed, out of credits")
     else:
         log("no music bed this time")
 
     (ROOT / "data" / "shorts_sfx.json").write_text(
         json.dumps({"cues": [c for c in plan if (out / f"{c['name']}.mp3")
                              .exists()],
-                    "bed": bool(bed.exists()), "seconds": total},
+                    "bed": bed.exists(), "seconds": total,
+                    "out_of_credits": bool(OUT_OF_CREDITS)},
                    indent=2), encoding="utf-8")
-    log(f"{made} cues ready")
+
+    if made == 0:
+        log("no sound design this time; the video still gets made")
+    else:
+        log(f"{made} cues ready")
     return 0
 
 
