@@ -91,6 +91,9 @@ jobs:
       - name: Speak it
         run: python shorts_voice.py
 
+      - name: Shoot the real app
+        run: python shots.py
+
       - name: Render the frames
         run: python shorts_render.py
 

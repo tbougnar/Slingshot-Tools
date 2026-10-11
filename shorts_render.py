@@ -114,14 +114,56 @@ def merge(img: Image.Image, layer: Image.Image, strength: int) -> Image.Image:
 
 def logo(d: ImageDraw.ImageDraw, cx: int, cy: int, s: int,
          a: float = 255) -> None:
-    """The prototype's rounded red square, drawn rather than pasted."""
-    pad = int(s * 0.16)
-    d.rounded_rectangle([cx - s, cy - s, cx + s, cy + s + pad * 2],
-                        radius=int(s * 0.42), fill=(*ACCENT, a))
-    # the little notch inside the mark
-    d.rounded_rectangle([cx - s * 0.32, cy - s * 0.24,
-                         cx + s * 0.32, cy + s * 0.46],
-                        radius=int(s * 0.12), fill=(*BG, a))
+    """The brand mark, taken from the file rather than drawn.
+
+    It was drawn by hand from a description and came out a red square with a
+    notch, which is not the logo. Reading icon.png keeps the video honest
+    about what the brand looks like, and costs one cached image.
+    """
+    cached = _LOGO
+    if cached is not None:
+        size = s * 2
+        if cached.size != (size, size):
+            cached = cached.resize((size, size), Image.LANCZOS)
+        if a >= 255:
+            img = d._image
+            img.alpha_composite(cached, (int(cx - s), int(cy - s)))
+            return
+        faded = cached.copy()
+        faded.putalpha(faded.getchannel("A").point(
+            lambda v: int(v * a / 255)))
+        d._image.alpha_composite(faded, (int(cx - s), int(cy - s)))
+        return
+
+    # no logo file, so draw something rather than nothing
+    d.rounded_rectangle([cx - s, cy - s, cx + s, cy + s + s * 0.2],
+                        radius=int(s * 0.4), fill=(*ACCENT, int(a)))
+
+
+_LOGO: Image.Image | None = None
+
+
+def _load_logo() -> None:
+    """Read the brand mark once, if the repo has one."""
+    global _LOGO
+    if _LOGO is not None:
+        return
+    for rel in ("site/icon-512.png", "site/logo.png"):
+        p = ROOT / rel
+        if not p.exists():
+            continue
+        try:
+            im = Image.open(p).convert("RGBA")
+        except Exception:  # noqa: BLE001
+            continue
+        # the file is a rounded square on transparent, so a wide crop keeps
+        # only the mark itself
+        side = min(im.size)
+        im = im.crop(((im.width - side) // 2, (im.height - side) // 2,
+                      (im.width - side) // 2 + side,
+                      (im.height - side) // 2 + side))
+        _LOGO = im
+        return
 
 
 def kinetic(d: ImageDraw.ImageDraw, text: str, band: tuple[int, int],
@@ -178,79 +220,115 @@ def tracked(d: ImageDraw.ImageDraw, xy, text: str, fnt, fill, track: int,
         x += w + track
 
 
-def mock_window(img: Image.Image, reveal: float, lines_seen: int,
-                features: list[str], shift: float = 0.0) -> Image.Image:
-    """An app window that assembles, then fills in as the voice describes it.
+def _shot_for(slug: str) -> Image.Image | None:
+    """The screenshot of the real app, if shots.py managed to take one."""
+    global _SHOT_CACHE
+    if slug in _SHOT_CACHE:
+        return _SHOT_CACHE[slug]
 
-    This is the argument the words cannot make on their own: a name and a
-    feature list is a claim, a window with those features in it is proof.
+    img = None
+    index = ROOT / "data" / "shots.json"
+    if index.exists():
+        try:
+            made = json.loads(index.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            made = {}
+        rel = made.get(slug) or ""
+        if not rel:
+            for k, v in made.items():
+                if k.startswith(slug[:12]) and v:
+                    rel = v
+                    break
+        if rel:
+            p = ROOT / rel
+            if p.exists():
+                try:
+                    img = Image.open(p).convert("RGB")
+                except Exception:  # noqa: BLE001
+                    img = None
+    _SHOT_CACHE[slug] = img
+    return img
+
+
+_SHOT_CACHE: dict = {}
+
+
+def app_window(img: Image.Image, slug: str, reveal: float,
+               features: list[str], top: int) -> Image.Image:
+    """The real interface, inside a window frame.
+
+    The screenshot is what the app genuinely looks like: its own colours, its
+    own layout, its own controls. Only the window chrome around it is ours,
+    and that is there to say "this is a desktop app" rather than a web page.
+
+    Falls back to a drawn stand-in when there is no screenshot, so a missing
+    browser never stops a video.
     """
     layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(layer)
 
-    cw, ch = int(W * 0.80), 560
+    a = ease(reveal / 0.45)
+    if a <= 0:
+        return img
+
+    # the frame is taller than the content now that the caption band is gone,
+    # so the window is given the room it would have shared with captions
+    cw = int(W * 0.84)
+    ch = 700
     cx = (W - cw) // 2
-    cy = 900 - int(shift)
 
-    a = ease(reveal / 0.5)
-    if a > 0:
-        sc = 0.94 + 0.06 * a
-        nw, nh = int(cw * sc), int(ch * sc)
-        nx = (W - nw) // 2
-        d.rounded_rectangle([nx, cy + (ch - nh) // 2, nx + nw,
-                             cy + (ch - nh) // 2 + nh],
-                            radius=34, fill=(*PANEL, int(246 * a)),
-                            outline=(*PANEL_EDGE, int(255 * a)), width=2)
+    sc = 0.95 + 0.05 * a
+    nw, nh = int(cw * sc), int(ch * sc)
+    nx, ny = (W - nw) // 2, top + (ch - nh) // 2
 
-        # title bar
-        bar_h = 74
-        bar_y = cy + (ch - nh) // 2
-        d.rounded_rectangle([nx, bar_y, nx + nw, bar_y + bar_h],
-                            radius=34, fill=(*BG_LIFT, int(255 * a)))
-        d.rectangle([nx, bar_y + bar_h - 34, nx + nw, bar_y + bar_h],
-                    fill=(*BG_LIFT, int(255 * a)))
-        for i, c in enumerate(((228, 94, 95), (196, 150, 70), (110, 170, 120))):
-            r = 9
-            cxp = nx + 34 + i * 30
-            d.ellipse([cxp - r, bar_y + bar_h / 2 - r,
-                       cxp + r, bar_y + bar_h / 2 + r],
-                      fill=(*c, int(255 * a)))
+    # the window itself, with a soft drop shadow beneath
+    d.rounded_rectangle([nx + 6, ny + 12, nx + nw + 6, ny + nh + 12],
+                        radius=34, fill=(0, 0, 0, 120))
+    d.rounded_rectangle([nx, ny, nx + nw, ny + nh], radius=34,
+                        fill=(20, 20, 22, int(255 * a)),
+                        outline=(*PANEL_EDGE, int(255 * a)), width=2)
 
-        # a title and a search field, the shape of a real window
-        tf, _ = font(30, bold=True)
-        d.text((nx + 42, bar_y + bar_h + 34), "Library",
-               font=tf, fill=(*WHITE, int(255 * a)))
-        sf, _ = font(22)
-        sby = bar_y + bar_h + 92
-        d.rounded_rectangle([nx + 42, sby, nx + nw - 42, sby + 56],
-                            radius=28, fill=(*BG, int(230 * a)),
-                            outline=(*PANEL_EDGE, int(255 * a)), width=2)
-        d.text((nx + 68, sby + 15), "Search your vault", font=sf,
-               fill=(*MUTED, int(230 * a)))
+    bar = 66
+    d.rounded_rectangle([nx, ny, nx + nw, ny + bar], radius=34,
+                        fill=(30, 30, 33, int(255 * a)))
+    d.rectangle([nx, ny + bar - 34, nx + nw, ny + bar],
+                fill=(30, 30, 33, int(255 * a)))
+    for i, c in enumerate(((228, 94, 95), (196, 160, 80), (110, 175, 125))):
+        r = 9
+        cxp = nx + 30 + i * 28
+        d.ellipse([cxp - r, ny + bar / 2 - r, cxp + r, ny + bar / 2 + r],
+                  fill=(*c, int(255 * a)))
 
-        # rows appear one at a time, in step with the voice
-        ry = sby + 92
-        rf, _ = font(26, bold=True)
-        for i, feat in enumerate(features):
-            p = ease((reveal - 0.3 - i * 0.17) / 0.4)
-            if p <= 0:
-                ry += 78
-                continue
-            off = int((1 - p) * 30)
-            d.rounded_rectangle([nx + 42, ry + off, nx + nw - 42,
-                                 ry + 62 + off],
-                                radius=22, fill=(*BG, int(236 * p)))
-            d.rounded_rectangle([nx + 62, ry + 18 + off, nx + 78,
-                                 ry + 44 + off],
-                                radius=6, fill=(*ACCENT, int(255 * p)))
-            d.text((nx + 98, ry + 18 + off), feat, font=rf,
-                   fill=(*WHITE, int(255 * p)))
-            ry += 78
+    inner_x, inner_y = nx + 14, ny + bar + 10
+    inner_w, inner_h = nw - 28, nh - bar - 24
+
+    shot = _shot_for(slug)
+    if shot is not None:
+        # letterbox the screenshot into the window's content area, so the
+        # whole interface is visible rather than cropped to the centre
+        ratio = min(inner_w / shot.width, inner_h / shot.height)
+        tw, th = int(shot.width * ratio), int(shot.height * ratio)
+        thumb = shot.resize((tw, th), Image.LANCZOS)
+        if a < 0.995:
+            thumb = thumb.convert("RGBA")
+            thumb.putalpha(thumb.getchannel("A").point(
+                lambda v: int(v * a)))
+        mask = Image.new("L", (tw, th), 0)
+        ImageDraw.Draw(mask).rounded_rectangle([0, 0, tw, th], radius=18,
+                                               fill=int(255 * a))
+        layer.paste(thumb, (inner_x + (inner_w - tw) // 2,
+                            inner_y + (inner_h - th) // 2), mask)
+    else:
+        # no screenshot: a stand-in that at least names the real controls
+        d.rounded_rectangle([inner_x, inner_y, inner_x + inner_w,
+                             inner_y + inner_h], radius=18,
+                            fill=(24, 24, 26, int(255 * a)))
+        sf, _ = font(26, bold=True)
+        d.text((inner_x + 30, inner_y + 24), features[0] if features
+               else "App", font=sf, fill=(*WHITE, int(230 * a)))
 
     img.alpha_composite(layer) if img.mode == "RGBA" else None
     return img
-
-
 def caption(d: ImageDraw.ImageDraw, words: list[dict], now: float) -> None:
     """The words being spoken, in a fixed band near the bottom.
 
@@ -297,12 +375,11 @@ def _price_line(parts: list[dict], price: str) -> int:
 # headline ran to three lines: the price badge landed on the text, and the
 # third line was cut off at the bottom of its band. Bands make a collision
 # impossible by giving each element a slot it cannot grow out of.
-BAND_LOGO = (220, 420)
-BAND_HEAD = (470, 880)
-BAND_PRICE = (900, 1160)
-BAND_WINDOW = (1180, 1520)
-BAND_URL = (1530, 1650)
-BAND_CAPTION = (1660, 1800)
+BAND_LOGO = (200, 400)
+BAND_HEAD = (460, 860)
+BAND_PRICE = (890, 1140)
+BAND_WINDOW = (1170, 1830)
+BAND_URL = (1150, 1300)
 
 
 def icon_row(img: Image.Image, y: int, a: float) -> None:
@@ -420,7 +497,12 @@ def main() -> int:
     if not words:
         raise SystemExit("[render] no caption timings")
 
-    log(f"{n} frames at {W}x{H}, {total:.1f}s, {len(words)} captioned words")
+    log(f"{n} frames at {W}x{H}, {total:.1f}s, {len(words)} spoken lines")
+
+    # the brand mark is read from the repo once, not drawn from memory
+    _load_logo()
+    if _LOGO is None:
+        log("no logo file found, so a plain mark will be drawn instead")
 
     # scene bounds from the measured clips
     bounds, at = [], 0.0
@@ -502,8 +584,8 @@ def main() -> int:
         if ((which >= 1 and not closing) and not show_price
                 and not long_head):
             rev = min(1.0, 0.25 + local * 0.5 + (which - 1) * 0.22)
-            img = mock_window(img, rev, which, feats,
-                              BAND_WINDOW[0] - 900)
+            img = app_window(img, str(script.get("slug") or ""), rev,
+                             feats, BAND_WINDOW[0])
 
         # the closing card takes the headline's slot, nothing else on screen
         if closing:
@@ -517,7 +599,6 @@ def main() -> int:
             tracked(d, (W // 2, BAND_URL[0] + 52), "Windows, Mac and Linux",
                     nf, (*MUTED, int(255 * a)), 3)
 
-        caption(d, words, t)
         progress(img, k)
 
         img.convert("RGB").save(out / f"{i:05d}.jpg", quality=90)
