@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import re
+import time
 import urllib.error
 import urllib.request
 
@@ -40,6 +41,9 @@ def fetch(url: str, method: str = "GET", bust: bool = False,
     The body limit matters. The footer sits at the end of a page, so reading
     only the first few kilobytes reports a link row as missing on a page that
     has one, which is how this check lied about a working deploy.
+
+    Retries cover a rate limit. itch.io answers 429 to a cloud runner now and
+    then, and a transient refusal is not a broken link.
     """
     if bust:
         url += ("&" if "?" in url else "?") + "cb=check"
@@ -47,18 +51,26 @@ def fetch(url: str, method: str = "GET", bust: bool = False,
                                  headers={"User-Agent": UA,
                                           "Accept": "*/*",
                                           "Cache-Control": "no-cache"})
-    try:
-        with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
-            body = r.read(limit).decode("utf-8", "replace")
-            return r.status, r.geturl(), body
-    except urllib.error.HTTPError as e:
+    for attempt in range(3):
         try:
-            return e.code, getattr(e, "url", url), e.read(limit).decode(
-                "utf-8", "replace")
-        except Exception:  # noqa: BLE001
-            return e.code, url, ""
-    except Exception as e:  # noqa: BLE001
-        return 0, url, str(e)[:120]
+            with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+                body = r.read(limit).decode("utf-8", "replace")
+                return r.status, r.geturl(), body
+        except urllib.error.HTTPError as e:
+            if e.code in (429, 502, 503) and attempt < 2:
+                time.sleep(2 + attempt * 2)
+                continue
+            try:
+                return e.code, getattr(e, "url", url), e.read(limit).decode(
+                    "utf-8", "replace")
+            except Exception:  # noqa: BLE001
+                return e.code, url, ""
+        except Exception as e:  # noqa: BLE001
+            if attempt < 2:
+                time.sleep(1.5)
+                continue
+            return 0, url, str(e)[:120]
+    return 0, url, "gave up"
 
 
 def check_discord(url: str) -> tuple[bool, str]:
