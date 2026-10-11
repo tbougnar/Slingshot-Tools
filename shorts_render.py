@@ -263,6 +263,21 @@ def caption(d: ImageDraw.ImageDraw, words: list[dict], now: float) -> None:
         y += lh
 
 
+def _price_line(parts: list[dict], price: str) -> int:
+    """Which spoken line the price card belongs beside.
+
+    The narration no longer says the price, so there is no sentence to hang it
+    on. It goes beside the proof, where the viewer has just been told what the
+    thing does and is deciding whether they care.
+    """
+    n = len(parts)
+    if n <= 1:
+        return 0
+    if n <= 3:
+        return 1
+    return min(2, n - 2)
+
+
 def progress(img: Image.Image, done: float) -> None:
     d = ImageDraw.Draw(img, "RGBA")
     d.rectangle([0, H - 8, W, H], fill=(*MUTED, 60))
@@ -353,68 +368,63 @@ def main() -> int:
         img = img.convert("RGBA")
         d = ImageDraw.Draw(img, "RGBA")
 
-        # the mark sits above everything, as in the prototype
-        logo(d, W // 2, 250, 34, int(255 * min(1.0, t / 0.4)))
-        lf, _ = font(40, bold=True)
-        tracked(d, (W // 2, 310), "SLINGSHOT", lf, (*WHITE, 236), 5)
-        sf, _ = font(22)
-        tracked(d, (W // 2, 358), "TOOLS", sf, (*ACCENT, 236), 7)
-
         last = which == nlines - 1
         # the closing card replaces the headline rather than stacking on it
-        closing = last and local > 0.74
-        # price: only in the last line's scene, and always below wherever
-        # the headline actually ended, so three lines never run into it
-        # the price rides the sentence that says it, not the one after it
-        price_line = next((i for i, p in enumerate(parts)
-                           if price.lower().strip(".").replace("$", "")
-                           in p["text"].lower()
-                           or any(ch.isdigit() for ch in p["text"])
-                           and any(w in p["text"].lower()
-                                   for w in ("cost", "price", "dollar"))),
-                          None)
-        if price_line is None:
-            price_line = nlines - 1
-        show_price = (which == price_line and 0.18 < local <= 0.74
+        closing = last and local > 0.72
+
+        # the brand arrives late, attached to the thing they now want.
+        # Direct response research is consistent on this: opening with a logo
+        # gives a scroller no reason to stay.
+        if t > 1.0:
+            ba = int(255 * ease((t - 1.0) / 0.5))
+            logo(d, W // 2, 300, 30, ba)
+            lf, _ = font(34, bold=True)
+            tracked(d, (W // 2, 352), 'SLINGSHOT', lf, (*WHITE, ba), 5)
+            sf, _ = font(20)
+            tracked(d, (W // 2, 396), 'TOOLS', sf, (*ACCENT, ba), 7)
+
+        # the price is shown, not spoken: a number the viewer reads stays, a
+        # number the voice says is forgotten
+        price_line = _price_line(parts, price)
+        show_price = (which == price_line and 0.14 < local <= 0.88
                       and bool(price))
+        if show_price:
+            pf, _ = font(64, bold=True)
+            a = ease((local - 0.14) / 0.2)
+            plines = wrap(d, price, pf, W - 300)
+            lh = 98
+            y = 850
+            for ln in plines:
+                tw = d.textlength(ln, font=pf)
+                x = W / 2 - tw / 2
+                d.rounded_rectangle([x - 40, y - 16, x + tw + 40, y + 96],
+                                    radius=48, fill=(*ACCENT, int(246 * a)))
+                d.text((x, y), ln, font=pf, fill=(*BG, int(255 * a)))
+                y += lh
+            nf, _ = font(26)
+            tracked(d, (W // 2, y + 24), 'one off, yours forever',
+                    nf, (*MUTED, int(255 * a)), 2)
 
         if not closing:
             # the headline, staggered, cut to the line being spoken
             appear = ease_in(min(1.0, max(0.0, local / 0.18)))
-            end_y = kinetic(d, parts[which]["text"], 500, W // 2,
-                            W - 200, 84, appear, WHITE)
-        else:
-            end_y = 760
+            kinetic(d, parts[which]['text'], 660, W // 2, W - 200, 86,
+                    appear, WHITE)
 
-        if show_price:
-            pf, _ = font(60, bold=True)
-            a = ease((local - 0.18) / 0.22)
-            lines = wrap(d, price, pf, W - 320)
-            lh = 96
-            y = max(end_y + 36, 900)
-            for ln in lines:
-                tw = d.textlength(ln, font=pf)
-                x = W / 2 - tw / 2
-                d.rounded_rectangle([x - 36, y - 14, x + tw + 36, y + 90],
-                                    radius=42, fill=(*ACCENT, int(244 * a)))
-                d.text((x, y), ln, font=pf, fill=(*BG, int(255 * a)))
-                y += lh
-
-        # the window carries the middle of the video; it steps aside for the
-        # price rather than fighting it for the same space
+        # the window carries the proof; it steps aside for the price card
         if (which >= 1 or closing) and not show_price:
             rev = min(1.0, 0.25 + local * 0.5 + (which - 1) * 0.22)
             img = mock_window(img, rev, which, feats, 0)
 
         # the closing card takes the headline's slot, nothing else on screen
         if closing:
-            a = ease((local - 0.74) / 0.16)
-            kinetic(d, f"Get {name}", 470, W // 2, W - 200, 76, a, WHITE)
+            a = ease((local - 0.72) / 0.16)
+            kinetic(d, f'Get {name}', 660, W // 2, W - 200, 74, a, WHITE)
             uf, _ = font(30, bold=True)
-            tracked(d, (W // 2, 1520), "slingshot-security.itch.io",
+            tracked(d, (W // 2, 1500), 'slingshot-security.itch.io',
                     uf, (*ACCENT, int(255 * a)), 2)
             nf, _ = font(24)
-            tracked(d, (W // 2, 1580), "Windows, Mac and Linux",
+            tracked(d, (W // 2, 1560), 'Windows, Mac and Linux',
                     nf, (*MUTED, int(255 * a)), 3)
 
         caption(d, words, t)

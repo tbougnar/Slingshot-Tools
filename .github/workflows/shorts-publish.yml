@@ -82,6 +82,9 @@ jobs:
       - name: Render the frames
         run: python shorts_render.py
 
+      - name: Design the sound
+        run: python shorts_sfx.py
+
       - name: Join audio and video
         run: python shorts_mux.py
 

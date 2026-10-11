@@ -73,6 +73,122 @@ def build_audio(parts: list[dict], dest: Path) -> float:
     return media_seconds(dest)
 
 
+def cue_times() -> dict:
+    """When each cue fires, read from the plan shorts_sfx.py wrote."""
+    p = ROOT / "data" / "shorts_sfx.json"
+    if not p.exists():
+        return {}
+    try:
+        return {c["name"]: float(c["at"])
+                for c in json.loads(p.read_text(encoding="utf-8")).get("cues")
+                or []}
+    except (json.JSONDecodeError, OSError, KeyError):
+        return {}
+
+
+def cue_gain(name: str) -> float:
+    """Hits carry the ad, transitions carry it, UI ticks only punctuate.
+
+    Left any louder and the mix fights the narration, which is worse than no
+    sound design at all.
+    """
+    p = ROOT / "data" / "shorts_sfx.json"
+    if p.exists():
+        try:
+            for c in json.loads(p.read_text(encoding="utf-8")).get("cues") or []:
+                if c["name"] == name:
+                    return {"hit": 0.55, "transition": 0.38,
+                            "ui": 0.30}.get(c.get("kind", "ui"), 0.30)
+        except (json.JSONDecodeError, OSError):
+            pass
+    return 0.30
+
+
+def plan_has_bed() -> bool:
+    p = ROOT / "data" / "shorts_sfx.json"
+    if not p.exists():
+        return False
+    try:
+        return bool(json.loads(p.read_text(encoding="utf-8")).get("bed"))
+    except (json.JSONDecodeError, OSError):
+        return False
+
+
+def cue_labels() -> list[str]:
+    p = ROOT / "data" / "shorts_sfx.json"
+    if not p.exists():
+        return []
+    try:
+        return [c["name"] for c in
+                (json.loads(p.read_text(encoding="utf-8")).get("cues") or [])
+                if (ROOT / "data" / "shorts_sfx" / f"{c['name']}.mp3").exists()]
+    except (json.JSONDecodeError, OSError, KeyError):
+        return []
+
+
+def mix_video(dest: Path, voice: Path) -> list[str]:
+    """Lay the sound design under the finished video.
+
+    Runs after the picture is done and never before, because frames are the
+    expensive part and sound design may be missing, retimed or replaced. The
+    video stream is copied rather than re-encoded, so this is fast and lossless.
+    """
+    cues = cue_labels()
+    bed = plan_has_bed()
+    if not (bed or cues):
+        return ["sound design: none, voice only"]
+
+    sfx = ROOT / "data" / "shorts_sfx"
+    times = cue_times()
+
+    # stage one: the design on its own, each cue delayed to its own timestamp
+    inputs: list[str] = []
+    graph: list[str] = []
+    outs: list[str] = []
+    n = 0
+
+    if bed:
+        n += 1
+        inputs += ["-i", str(sfx / "bed.mp3")]
+        graph.append(f"[{n}:a]volume=0.13[bed]")
+        outs.append("[bed]")
+
+    for cue in cues:
+        n += 1
+        ms = int(times.get(cue, 0.0) * 1000)
+        inputs += ["-i", str(sfx / f"{cue}.mp3")]
+        graph.append(f"[{n}:a]volume={cue_gain(cue)},"
+                     f"adelay={ms}|{ms}[c{cue}]")
+        outs.append(f"[c{cue}]")
+
+    graph.append("".join(outs) +
+                 f"amix=inputs={len(outs)}:duration=longest:"
+                 f"normalize=0[design]")
+
+    stem = dest.parent / "design.m4a"
+    subprocess.run(
+        [ffmpeg(), "-y"] + inputs +
+        ["-filter_complex", ";".join(graph), "-map", "[design]",
+         "-c:a", "aac", "-b:a", "192k", str(stem)],
+        capture_output=True, check=True)
+
+    # stage two: narration over the design, normalised for the feed
+    subprocess.run(
+        [ffmpeg(), "-y", "-i", str(dest), "-i", str(stem), "-i", str(voice),
+         "-filter_complex",
+         "[1:a]volume=1.0[bed];[bed][2:a]amix=inputs=2:duration=longest:"
+         "normalize=0[mix]",
+         "-map", "0:v", "-map", "[mix]",
+         "-c:v", "copy",
+         "-c:a", "aac", "-b:a", "192k", "-ar", "48000",
+         "-af", "loudnorm=I=-14:TP=-1.5:LRA=11",
+         "-movflags", "+faststart", "-y", str(dest)],
+        capture_output=True, check=True)
+
+    what = f"{len(cues)} cue(s)" + (" plus a music bed" if bed else "")
+    return [f"sound design: {what}"]
+
+
 def main() -> int:
     voice = json.loads((ROOT / "data" / "shorts_voice.json")
                        .read_text(encoding="utf-8"))
@@ -123,7 +239,13 @@ def main() -> int:
     if not dest.exists() or dest.stat().st_size < 20_000:
         raise SystemExit("[mux] the file came out empty")
 
+    # the sound design is mixed in afterwards so it can be skipped, retimed or
+    # replaced without re-rendering a single frame
+    notes = mix_video(dest, audio)
+
     log(f"{dest.name}  {dest.stat().st_size / 1024 / 1024:.1f} MB")
+    for n in notes:
+        log(f"  {n}")
     (ROOT / "data" / "shorts_video.json").write_text(
         json.dumps({"file": str(dest), "slug": slug,
                     "seconds": round(seconds, 1)}, indent=2),

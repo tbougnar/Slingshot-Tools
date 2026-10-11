@@ -1,8 +1,25 @@
 """Write the narration for a Short, from what the product actually is.
 
-The script is generated from the published product record rather than written by
-hand, so the price and the claim in the video can never drift from what is
-sold. A Short that quotes a price that has changed is worse than no Short.
+The script is generated from the published product record rather than written
+by hand, so the claim in the video can never drift from what is sold. A Short
+that quotes a price that has changed is worse than no Short.
+
+The structure follows direct response practice for feed video, which is
+stricter than it first looks:
+
+  hook    the pain, in the viewer's own words, under three seconds
+  problem the cost of living with it, one line
+  proof   what the product actually does, shown rather than praised
+  ask     one action
+
+Three things the research is explicit about, and this script obeys:
+
+- Do not open with the brand. Nobody scrolling knows or cares who you are, so
+  the name comes late, attached to the thing they now want.
+- Agitation gets cut. Targeting already selected people who feel the problem,
+  and dwelling on misery reads as manipulative in a short slot.
+- The price belongs on screen, not in the narration. Spoken numbers fight the
+  voice for attention and are forgotten; a number the viewer reads stays.
 
 Groq writes it because it is already a dependency and it is free.
 """
@@ -17,21 +34,23 @@ import providers
 
 ROOT = Path(__file__).resolve().parent
 
-# Shorts are vertical and autoplayed muted, so the first words carry the whole
-# video and everything after that has to earn the next second.
-RULES = """Write narration for a 30 second vertical YouTube Short advertising a \
-desktop tool.
+RULES = """Write narration for a 20 second vertical advert for a desktop tool.
+
+Structure, in order, and nothing else:
+  hook    under 7 words. The pain, in the words a real person would use.
+  problem one sentence. The cost of living with it today.
+  proof   one sentence. What the tool does about it, plainly.
+  ask     under 7 words. One action.
 
 Hard rules:
-- Open with a hook in the first five words. No "introducing", no "in this \
-video".
-- Say what it does in one plain sentence, then the price, then one call to \
-action.
-- Short sentences. It is spoken aloud, so no parentheses, no bullet points, no \
-em dashes, no markdown.
-- Do not use the words "revolutionary", "game-changing", "seamless", \
-"game changer", "unlock", "supercharge", or "elevate".
-- Never claim the tool does something it does not do.
+- Never say the brand or the product name in the narration. It appears on
+  screen instead.
+- Never say a price or a number aloud. Prices are shown, not spoken.
+- Start mid thought. No greeting, no introducing, no build up.
+- No marketing words: no revolutionary, seamless, game-changing, unlock,
+  supercharge, effortless, robust, powerful, elevate.
+- Short sentences, spoken aloud. No parentheses, no dashes, no markdown.
+- Do not describe features the record does not support.
 - Return JSON only, no prose around it."""
 
 
@@ -74,25 +93,21 @@ def ask(model: str) -> dict:
 
     prompt = f"""Tool: {name}
 What it does: {blurb}
-Price: {price}
+Price, shown on screen only: {price}
 
 Produce a JSON object with exactly these keys:
-  "hook"    - under 8 words, the opening line
-  "beats"   - a list of 3 to 4 strings, each under 16 words, the middle of \
-the video
-  "price"   - one short sentence that says the price exactly as written above
-  "cta"     - under 8 words, what to do now
-
-The price sentence must contain the price exactly as given. Do not turn it \
-into words, do not round it, do not invent a discount.
+  "hook"    under 7 words, the pain in plain words
+  "problem" one sentence
+  "proof"   one sentence
+  "ask"     under 7 words, one action
 
 {RULES}"""
     raw = providers.groq_chat(model, f"You are a direct response copywriter. "
-                                    f"{RULES}", prompt, 0.8, 700)
-    return _clean(raw, p, name, price)
+                                    f"{RULES}", prompt, 0.85, 600)
+    return _clean(raw, p)
 
 
-def _clean(raw: str, p: dict, name: str, price: str) -> dict:
+def _clean(raw: str, p: dict) -> dict:
     """Pull the JSON out of whatever the model wrapped it in."""
     m = re.search(r"\{.*\}", raw, re.S)
     if not m:
@@ -102,30 +117,46 @@ def _clean(raw: str, p: dict, name: str, price: str) -> dict:
     except json.JSONDecodeError:
         raise SystemExit(f"[shorts] malformed JSON: {m.group(0)[:120]}")
 
-    beats = [str(b).strip() for b in d.get("beats", []) if str(b).strip()]
+    name = str(p.get("name") or p.get("title") or "this tool").lower()
     out = {
         "hook": str(d.get("hook", "")).strip(),
-        "beats": beats[:4],
-        "price": str(d.get("price", "")).strip(),
-        "cta": str(d.get("cta", "")).strip(),
+        "problem": str(d.get("problem", "")).strip(),
+        "proof": str(d.get("proof", "")).strip(),
+        "ask": str(d.get("ask", "")).strip(),
     }
-    # fall back to the product's own words rather than shipping a hole
-    out["hook"] = out["hook"] or f"Stop doing {name} by hand."
-    out["price"] = out["price"] or f"It is {price}, one off."
-    out["cta"] = out["cta"] or "Link in the bio."
 
-    # the number shown has to be the number sold, whatever the model wrote
-    digits = re.findall(r"\$?\d+(?:\.\d+)?", out["price"])
-    want = re.findall(r"\$?\d+(?:\.\d+)?", price)
-    if want and (not digits or digits[0] != want[0]):
-        out["price"] = f"It is {price}. One off, yours forever."
+    # the brand is on screen, never in the narration
+    name = str(p.get("name") or p.get("title") or "this tool").lower()
+    for k, v in list(out.items()):
+        if name and name in v.lower():
+            log(f"stripped the brand name out of the {k}")
+            out[k] = re.sub(re.escape(name), "it", v, flags=re.I)
 
+    # a spoken price fights the voice and is forgotten; the card carries it
+    for k, v in list(out.items()):
+        if not re.search(r"\$\s?\d|\b\d+\s?(dollars|pounds|euros|usd)\b", v,
+                         re.I):
+            continue
+        log(f"stripped a spoken price out of the {k}")
+        # drop the whole clause the number sits in, not just the digits: a
+        # sentence whose only content was the price leaves nothing worth
+        # saying, and the card shows it better anyway
+        cleaned = re.sub(r"[^.]*\$\s?\d[^.]*\.?", "", v)
+        if len(cleaned.strip()) < 12:
+            # the whole line was the price; make it a benefit instead
+            cleaned = "It runs on your own machine, not a server."
+        out[k] = cleaned.strip()
+
+    if not out["hook"]:
+        raise SystemExit("[shorts] the model returned no hook")
+    if not out["ask"]:
+        out["ask"] = "Download it free to try."
     return out
 
 
 def lines(d: dict) -> list[str]:
     """The narration in the order it is spoken."""
-    seq = [d["hook"]] + list(d["beats"]) + [d["price"], d["cta"]]
+    seq = [d["hook"], d.get("problem", ""), d.get("proof", ""), d["ask"]]
     return [s for s in seq if s]
 
 
