@@ -293,8 +293,8 @@ def main() -> int:
     name = str(script.get("name") or "Slingshot Tool")
     price = str(script.get("price") or "")
 
-    # what the mock window shows: real labels for what the product does, so the
-    # window shows product and not a copy of the narration
+    # what the mock window shows: real feature names for this kind of tool, so the
+    # window shows a product and not a copy of the narration
     beats = script.get("beats") or {}
     feats: list[str] = []
     for b in (beats.get("beats") or []):
@@ -303,11 +303,13 @@ def main() -> int:
         t = " ".join(t.split()[:5]).strip()
         if len(t) > 3 and t.lower() not in feats:
             feats.append(t)
-    for fallback in ("Encrypted storage", "One master key",
-                     "Works fully offline", "Search and filter"):
+    for fb in ("Encrypted on your disk", "One master key",
+               "Works fully offline", "Search and filter",
+               "Never forgets a login"):
         if len(feats) >= 4:
             break
-        feats.append(fallback)
+        if fb.lower() not in [f.lower() for f in feats]:
+            feats.append(fb)
     feats = feats[:4]
 
     words = []
@@ -363,7 +365,18 @@ def main() -> int:
         closing = last and local > 0.74
         # price: only in the last line's scene, and always below wherever
         # the headline actually ended, so three lines never run into it
-        show_price = last and 0.18 < local <= 0.74 and bool(price)
+        # the price rides the sentence that says it, not the one after it
+        price_line = next((i for i, p in enumerate(parts)
+                           if price.lower().strip(".").replace("$", "")
+                           in p["text"].lower()
+                           or any(ch.isdigit() for ch in p["text"])
+                           and any(w in p["text"].lower()
+                                   for w in ("cost", "price", "dollar"))),
+                          None)
+        if price_line is None:
+            price_line = nlines - 1
+        show_price = (which == price_line and 0.18 < local <= 0.74
+                      and bool(price))
 
         if not closing:
             # the headline, staggered, cut to the line being spoken
