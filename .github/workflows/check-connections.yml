@@ -26,6 +26,8 @@ jobs:
       DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
       DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+      ELEVENLABS_VOICE_ID: ${{ vars.ELEVENLABS_VOICE_ID }}
       YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
       YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
       YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
@@ -38,6 +40,10 @@ jobs:
 
       - name: Install deps
         run: pip install --quiet requests
+
+      - name: Find a working ElevenLabs endpoint
+        if: env.ELEVENLABS_API_KEY != ''
+        run: python shorts_probe.py
 
       - name: Are the credentials good
         run: python check_connections.py
