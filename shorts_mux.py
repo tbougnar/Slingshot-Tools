@@ -186,7 +186,10 @@ def mix_video(dest: Path, voice: Path) -> list[str]:
 
     # stage two: narration over the design, normalised for the feed. loudnorm
     # has to live inside the complex graph, because ffmpeg refuses a simple
-    # -af filter on a stream that came out of one.
+    # -af filter on a stream that came out of one. The result is written to a
+    # new file and swapped in, because ffmpeg will not edit a file it is
+    # reading and refuses the whole command with a bare "exiting".
+    final = dest.with_name(dest.stem + "-mix.mp4")
     _run([ffmpeg(), "-y", "-i", str(dest), "-i", str(stem),
           "-i", str(voice),
           "-filter_complex",
@@ -196,8 +199,11 @@ def mix_video(dest: Path, voice: Path) -> list[str]:
           "-map", "0:v", "-map", "[out]",
           "-c:v", "copy",
           "-c:a", "aac", "-b:a", "192k", "-ar", "48000",
-          "-movflags", "+faststart", str(dest)],
+          "-movflags", "+faststart", str(final)],
          "mixing narration over the design")
+
+    final.replace(dest)
+    stem.unlink(missing_ok=True)
 
     what = f"{len(cues)} cue(s)" + (" plus a music bed" if bed else "")
     return [f"sound design: {what}"]
@@ -236,6 +242,8 @@ def main() -> int:
                       .read_text(encoding="utf-8")).get("slug", "short")
     dest = out_dir / f"{slug}-short.mp4"
 
+    # the first pass writes a plain video plus the joined narration
+    plain = dest.with_name(dest.stem + "-plain.mp4")
     subprocess.run(
         [ffmpeg(), "-y",
          "-framerate", str(FPS), "-i", str(frames_dir / "%05d.jpg"),
@@ -247,11 +255,12 @@ def main() -> int:
          "-c:a", "aac", "-b:a", "192k", "-ar", "48000",
          "-af", "loudnorm=I=-14:TP=-1.5:LRA=11",  # YouTube's target
          "-shortest", "-movflags", "+faststart",
-         str(dest)],
+         str(plain)],
         capture_output=True, check=True)
 
-    if not dest.exists() or dest.stat().st_size < 20_000:
+    if not plain.exists() or plain.stat().st_size < 20_000:
         raise SystemExit("[mux] the file came out empty")
+    plain.replace(dest)
 
     # the sound design is mixed in afterwards so it can be skipped, retimed or
     # replaced without re-rendering a single frame
