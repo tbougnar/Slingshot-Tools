@@ -254,7 +254,8 @@ _SHOT_CACHE: dict = {}
 
 
 def app_window(img: Image.Image, slug: str, reveal: float,
-               features: list[str], top: int) -> Image.Image:
+               features: list[str], top: int,
+               small: bool = False) -> Image.Image:
     """The real interface, inside a window frame.
 
     The screenshot is what the app genuinely looks like: its own colours, its
@@ -275,9 +276,10 @@ def app_window(img: Image.Image, slug: str, reveal: float,
     # so the window is given the room it would have shared with captions
     # a fixed window that fits its band. Calculating the height from the
     # screenshot's aspect overflowed the frame and pushed the window half off
-    # screen, which is worse than letterboxing
+    # screen, which is worse than letterboxing. small=True is the case where
+    # a three line headline already filled the band above it.
     cw = int(W * 0.78)
-    ch = BAND_WINDOW[1] - BAND_WINDOW[0]
+    ch = int((BAND_WINDOW[1] - BAND_WINDOW[0]) * (0.66 if small else 1.0))
     cx = (W - cw) // 2
 
     sc = 0.95 + 0.05 * a
@@ -582,18 +584,19 @@ def main() -> int:
         # above the window, three do not.
         long_head = len(wrap(d, parts[which]["text"], font(86)[0],
                              W - 200)) >= 3
-        # The window shows for most of the video, not just where a headline
-        # happens to be short. It only steps aside for the price card, for a
-        # three line headline, and for the closing card.
         has_shot = bool(_shot_for(str(script.get("slug") or "")))
         # from the very first line after the hook, so the app is on screen for
         # most of the video. It only steps aside for the price card, for a
         # three line headline, and for the closing card.
-        if (not closing and not show_price and not long_head and has_shot
-                and which >= 1):
+        if not closing and not show_price and has_shot and which >= 1:
             rev = min(1.0, 0.25 + local * 0.55)
+            # a three line headline fills its band, so the window drops below
+            # it rather than leaving the bottom half of the frame empty
             img = app_window(img, str(script.get("slug") or ""), rev,
-                             feats, BAND_WINDOW[0])
+                             feats,
+                             BAND_HEAD[1] + 60 if long_head
+                             else BAND_WINDOW[0],
+                             small=long_head)
 
         # the closing card takes the headline's slot, nothing else on screen
         if closing:
