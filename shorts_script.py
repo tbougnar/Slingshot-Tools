@@ -96,85 +96,19 @@ def product() -> dict:
 
 
 def real_features(slug: str, limit: int = 10) -> list[str]:
-    """What the app actually does, read from the app itself.
+    """What the app actually does, read out of the app itself.
 
-    A tour mode needs a minute of material and the product record holds three
-    fields, so asking the model to fill 60 seconds from a blurb makes it
-    invent features. The app's own interface is the one place the real
-    capabilities are written down, so that is what gets read.
-
-    Three sources, in order of how much they can be trusted: the catalog's
-    difference list, the app's feature markup, then anything the page labels.
+    A tour needs a minute of material and the product record holds three
+    fields, so asking the model to fill it from a blurb makes it invent
+    features. extract_features.py already knows how to read them out of the
+    source and write them into the catalog, so this only asks it. One place
+    decides what a feature is; two places would drift apart.
     """
-    root = ROOT / "site" / "apps"
-    if not root.exists():
-        return []
-
-    dirs = [d for d in sorted(root.iterdir())
-            if d.is_dir() and slug.startswith(d.name[:len(slug)])] \
-        or [d for d in sorted(root.iterdir()) if d.is_dir()]
-    if not dirs:
-        return []
-
-    app = dirs[0]
-    out: list[str] = []
-
-    # control names that describe chrome rather than capability. Kept out because
-    # "Delete" and "Toggle Theme" are not things to advertise.
-    CHROME = {"delete", "cancel", "close", "menu", "toggle theme",
-              "toggle dark mode", "theme", "close dialog", "open",
-              "edit", "save", "back", "next", "settings", "help", "about"}
-
-    def add(text: str) -> None:
-        t = " ".join(str(text).split()).strip(" .—-*")
-        if len(t) < 4 or len(t) > 68:
-            return
-        if t.lower() in CHROME:
-            return
-        if t.lower() not in [x.lower() for x in out]:
-            out.append(t)
-
-    # the catalog's own difference list, which is curated
     try:
-        cat = json.loads((ROOT / "site" / "apps.json").read_text(
-            encoding="utf-8"))
-        for a in (cat if isinstance(cat, list) else cat.get("apps", [])):
-            if a.get("base_slug") == slug or a.get("slug") == slug:
-                for d in (a.get("differences") or []):
-                    add(d if isinstance(d, str) else d.get("text", ""))
-    except (json.JSONDecodeError, OSError):
-        pass
-
-    page = app / "index.html"
-    if page.exists() and len(out) < limit:
-        html = page.read_text(encoding="utf-8", errors="replace")
-        for m in re.finditer(r"<li[^>]*>(.*?)</li>", html, re.S | re.I):
-            add(re.sub(r"<[^>]+>", " ", m.group(1)))
-            if len(out) >= limit:
-                break
-
-    # the app's own controls are the one place its capabilities are written
-    if len(out) < limit:
-        for sub in ("app/index.html", "index.html"):
-            ui = app / sub
-            if not ui.exists():
-                continue
-            try:
-                html = ui.read_text(encoding="utf-8", errors="replace")
-            except OSError:
-                continue
-            labels = (re.findall(r'aria-label="([^"]+)"', html)
-                      + re.findall(r'placeholder="([^"]+)"', html)
-                      + re.findall(r"<button[^>]*>([^<]{2,40})</button>",
-                                   html))
-            for raw in labels:
-                add(re.sub(r"\s+", " ", raw))
-                if len(out) >= limit:
-                    break
-            if out:
-                break
-
-    return out[:limit]
+        import extract_features
+        return extract_features.features_for(slug, limit)
+    except ImportError:
+        return []
 
 
 def ask(model: str, mode: str = "short") -> dict:
@@ -188,10 +122,11 @@ def ask(model: str, mode: str = "short") -> dict:
     if tour:
         log(f"{len(known)} real features found to write the tour from")
 
-    # Asking for more lines than there is material for gets nothing back at
-    # all: the model declines rather than inventing. The count is derived from
-    # what was actually found, so the request is always answerable.
-    want = min(8, max(3, len(known))) if tour else 0
+    # The count is derived from what was actually found, so the request is
+    # always answerable: asking for more lines than there is material for gets
+    # nothing back at all, and the model declines rather than inventing.
+    # Six features reads as about twenty six seconds, which is the target.
+    want = min(9, max(3, len(known))) if tour else 0
     if tour:
         log(f"asking for {want} tour line(s), which is what the material "
             f"supports")

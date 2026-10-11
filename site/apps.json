@@ -14,7 +14,14 @@
     "download": "",
     "price": 3.0,
     "free": false,
-    "differences": [],
+    "differences": [
+      "Unlimited entries, not a three item trial",
+      "Light and dark, whichever you prefer",
+      "Stored on your own disk, never sent anywhere",
+      "Takes every entry out to one file you control",
+      "Brings entries in from another manager",
+      "Stores site, username and password together in one place"
+    ],
     "published": true,
     "badge": "New",
     "date": "2026-10-08"
@@ -34,7 +41,14 @@
     "download": "",
     "price": 0.0,
     "free": true,
-    "differences": [],
+    "differences": [
+      "Unlimited entries, not a three item trial",
+      "Light and dark, whichever you prefer",
+      "Stored on your own disk, never sent anywhere",
+      "Takes every entry out to one file you control",
+      "Brings entries in from another manager",
+      "Stores site, username and password together in one place"
+    ],
     "published": true,
     "badge": "New",
     "date": "2026-10-08"
