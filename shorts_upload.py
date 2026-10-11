@@ -46,6 +46,24 @@ def access_token() -> str:
         return json.loads(r.read().decode("utf-8"))["access_token"]
 
 
+def privacy() -> str:
+    """How visible the upload is, refusing anything unrecognised.
+
+    The safe answer when the setting is missing is private, not public. A
+    typo in a variable name would otherwise publish every video to the world
+    without anyone noticing until it was up.
+    """
+    raw = (os.environ.get("YOUTUBE_PRIVACY", "") or "").strip().lower()
+    if not raw:
+        return "private"
+    if raw in ("private", "unlisted", "public"):
+        return raw
+    log(f"YOUTUBE_PRIVACY is {raw!r}, which YouTube will reject; "
+        f"falling back to private")
+    log("valid values are private, unlisted, public")
+    return "private"
+
+
 def metadata(script: dict) -> dict:
     """Title, description and tags built from the same source as the video."""
     name = script.get("name") or "Slingshot Tool"
@@ -74,8 +92,7 @@ def metadata(script: dict) -> dict:
             "selfDeclaredMadeForKids": False,
         },
         "status": {
-            "privacyStatus": (os.environ.get("YOUTUBE_PRIVACY",
-                                             "public").strip()),
+            "privacyStatus": privacy(),
             "selfDeclaredMadeForAds": False,
         },
     }
