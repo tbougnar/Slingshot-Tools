@@ -273,18 +273,11 @@ def app_window(img: Image.Image, slug: str, reveal: float,
 
     # the frame is taller than the content now that the caption band is gone,
     # so the window is given the room it would have shared with captions
-    # the window matches the screenshot's shape so the app fills it; a wide
-    # window around a tall screenshot leaves grey bars and a postage stamp
-    cw = int(W * 0.80)
-    shot = _shot_for(slug)
-    if shot is not None:
-        # room for the title bar, then the image at its own proportions
-        bar_h = 66
-        avail = int(W * 0.80 * (shot.height / shot.width)) + bar_h + 20
-        ch = max(480, min(avail, BAND_WINDOW[1] - BAND_WINDOW[0] + 420))
-    else:
-        ch = 620
-        bar_h = 66
+    # a fixed window that fits its band. Calculating the height from the
+    # screenshot's aspect overflowed the frame and pushed the window half off
+    # screen, which is worse than letterboxing
+    cw = int(W * 0.78)
+    ch = BAND_WINDOW[1] - BAND_WINDOW[0]
     cx = (W - cw) // 2
 
     sc = 0.95 + 0.05 * a
