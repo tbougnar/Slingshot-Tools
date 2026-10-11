@@ -88,6 +88,9 @@ jobs:
         env:
           DRY_RUN: ${{ inputs.dry_run }}
 
+      - name: Check the voice account
+        run: python eleven_check.py
+
       - name: Speak it
         run: python shorts_voice.py
 
