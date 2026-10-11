@@ -80,3 +80,6 @@ data/shorts_voice.json
 data/shorts_video.json
 data/shorts_published.json
 data/dry_run.json
+data/shots/
+data/shots.json
+data/shorts_thumb.json

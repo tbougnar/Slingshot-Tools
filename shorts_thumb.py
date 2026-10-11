@@ -64,65 +64,90 @@ def build(script: dict, shot: Image.Image | None) -> Image.Image:
     price = str(script.get("price") or "")
     name = str(script.get("name") or "Slingshot Tool")
 
-    # the app, tilted very slightly and cropped to fill the lower half
+    # the app, cropped to fill the lower half of the card. Both numbers are
+    # derived once so the hook, the price and the card cannot disagree.
+    card_top = int(H * 0.46)
+    footer_h = 130
+    card_h = H - card_top - footer_h
+
     if shot is not None:
-        target_h = int(H * 0.52)
+        target_h = card_h
         ratio = max(W / shot.width, target_h / shot.height)
         tw, th = int(shot.width * ratio) + 1, int(shot.height * ratio) + 1
         t = shot.resize((tw, th), Image.LANCZOS)
         left = max(0, (tw - W) // 2)
         topc = max(0, int((th - target_h) * 0.08))
         t = t.crop((left, topc, left + W, topc + target_h))
+        if t.size != (W, target_h):
+            t = t.resize((W, target_h), Image.LANCZOS)
 
-        layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-        mask = Image.new("L", (W, H), 0)
+        # the mask must be the size of the thing being pasted, not the frame;
+        # a mismatch here is a ValueError at the worst possible moment
+        mask = Image.new("L", (W, target_h), 0)
         ImageDraw.Draw(mask).rounded_rectangle(
-            [70, int(H * 0.44), W - 70, int(H * 0.44) + target_h],
-            radius=40, fill=255)
-        img.paste(t, (0, int(H * 0.44)), mask)
+            [0, 0, W - 1, target_h - 1], radius=40, fill=255)
 
-        # a line of the brand across the seam, so the card reads as ours
-        sr._LOGO and None
+        card = Image.new("RGB", (W, target_h), sr.PANEL)
+        card.paste(t, (0, 0), mask)
+        img.paste(card, (0, card_top))
+
+        # the brand mark across the seam, so the card reads as ours
         p = ROOT / "site" / "icon-512.png"
         if p.exists():
             try:
                 mark = Image.open(p).convert("RGBA")
-                side = int(W * 0.11)
+                side = int(W * 0.10)
                 mark = mark.resize((side, side), Image.LANCZOS)
-                img.paste(mark, (70, int(H * 0.44) - side // 2), mark)
+                img.paste(mark, (64, card_top - side // 2), mark)
             except Exception:  # noqa: BLE001
                 pass
 
-    # the hook, large, at the top where the eye lands first
+    # the hook first, so the price can be placed clear of however many lines
+    # it takes. Measuring before drawing is the only way to stop the badge
+    # landing on the last line of the headline.
     d = ImageDraw.Draw(img)
     fnt = font(112)
-    lines = wrap(d, hook, fnt, W - 160)
-    y = 300
-    for ln in lines[:3]:
+    lines = wrap(d, hook, fnt, W - 160)[:3]
+    lh = 132
+    y = 250
+    for ln in lines:
         tw = d.textlength(ln, font=fnt)
         x = (W - tw) / 2
-        # a shadow rather than a box: thick type needs separation, not a panel
         for dx, dy in ((5, 6), (-5, 6), (5, -6), (-5, -6)):
             d.text((x + dx, y + dy), ln, font=fnt, fill=(18, 8, 7))
         d.text((x, y), ln, font=fnt, fill=(255, 252, 248))
-        y += 128
+        y += lh
+    hook_end = y
 
-    # the price as a badge, because that is the reason to watch
+    # the price, below the headline with a real gap. Measuring before
+    # drawing is the only way to stop the badge landing on the type, and the
+    # badge height follows the font so stacked lines cannot overlap.
     if price:
-        pf = font(76)
-        lines = wrap(d, price, pf, W - 300)
-        py = int(H * 0.30)
-        for ln in lines[:2]:
+        def badge(font_size: int) -> tuple[list[str], int]:
+            pf = font(font_size)
+            step = int(font_size * 1.34)
+            return wrap(d, price, pf, W - 340)[:2], step
+
+        plines, step = badge(68)
+        py = hook_end + 44
+        if py + len(plines) * step > card_top - 30:
+            # shrink rather than overlap; a clipped badge is unreadable
+            plines, step = badge(56)
+            py = min(py, card_top - len(plines) * step - 30)
+        for ln in plines:
+            pf = font(56 if step < 92 else 68)
             tw = d.textlength(ln, font=pf)
             x = (W - tw) / 2
-            d.rounded_rectangle([x - 44, py - 20, x + tw + 44, py + 104],
-                                radius=52, fill=sr.ACCENT)
-            d.text((x, py), ln, font=pf, fill=sr.BG)
-            py += 104
+            d.rounded_rectangle([x - 42, py, x + tw + 42, py + step],
+                                radius=step // 2, fill=sr.ACCENT)
+            d.text((x, py + (step - pf.size) // 2 - pf.size // 10),
+                   ln, font=pf, fill=sr.BG)
+            py += step
 
-    nf = font(40)
+    nf = font(44)
     tw = d.textlength(name, font=nf)
-    d.text(((W - tw) / 2, H - 150), name, font=nf, fill=(230, 226, 220))
+    d.text(((W - tw) / 2, H - footer_h + 34), name, font=nf,
+           fill=(230, 226, 220))
 
     # a touch more contrast, because a thumbnail is judged at postage size
     img = ImageEnhance.Contrast(img).enhance(1.06)
