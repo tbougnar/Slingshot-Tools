@@ -1019,6 +1019,54 @@ the change that fixed it. Check here before proposing anything.
 - **Check for recurrence:** selftest_audit.py: each of them is checked as protected
 - **Status:** UNTESTED
 
+## B128 - a customer cannot buy anything: the buy button leads to an empty checkout link
+
+- **Cause:** itch_url has never been set, so the paid card renders a real price and a real button that goes nowhere. Every test in the project passed the whole time, because all of them read the catalog directly and none of them clicked the button
+- **Fix:** found by e2e_customer.py, which follows the journey a person follows. The fix needs a human to create the itch.io page and run set_itch_url.py; the tests now say so out loud on every run
+- **Files:** e2e_customer.py, e2e_product.py, e2e_all.py
+- **Check for recurrence:** python e2e_customer.py: the buy link must carry an itch.io address, and the run fails until it does
+- **Status:** UNTESTED
+
+## B129 - every test passed while the business could not take a single payment
+
+- **Cause:** the suite is built from the project's own point of view: it imports the modules, calls the functions and compares against expectations written by the same author. A codebase that is internally perfect can still be commercially dead, and nothing in it noticed
+- **Fix:** four end-to-end journeys now exist that go through a browser or over the network: arrive and buy, is there a product, does the free app work, do the links work. e2e_all.py runs them and refuses to call the project healthy while any of them is broken
+- **Files:** e2e_customer.py, e2e_product.py, e2e_app.py, e2e_links.py, e2e_all.py
+- **Check for recurrence:** python e2e_all.py exits non-zero while any journey is broken
+- **Status:** UNTESTED
+
+## B130 - the paid edition is a 59-byte file, not an application
+
+- **Cause:** paid/password-manager/app/index.html holds one localStorage assignment. Nothing checks the size or shape of a paid build, so a placeholder is indistinguishable from a product as far as the pipeline is concerned
+- **Fix:** e2e_product.py now asks whether the paid app is real: over two thousand bytes, an html document, and something to click. It reports the byte count so a placeholder cannot be mistaken for a build
+- **Files:** e2e_product.py
+- **Check for recurrence:** python e2e_product.py fails on a paid app under 2000 bytes or with no inputs
+- **Status:** UNTESTED
+
+## B131 - there is no installer, so even a working itch.io page would sell nothing
+
+- **Cause:** no .exe is built on this machine. The catalog calls the product built and published, and neither word was checked against the filesystem
+- **Fix:** e2e_product.py looks for the installer rather than trusting the catalog flag, because a flag that nothing maintains is a wish
+- **Files:** e2e_product.py
+- **Check for recurrence:** python e2e_product.py: there is an installer to hand over
+- **Status:** UNTESTED
+
+## B132 - the itch.io store answers with a 200 and an empty shop
+
+- **Cause:** the profile page resolves and loads, so the link check passed and the footer link looked healthy. Checking that a URL answers is not the same as checking there is something behind it
+- **Fix:** the link journey now reads the store page and looks for the product by name, so an empty shop fails rather than passing on its status code
+- **Files:** e2e_links.py
+- **Check for recurrence:** python e2e_links.py: the itch.io store actually lists the product
+- **Status:** UNTESTED
+
+## B133 - a real link was reported broken because the body was truncated
+
+- **Cause:** GitHub serves a large page and closes the connection early under a plain user agent. The test treated an IncompleteRead as a dead link, so the report was wrong about the site
+- **Fix:** a partial read is accepted when a status code came back, because a truncated body is a fetch problem and not a site being down. Only the status is trusted for these large pages
+- **Files:** e2e_links.py
+- **Check for recurrence:** python e2e_links.py, and the GitHub line now passes
+- **Status:** UNTESTED
+
 ## How to use this
 
 1. If the symptom matches an entry, use that fix. Do not invent a new one.
