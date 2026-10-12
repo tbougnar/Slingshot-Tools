@@ -66,6 +66,18 @@ data/lessons.txt
 # fixbook's; sharing one file meant whichever ran last destroyed the other.
 data/coach_lessons.txt
 
+# The growth signals and the goal they feed.
+#
+# data/signals.json is regenerated from live sources every Wednesday, so a
+# committed copy would be last week's numbers. The goal itself is a different
+# thing: it is a decision, and losing it would silently reset the company to
+# chasing reach forever, so data/goals.json is tracked on purpose.
+data/signals.json
+data/goal_history.json
+data/improve_daily.json
+data/weekly_review.md
+data/weekly_reviews.json
+
 # Discord state that must never be published.
 # data/polls.json holds voters' Discord user ids, and
 # data/discord_sent.json only matters on the machine that posts.

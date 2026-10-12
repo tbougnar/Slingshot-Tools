@@ -39,6 +39,11 @@ PROTECTED_WORKFLOWS = [
     # locked exactly like the ones already here.
     "monthly-update.yml",
     "weekly-patch.yml",
+    # the fast self-improvement lane. It may rewrite the generator, but it must
+    # not be able to rewrite the goal it is being measured against, or the
+    # thing deciding what counts as an improvement could edit its own
+    # standard.
+    "daily-improve.yml",
 ]
 
 # The scripts that make the site work. Editing these changes what customers get
@@ -57,6 +62,16 @@ MONEY_AND_DEATH = [
     "retire_product.py",    # taking a product down
     "publish_paid.py",      # putting a product on sale
     "set_itch_url.py",      # where a product is sold
+    # What the company is trying to be, and the numbers it judges itself on.
+    # Both are protected for the same reason as a price: a self-improving job
+    # that could edit the goal could decide it had already met it.
+    "goals.py",
+    "signals.py",
+    # The lane that decides whether to make a change at all, and what for.
+    # If this were improvable, the job could raise its own cooldowns or
+    # rewrite the objective it is handed, which is the same problem as a
+    # price the job may set itself.
+    "improve_daily.py",
 ]
 
 # The generator and its QA stack: the part the company may freely improve.

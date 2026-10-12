@@ -132,7 +132,7 @@ def t_workflows():
     # the four stages of the weekly cycle have to all be there
     for required in ("monday-vote.yml", "wednesday-review.yml",
                      "friday-build.yml", "friday-verify.yml", "pages.yml",
-                     "monthly-update.yml", "weekly-patch.yml"):
+                     "monthly-update.yml", "weekly-patch.yml", "daily-improve.yml"):
         if required not in names:
             raise AssertionError(f"missing workflow: {required}")
     return f"all {len(names)} workflows parse"
@@ -146,7 +146,8 @@ def t_imports():
                 "discord_tally", "discord_intro", "budget", "weekly_guard",
                 "check_repo_hygiene", "update_state", "update_plan",
                 "app_update", "update_discord", "update_weekly",
-                "update_trailer_script", "update_trailer_render"):
+                "update_trailer_script", "update_trailer_render",
+                "signals", "goals", "improve_daily"):
         importlib.import_module(mod)
     return "every module imports"
 

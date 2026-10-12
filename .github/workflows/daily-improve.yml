@@ -1,0 +1,101 @@
+name: Slingshot — daily self-improvement
+
+# The weekly cycle ships, reviews and improves. This is the fast lane: a much
+# smaller job, run most days, that looks for the one small change most likely
+# to help right now and does it only if the whole suite stays green.
+#
+# Why it is separate from wednesday-review.yml:
+#
+# - it may only touch the generator and its QA stack, so a failure here can
+#   never touch the site, a price, or a product
+# - it has its own concurrency group, so a bad day of patches cannot block the
+#   weekly review
+# - it is allowed to do nothing. Most runs will. A job that feels obliged to
+#   change something every day fills the repository with churn, and churn is
+#   how a codebase becomes impossible to read and slow to change safely.
+
+on:
+  schedule:
+    # 06:00 UTC, Monday to Saturday
+    - cron: "0 6 * * 1,2,3,4,5,6"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Run even if the guard says today is already done
+        required: false
+        default: "false"
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: slingshot-improve
+  cancel-in-progress: false
+
+jobs:
+  improve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      GROQ_CHAT_MODEL: ${{ secrets.GROQ_CHAT_MODEL }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      SLINGSHOT_MONTHLY_HOURS: "30"
+      # the editable set. Kept identical to the one the Wednesday job uses, so
+      # the two lanes cannot drift into different permissions.
+      SLINGSHOT_ALLOWED: "make_app.py,qa_loop.py,app_scanner.py,patcher.py,selfheal.py,sizeguard.py,tokenmeter.py,providers.py"
+      FORCE: ${{ inputs.force }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: pip install --quiet requests
+
+      - name: Is there budget left this month
+        run: python budget.py check --label daily-improve --need 0.12
+
+      - name: What are we trying to do right now
+        # The goal decides what counts as an improvement. Chasing reach and
+        # chasing revenue need different changes, and a job that ignores this
+        # spends its budget on whichever kind of change it happens to try
+        # first.
+        run: |
+          python signals.py || echo "signals unavailable, working blind"
+          python goals.py
+
+      - name: Pick one improvement and make it
+        run: python improve_daily.py
+
+      - name: Nothing protected may change
+        run: python weekly_guard.py check
+
+      - name: Nothing private is tracked
+        run: python check_repo_hygiene.py
+
+      - name: The whole suite must still pass
+        # A patch that broke anything is already discarded by
+        # self_upgrade.py. This re-runs after it to be sure the committed
+        # tree is the one that passed, not merely the one that was tested.
+        run: |
+          python selftest.py
+          python selftest_deep.py
+          python selftest_audit.py
+          python update_selftest.py
+          python site_js_selftest.py
+          python scan_selftest.py
+          python check_exposure.py
+
+      - name: Commit
+        run: |
+          git config user.name "slingshot-bot"
+          git config user.email "slingshot-bot@users.noreply.github.com"
+          git add data/self_upgrade.json data/improve_daily.json \
+                  data/goals.json data/signals.json || true
+          git diff --staged --quiet || \
+            git commit -q -m "chore: daily self-improvement [skip ci]"
+          git push || echo "nothing to push"

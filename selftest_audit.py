@@ -96,7 +96,8 @@ for f in ("make_app.py", "stage_app.py", "verify_app.py", "pricing.py",
           "app_update.py", "update_trailer_script.py",
           "update_trailer_voice.py", "update_trailer_render.py",
           "update_trailer_mux.py", "update_selftest.py",
-          "site_js_selftest.py"):
+          "site_js_selftest.py", "signals.py", "goals.py",
+          "improve_daily.py", "growth_selftest.py"):
     if not (R / f).exists():
         problems.append(("-", f"referenced script missing: {f}"))
 
@@ -159,6 +160,10 @@ WEEKLY_STAGES = {
                            "weekly_guard.py", "update_selftest.py"],
     "weekly-patch.yml": ["update_weekly.py", "weekly_guard.py", "budget.py",
                          "update_selftest.py"],
+    # the fast lane: it reads the goal and the signals, then tries one change
+    "daily-improve.yml": ["signals.py", "goals.py", "improve_daily.py",
+                          "self_upgrade.py", "weekly_guard.py",
+                          "budget.py", "selftest.py"],
 }
 for name, scripts in WEEKLY_STAGES.items():
     path = wf_dir / name
@@ -203,7 +208,8 @@ except Exception as _e:  # noqa: BLE001
 
 # The budget has to be asked before work starts, not only reported afterwards.
 for name in ("monday-vote.yml", "wednesday-review.yml", "friday-build.yml",
-             "friday-verify.yml", "monthly-update.yml", "weekly-patch.yml"):
+             "friday-verify.yml", "monthly-update.yml", "weekly-patch.yml",
+             "daily-improve.yml"):
     path = wf_dir / name
     if path.exists() and "budget.py check" not in path.read_text(encoding="utf-8"):
         problems.append(("-", f"{name} runs without checking the budget"))

@@ -45,8 +45,16 @@ MODEL = (os.environ.get("GROQ_CHAT_MODEL") or "").strip() \
     or "openai/gpt-oss-20b"
 
 # The tests that must all pass before a patch is kept.
+# Everything that has to stay green. A patch that breaks any of these is
+# discarded, so this list is the real definition of "working" for a
+# self-improvement. It grew when the Shorts lane and the release lane landed:
+# a generator patch that renders a broken thumbnail or a broken homepage is
+# not an improvement, however good it looks.
 TEST_SUITE = ["selftest.py", "selftest_deep.py", "selftest_audit.py",
-              "check_exposure.py"]
+              "check_exposure.py", "check_links.py",
+              "update_selftest.py", "site_js_selftest.py",
+              "shorts_layout_selftest.py", "shorts_mux_selftest.py",
+              "shorts_script_selftest.py", "scan_selftest.py"]
 
 
 def log(msg: str) -> None:

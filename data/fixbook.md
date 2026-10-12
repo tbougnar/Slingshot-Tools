@@ -963,6 +963,62 @@ the change that fixed it. Check here before proposing anything.
 - **Check for recurrence:** checked by hand: a comment naming a protected file passes, a real blanket add of one is reported
 - **Status:** UNTESTED
 
+## B121 - weekly review 2026-W42: 0 order(s), $0.00, 0 star(s), 0 vote(s) on the open ballot
+
+- **Cause:** ## What happened
+- **Fix:** read data/weekly_reviews.json before the next build; it carries this week's numbers and what to change
+- **Files:** data/weekly_reviews.json, weekly_review.py
+- **Check for recurrence:** recurs every Wednesday; one entry per week is expected
+- **Status:** UNTESTED
+
+## B122 - nothing has ever been buyable: the paid edition is marked published but has no itch_url, so the buy button leads nowhere
+
+- **Cause:** itch_url has never been set in this repository's history. publish_paid.py refuses to publish without one, but nothing checked the flag that was already there, so a published-but-unbuyable product sat there indefinitely and no gate noticed
+- **Fix:** check_exposure.py now reports any published paid edition with no itch_url. It is a warning rather than a failure by default, because nothing is leaking and fixing it needs one person to open a page; --strict makes it fatal
+- **Files:** check_exposure.py, signals.py
+- **Check for recurrence:** check_exposure.py prints the slug and the command that fixes it, and exits 1 under --strict
+- **Status:** UNTESTED
+
+## B123 - the paid build on this machine is a 59-byte placeholder, not an app
+
+- **Cause:** paid/password-manager/app/index.html holds a single localStorage assignment. Nothing verifies that a paid build is a real application before the catalog calls it built
+- **Fix:** reported rather than papered over: it is local and gitignored, so it was never published, but it means the paid edition has never actually been built and cannot be sold as it stands
+- **Files:** itch_publish.py
+- **Check for recurrence:** no automatic check yet; signals.py reports catalog_on_sale, which is 0 until an itch_url exists
+- **Status:** UNTESTED
+
+## B124 - conversion was reported as zero percent while five sales were recorded
+
+- **Cause:** conversion() read the sales count from itch.io, which only returns one when ITCH_API_KEY is present. Without it the count was 0, and the recorded order count was fetched and then never used
+- **Fix:** the order count stands in when itch has no sales of its own, and the result records which source it came from so the two can be compared
+- **Files:** signals.py
+- **Check for recurrence:** growth_selftest.py: five orders against two hundred visits is 2.5%, and itch's own figure still wins when it has one
+- **Status:** UNTESTED
+
+## B125 - the daily lane assumed two APIs that do not exist
+
+- **Cause:** improve_daily called budget.affordable, which budget.py never had, and passed an argument to self_upgrade.main, which takes none. Both raised and were swallowed by the same handler, so the lane logged a failure and moved on every day without ever improving anything
+- **Fix:** budget.remaining() is the real call and self_upgrade.main() takes no argument. The caught-and-carried-on handler stays, because a failing improver must not fail the job
+- **Files:** improve_daily.py
+- **Check for recurrence:** the lane runs and reports a real reason instead of an AttributeError
+- **Status:** UNTESTED
+
+## B126 - the self-improvement gate did not know about the new lanes
+
+- **Cause:** TEST_SUITE was four scripts. A generator patch could have broken the thumbnail layout, the release countdown or the homepage JavaScript and still counted as an improvement, because none of those were in the suite that decides whether to keep it
+- **Fix:** TEST_SUITE now includes every lane's selftest plus the link and exposure checks, so a patch that renders a broken card is discarded
+- **Files:** self_upgrade.py
+- **Check for recurrence:** self_upgrade.TEST_SUITE is checked against the filesystem at runtime
+- **Status:** UNTESTED
+
+## B127 - nothing stopped a self-improving job from rewriting the goal it is measured against
+
+- **Cause:** the guard protected prices and the site but not goals.py or signals.py, so the lane could have edited the standard it is judged on, which is the same failure as a job that raises its own price ceiling
+- **Fix:** goals.py, signals.py and improve_daily.py are in MONEY_AND_DEATH for the same reason pricing.py is, and selftest_audit asserts it
+- **Files:** weekly_guard.py, selftest_audit.py
+- **Check for recurrence:** selftest_audit.py: each of them is checked as protected
+- **Status:** UNTESTED
+
 ## How to use this
 
 1. If the symptom matches an entry, use that fix. Do not invent a new one.

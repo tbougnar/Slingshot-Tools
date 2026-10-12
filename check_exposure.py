@@ -2,10 +2,15 @@
 
 This is the check that would have caught the leak where old paid files stayed
 tracked in git and the build republished them. It runs on every publish.
+
+It also reports, separately, when a product is marked for sale but cannot be
+bought. That is not a leak and nothing is unsafe, so it does not fail the
+run unless ``--strict`` is passed.
 """
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -50,6 +55,7 @@ def main() -> int:
     basic = {a["slug"] for a in catalog if a.get("tier") == "basic"}
 
     problems = []
+    blockers = []
     for slug in paid:
         if (APPS / slug / "index.html").exists():
             problems.append(f"a paid edition is published: apps/{slug}")
@@ -69,6 +75,27 @@ def main() -> int:
         if "-basic-basic" in str(a.get("url", "")):
             problems.append(f"{a['slug']} has a malformed url")
 
+    # A paid edition marked published but with no itch_url is a dead end: the
+    # card renders a price, the button builds a checkout link with an empty
+    # itch parameter, and the visitor has nowhere to go. Nothing else in the
+    # pipeline catches this, because publish_paid.py refuses to set the flag
+    # without a url but nothing checks the flag that is already there.
+    #
+    # Reported separately from the exposure failures, and only fatal when
+    # asked for, because it is a different kind of problem: nothing is leaking
+    # and nothing is unsafe, the shop is simply closed. Failing every release
+    # over it would block the rest of the work indefinitely on something that
+    # needs one person to open an itch.io page, and a gate nobody can pass is a
+    # gate that stops being read.
+    for a in catalog:
+        if a.get("tier") != "full" or a.get("published") is not True:
+            continue
+        if not str(a.get("itch_url") or "").startswith("http"):
+            blockers.append(
+                f"{a['slug']} is published for sale but has no itch_url, so "
+                f"nobody can buy it (fix: python set_itch_url.py "
+                f"{a.get('base_slug') or a['slug']} <itch url>)")
+
     families, family_problems = check_tier_families(catalog)
     problems.extend(family_problems)
 
@@ -80,6 +107,13 @@ def main() -> int:
 
     print(f"[exposure] ok: {len(basic)} basic edition(s) published, "
           f"{len(paid)} paid edition(s) kept private")
+    if blockers:
+        print("[exposure] the shop is closed - nothing is leaking, but "
+              "nobody can buy:")
+        for b in blockers:
+            print(f"  - {b}")
+        # --strict is for the job that must not finish while money is blocked
+        return 1 if "--strict" in sys.argv else 0
     return 0
 
 

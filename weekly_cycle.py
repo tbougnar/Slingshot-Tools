@@ -35,16 +35,25 @@ COSTS = {
 }
 
 
-def run(args: list[str], label: str) -> int:
-    """Run one script and report what it did."""
+def run(args: list[str], label: str, soft: bool = False) -> int:
+    """Run one script and report what it did.
+
+    ``soft`` is for the telemetry steps. A missing key or an unreachable
+    service makes them print "unavailable" and carry on, which is the correct
+    outcome: a Wednesday spent fixing telemetry instead of shipping is a
+    Wednesday wasted.
+    """
     print(f"\n{'=' * 62}\n[cycle] {label}: {' '.join(args)}\n{'=' * 62}",
           flush=True)
     try:
         r = subprocess.run([sys.executable, *args], cwd=ROOT, text=True)
+        if soft and r.returncode != 0:
+            print(f"[cycle] {label} did not finish, continuing without it")
+            return 0
         return r.returncode
     except (OSError, subprocess.SubprocessError) as e:
         print(f"[cycle] {label} could not run: {e}")
-        return 1
+        return 0 if soft else 1
 
 
 def monday() -> int:
@@ -58,7 +67,17 @@ def wednesday() -> int:
     with budget.Timer("wednesday-review"):
         # reputation first: it is what the review reasons about
         run(["reputation.py"], "wednesday/reputation")
+        # the wider signal sweep, which adds the three sources reputation
+        # does not cover: the live site, Discord, and YouTube. It runs after
+        # reputation because it reads those same values for the catalogue.
+        # continue-on-error: telemetry that fails must not cost us the review,
+        # and every source in it already degrades to "unavailable".
+        run(["signals.py"], "wednesday/signals", soft=True)
         rc = run(["weekly_review.py"], "wednesday/review")
+        # the goal is decided from the signals, after they are collected and
+        # before the review reads them, so the review reasons about the right
+        # phase rather than assuming one
+        run(["goals.py"], "wednesday/goal", soft=True)
 
         # the review must not have touched anything it may not touch
         print(f"\n{'=' * 62}\n[cycle] wednesday/guard\n{'=' * 62}",

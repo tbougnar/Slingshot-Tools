@@ -1497,5 +1497,92 @@
   ],
   "detects": "checked by hand: a comment naming a protected file passes, a real blanket add of one is reported",
   "verified": false
+ },
+ {
+  "id": "B121",
+  "date": "2026-10-12",
+  "symptom": "weekly review 2026-W42: 0 order(s), $0.00, 0 star(s), 0 vote(s) on the open ballot",
+  "cause": "## What happened",
+  "fix": "read data/weekly_reviews.json before the next build; it carries this week's numbers and what to change",
+  "files": [
+   "data/weekly_reviews.json",
+   "weekly_review.py"
+  ],
+  "detects": "recurs every Wednesday; one entry per week is expected",
+  "verified": false
+ },
+ {
+  "id": "B122",
+  "date": "2026-10-12",
+  "symptom": "nothing has ever been buyable: the paid edition is marked published but has no itch_url, so the buy button leads nowhere",
+  "cause": "itch_url has never been set in this repository's history. publish_paid.py refuses to publish without one, but nothing checked the flag that was already there, so a published-but-unbuyable product sat there indefinitely and no gate noticed",
+  "fix": "check_exposure.py now reports any published paid edition with no itch_url. It is a warning rather than a failure by default, because nothing is leaking and fixing it needs one person to open a page; --strict makes it fatal",
+  "files": [
+   "check_exposure.py",
+   "signals.py"
+  ],
+  "detects": "check_exposure.py prints the slug and the command that fixes it, and exits 1 under --strict",
+  "verified": false
+ },
+ {
+  "id": "B123",
+  "date": "2026-10-12",
+  "symptom": "the paid build on this machine is a 59-byte placeholder, not an app",
+  "cause": "paid/password-manager/app/index.html holds a single localStorage assignment. Nothing verifies that a paid build is a real application before the catalog calls it built",
+  "fix": "reported rather than papered over: it is local and gitignored, so it was never published, but it means the paid edition has never actually been built and cannot be sold as it stands",
+  "files": [
+   "itch_publish.py"
+  ],
+  "detects": "no automatic check yet; signals.py reports catalog_on_sale, which is 0 until an itch_url exists",
+  "verified": false
+ },
+ {
+  "id": "B124",
+  "date": "2026-10-12",
+  "symptom": "conversion was reported as zero percent while five sales were recorded",
+  "cause": "conversion() read the sales count from itch.io, which only returns one when ITCH_API_KEY is present. Without it the count was 0, and the recorded order count was fetched and then never used",
+  "fix": "the order count stands in when itch has no sales of its own, and the result records which source it came from so the two can be compared",
+  "files": [
+   "signals.py"
+  ],
+  "detects": "growth_selftest.py: five orders against two hundred visits is 2.5%, and itch's own figure still wins when it has one",
+  "verified": false
+ },
+ {
+  "id": "B125",
+  "date": "2026-10-12",
+  "symptom": "the daily lane assumed two APIs that do not exist",
+  "cause": "improve_daily called budget.affordable, which budget.py never had, and passed an argument to self_upgrade.main, which takes none. Both raised and were swallowed by the same handler, so the lane logged a failure and moved on every day without ever improving anything",
+  "fix": "budget.remaining() is the real call and self_upgrade.main() takes no argument. The caught-and-carried-on handler stays, because a failing improver must not fail the job",
+  "files": [
+   "improve_daily.py"
+  ],
+  "detects": "the lane runs and reports a real reason instead of an AttributeError",
+  "verified": false
+ },
+ {
+  "id": "B126",
+  "date": "2026-10-12",
+  "symptom": "the self-improvement gate did not know about the new lanes",
+  "cause": "TEST_SUITE was four scripts. A generator patch could have broken the thumbnail layout, the release countdown or the homepage JavaScript and still counted as an improvement, because none of those were in the suite that decides whether to keep it",
+  "fix": "TEST_SUITE now includes every lane's selftest plus the link and exposure checks, so a patch that renders a broken card is discarded",
+  "files": [
+   "self_upgrade.py"
+  ],
+  "detects": "self_upgrade.TEST_SUITE is checked against the filesystem at runtime",
+  "verified": false
+ },
+ {
+  "id": "B127",
+  "date": "2026-10-12",
+  "symptom": "nothing stopped a self-improving job from rewriting the goal it is measured against",
+  "cause": "the guard protected prices and the site but not goals.py or signals.py, so the lane could have edited the standard it is judged on, which is the same failure as a job that raises its own price ceiling",
+  "fix": "goals.py, signals.py and improve_daily.py are in MONEY_AND_DEATH for the same reason pricing.py is, and selftest_audit asserts it",
+  "files": [
+   "weekly_guard.py",
+   "selftest_audit.py"
+  ],
+  "detects": "selftest_audit.py: each of them is checked as protected",
+  "verified": false
  }
 ]
