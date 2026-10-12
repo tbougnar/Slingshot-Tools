@@ -1,0 +1,70 @@
+name: Slingshot — weekly patch
+
+# The small lane between major updates: a bug fix or a UI improvement, shipped
+# every week with a patch version bump and nothing else.
+#
+# It is a separate workflow from monthly-update.yml rather than a branch of it,
+# so a failure in the monthly trailer cannot stop the weekly from shipping, and
+# so each has its own concurrency group and budget line.
+
+on:
+  schedule:
+    # Tuesday 09:00 UTC
+    - cron: "0 9 * * 2"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: slingshot-weekly-patch
+  cancel-in-progress: false
+
+jobs:
+  weekly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      GROQ_CHAT_MODEL: ${{ secrets.GROQ_CHAT_MODEL }}
+      DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+      DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
+      SLINGSHOT_MONTHLY_HOURS: "30"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: pip install --quiet requests
+
+      - name: Is there budget left this month
+        run: python budget.py check --label weekly-patch --need 0.2
+
+      # The lane refuses to run in a week where a major is already announced,
+      # so this is a no-op rather than a collision.
+      - name: Choose this week's lane
+        run: python update_weekly.py
+
+      - name: Show the lanes
+        run: python update_weekly.py --list
+
+      - name: Nothing protected may change
+        run: python weekly_guard.py check
+
+      - name: Run the tests
+        run: |
+          python selftest.py
+          python selftest_audit.py
+          python update_selftest.py
+
+      - name: Commit
+        run: |
+          git config user.name "slingshot-bot"
+          git config user.email "slingshot-bot@users.noreply.github.com"
+          git add data/update_state.json data/weekly_state.json || true
+          git diff --staged --quiet || \
+            git commit -q -m "chore: weekly patch [skip ci]"
+          git push || echo "nothing to push"

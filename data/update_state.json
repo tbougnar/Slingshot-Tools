@@ -1,0 +1,15 @@
+{
+  "version": "1.0.0",
+  "updated": "2026-10-12",
+  "next_major": "2026-10-26T18:00:00+00:00",
+  "next_major_title": "A whole new look",
+  "next_major_notes": [
+    "New spacing and type scale across every app",
+    "Rounder cards, softer shadows, clearer hierarchy",
+    "Light mode rebuilt to match the dark one"
+  ],
+  "discord_event_id": null,
+  "last_trailer": null,
+  "apps": [],
+  "next_major_theme": "ui-refresh"
+}

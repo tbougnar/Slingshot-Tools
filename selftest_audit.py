@@ -91,7 +91,12 @@ for f in ("make_app.py", "stage_app.py", "verify_app.py", "pricing.py",
           "patcher.py", "app_scanner.py", "qa_loop.py", "providers.py",
           "buglog.py", "tokenmeter.py", "sizeguard.py", "selfheal.py",
           "discord_intro.py", "discord_tally.py", "budget.py",
-          "weekly_guard.py", "check_repo_hygiene.py"):
+          "weekly_guard.py", "check_repo_hygiene.py", "update_state.py",
+          "update_plan.py", "update_discord.py", "update_weekly.py",
+          "app_update.py", "update_trailer_script.py",
+          "update_trailer_voice.py", "update_trailer_render.py",
+          "update_trailer_mux.py", "update_selftest.py",
+          "site_js_selftest.py"):
     if not (R / f).exists():
         problems.append(("-", f"referenced script missing: {f}"))
 
@@ -145,6 +150,15 @@ WEEKLY_STAGES = {
     "friday-verify.yml": ["verify_app.py", "build_paid_only.py",
                           "check_exposure.py", "weekly_guard.py",
                           "budget.py"],
+    # the release lane: plan, announce, trailer, publish the public state
+    "monthly-update.yml": ["update_plan.py", "update_discord.py",
+                           "update_trailer_script.py",
+                           "update_trailer_voice.py",
+                           "update_trailer_render.py",
+                           "update_trailer_mux.py", "update_state.py",
+                           "weekly_guard.py", "update_selftest.py"],
+    "weekly-patch.yml": ["update_weekly.py", "weekly_guard.py", "budget.py",
+                         "update_selftest.py"],
 }
 for name, scripts in WEEKLY_STAGES.items():
     path = wf_dir / name
@@ -166,6 +180,8 @@ try:
                "set_itch_url.py",
                ".github/workflows/friday-build.yml",
                ".github/workflows/friday-verify.yml",
+               ".github/workflows/monthly-update.yml",
+               ".github/workflows/weekly-patch.yml",
                ".github/workflows/pages.yml"):
         if not _g.is_protected(_p):
             problems.append(("-", f"should be protected but is not: {_p}"))
@@ -187,7 +203,7 @@ except Exception as _e:  # noqa: BLE001
 
 # The budget has to be asked before work starts, not only reported afterwards.
 for name in ("monday-vote.yml", "wednesday-review.yml", "friday-build.yml",
-             "friday-verify.yml"):
+             "friday-verify.yml", "monthly-update.yml", "weekly-patch.yml"):
     path = wf_dir / name
     if path.exists() and "budget.py check" not in path.read_text(encoding="utf-8"):
         problems.append(("-", f"{name} runs without checking the budget"))

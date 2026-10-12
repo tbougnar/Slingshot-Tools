@@ -87,6 +87,17 @@
     .optCta{font-size:13px;color:var(--red-ink);font-weight:700}
     .empty{grid-column:1/-1;text-align:center;padding:70px 20px;color:var(--muted);
       border:1px dashed var(--line);border-radius:18px}
+    /* release countdown. Hidden by default and only shown when update.json
+       says there is something real to count down to, so a stale file cannot
+       leave a banner on the page saying an update shipped weeks ago. */
+    .countdown{display:none;margin:0 auto 4px;padding:11px 18px;border-radius:14px;
+      border:1px solid var(--red-ink);background:color-mix(in srgb,var(--red) 10%,var(--card));
+      align-items:center;gap:12px;justify-content:center;flex-wrap:wrap;text-align:center}
+    .countdown.on{display:flex}
+    .countdown b{color:var(--red-ink);letter-spacing:-.01em}
+    .cdPill{font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+      color:var(--red-ink);border:1px solid var(--red-ink);border-radius:999px;padding:3px 9px}
+    .cdNum{font-variant-numeric:tabular-nums}
     @keyframes fadeDown{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
     @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
   </style>
@@ -104,6 +115,10 @@
     </div>
   </header>
   <main class="wrap">
+    <!-- The countdown lives here, right under the header, and is filled in
+         from update.json. No HTML is generated for it, so the page stays a
+         protected file and only the small JSON beside it is rewritten. -->
+    <div class="countdown" id="countdown" role="status" aria-live="polite"></div>
     <section class="hero">
       <img src="logo.png" alt="">
       <h1>Tiny apps for <b>everyday</b> problems</h1>
@@ -166,16 +181,41 @@
     if(!saved)saved=window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";
     paint(saved); btn.onclick=()=>{const next=root.dataset.theme==="dark"?"light":"dark"; paint(next); try{localStorage.setItem(THEME_KEY,next);}catch(e){}};
     const appsEl=document.getElementById("apps"), filtersEl=document.getElementById("filters");
-    const CHECKOUT="./checkout.html"; let APPS=[], active="all";
+    const CHECKOUT="./checkout.html"; let APPS=[], active="all", VIEW=[];
     function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
-    function groupProducts(list){const byBase={}; list.forEach(a=>{if(a.published===false)return; const k=a.base_slug||a.slug; (byBase[k]=byBase[k]||[]).push(a);}); return Object.values(byBase).map(pair=>{const full=pair.find(x=>x.tier!=="basic")||pair[0]; const basic=pair.find(x=>x.tier==="basic"); return{full,basic,key:k,diffs:full.differences||[]};});}
-    function render(){const products=groupProducts(APPS); const list=active==="all"?products:products.filter(p=>(p.full.tag||"")==active); if(!APPS.length){appsEl.innerHTML='<div class="empty"><strong>Nothing here yet.</strong><br>New tools land here soon.</div>'; return;} appsEl.innerHTML=list.map(item=>{const f=item.full; const p=f.price!=null?'$'+Number(f.price).toFixed(2):''; return '<article class="card full"><span class="pill">Full edition</span><h3>'+esc(f.title)+'</h3><p>'+esc(f.blurb)+'</p><div class="tags">'+(f.tags||[]).slice(0,4).map(t=>'<span class="tag">'+esc(t)+'</span>').join('')+'</div><div class="row"><span class="price">'+p+'</span><button class="btn primary" onclick="openDialog('+JSON.stringify(item).replace(/'/g,'&#39;')+')">See options</button></div></article>';}).join('');}
+    function groupProducts(list){const byBase={}; list.forEach(a=>{if(a.published===false)return; const k=a.base_slug||a.slug; (byBase[k]=byBase[k]||[]).push(a);}); return Object.values(byBase).map(pair=>{const full=pair.find(x=>x.tier!=="basic")||pair[0]; const basic=pair.find(x=>x.tier==="basic"); return{full,basic,key:(full.base_slug||full.slug),diffs:full.differences||[]};});}
+    function render(){const products=groupProducts(APPS); const list=active==="all"?products:products.filter(p=>(p.full.tag||"")==active); if(!APPS.length){appsEl.innerHTML='<div class="empty"><strong>Nothing here yet.</strong><br>New tools land here soon.</div>'; return;} appsEl.innerHTML=list.map((item,idx)=>{const f=item.full; const p=f.price!=null?'$'+Number(f.price).toFixed(2):''; return '<article class="card full"><span class="pill">Full edition</span><h3>'+esc(f.title)+'</h3><p>'+esc(f.blurb)+'</p><div class="tags">'+(f.tags||[]).slice(0,4).map(t=>'<span class="tag">'+esc(t)+'</span>').join('')+'</div><div class="row"><span class="price">'+p+'</span><button class="btn primary" onclick="openDialogByIndex('+idx+')">See options</button></div></article>';}).join(''); VIEW=list;}
+    // Cards pass an index, not their own JSON. Serialising the product into
+    // the onclick attribute put double quotes inside a double-quoted attribute,
+    // which ended the attribute early and left every "See options" button
+    // throwing a syntax error: nobody could open a product at all.
+    // The index refers to VIEW, which is whatever render() last drew, so it
+    // stays correct when a filter is on and the card order has changed.
+    function openDialogByIndex(i){const item=VIEW[i]; if(item) openDialog(item);}
     function openDialog(item){const opts=[]; if(item.basic)opts.push({tier:'basic',title:item.basic.title,blurb:item.basic.blurb,price:'Free',href:item.basic.url});
     // checkout.html only forwards to itch.io, so no payment detail touches this site
     if(item.full){const live=item.full.itch_url||''; opts.push({tier:'full',title:item.full.title,blurb:item.full.blurb,price:'$'+Number(item.full.price||0).toFixed(2),href:CHECKOUT+'?slug='+encodeURIComponent(item.base_slug||item.full.slug)+'&price='+Number(item.full.price||0).toFixed(2)+'&title='+encodeURIComponent(item.full.title)+'&itch='+encodeURIComponent(live)});}
     document.getElementById('dlgTitle').textContent=item.full.title; document.getElementById('dlgBlurb').textContent=item.full.blurb||''; document.getElementById('dlgOpts').innerHTML=opts.map(o=>'<button class="opt '+o.tier+'" onclick="location.href=\''+esc(o.href)+'\'"><span class="optTier">'+(o.tier==='basic'?'Free basic':'Full edition')+'</span><span class="optTitle">'+esc(o.title)+'</span><span class="optBlurb">'+esc(o.blurb||'')+'</span><span class="optPrice">'+esc(o.price)+'</span><span class="optCta">'+(o.tier==='basic'?'Download free':'Get the full edition')+'</span></button>').join(''); document.getElementById('dlg').classList.add('open');}
     function closeDialog(){document.getElementById('dlg').classList.remove('open');}
     fetch("apps.json",{cache:"no-store"}).then(r=>r.json()).then(d=>{APPS=Array.isArray(d)?d:(d.apps||[]); render();}).catch(()=>{appsEl.innerHTML='<div class="empty"><strong>Slingshot Tools</strong><br>The catalog loads on first build.</div>';});
+
+    // Release countdown. Reads update.json, which update_state.py writes.
+    // Anything unexpected in that file leaves the banner hidden, because a
+    // broken countdown must never take the homepage down with it.
+    (function(){
+      const el=document.getElementById("countdown"); if(!el) return;
+      fetch("update.json",{cache:"no-store"}).then(r=>r.ok?r.json():null).then(d=>{
+        if(!d||!d.next_major||d.phase==="idle"||d.phase==="live") return;
+        const when=new Date(d.next_major+"T18:00:00Z"); if(isNaN(when)) return;
+        const left=Math.max(0,Math.round((when-Date.now())/86400000));
+        const title=d.next_major_title||"A new update";
+        const first=(d.next_major_notes&&d.next_major_notes[0])||"";
+        el.innerHTML='<span class="cdPill">Coming soon</span><b>'+esc(title)+
+          '</b><span class="cdNum">'+left+(left===1?" day":" days")+' to go</span>'+
+          (first?'<span class="cdNum">'+esc(first)+'</span>':'');
+        el.classList.add("on");
+      }).catch(()=>{});
+    })();
   </script>
 </body>
 </html>

@@ -1,0 +1,12 @@
+{
+  "done": [
+    "a11y",
+    "theme"
+  ],
+  "last": {
+    "lane": "theme",
+    "area": "interface",
+    "what": "Check light mode against dark mode in both themes",
+    "version": "1.0.2"
+  }
+}

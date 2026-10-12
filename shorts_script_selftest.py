@@ -36,7 +36,7 @@ cases = [
 
 for label, payload in cases:
     d = ss._clean(json.dumps(payload), RECORD)
-    blob = " ".join(d.values())
+    blob = " ".join(str(v) for v in d.values() if isinstance(v, str))
     bad = []
     if "password manager" in blob.lower():
         bad.append("brand")

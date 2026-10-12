@@ -1,0 +1,148 @@
+name: Slingshot — monthly major update
+
+# One job a month for the big release, plus the Discord event a week ahead and
+# the trailer that goes with it.
+#
+# The schedule is deliberately not the 1st. update_plan.py aims for the 26th,
+# and a job that ran on the 1st would plan a release three and a half weeks out
+# every time, so the plan would never actually be a month.
+
+on:
+  schedule:
+    # 08:00 UTC on the 1st: plan, announce, and build the trailer
+    - cron: "0 8 1 * *"
+    # 08:00 UTC on the 20th: announce the release a week out
+    - cron: "0 8 20 * *"
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: Which part to run
+        required: false
+        default: all
+        type: choice
+        options: [all, plan, announce, trailer, publish]
+      dry_run:
+        description: Plan and render, but do not upload anything
+        required: false
+        default: "true"
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: slingshot-monthly
+  cancel-in-progress: false
+
+jobs:
+  major-update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      GROQ_CHAT_MODEL: ${{ secrets.GROQ_CHAT_MODEL }}
+      DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+      DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+      ELEVENLABS_VOICE_ID: ${{ vars.ELEVENLABS_VOICE_ID }}
+      SLINGSHOT_MONTHLY_HOURS: "30"
+      STAGE: ${{ inputs.stage }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: pip install --quiet pillow edge-tts requests
+
+      - name: Install ffmpeg
+        run: |
+          if ! command -v ffmpeg >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq ffmpeg
+          fi
+          ffmpeg -version | head -1
+
+      - name: Is there budget left this month
+        run: python budget.py check --label monthly-update --need 0.5
+
+      # Everything below is guarded on STAGE so a hand-triggered run can do one
+      # piece, and so the 20th's announce-only run does not rebuild a trailer
+      # that already exists.
+      - name: Plan the update
+        if: ${{ inputs.stage == 'all' || inputs.stage == 'plan' }}
+        run: python update_plan.py
+
+      - name: Show the plan
+        if: ${{ inputs.stage == 'all' || inputs.stage == 'plan' }}
+        run: python update_plan.py --show
+
+      - name: Announce it on Discord
+        if: ${{ inputs.stage == 'all' || inputs.stage == 'announce' }}
+        run: python update_discord.py
+
+      # The trailer reads the real app's HTML, so the screenshots come from the
+      # same shots.py the Shorts pipeline uses rather than a mock-up.
+      - name: Shoot the real app
+        if: ${{ inputs.stage == 'all' || inputs.stage == 'trailer' }}
+        run: python shots.py || true
+
+      - name: Write the trailer script
+        if: ${{ inputs.stage == 'all' || inputs.stage == 'trailer' }}
+        run: python update_trailer_script.py
+
+      - name: Speak the trailer
+        if: ${{ inputs.stage == 'all' || inputs.stage == 'trailer' }}
+        run: python update_trailer_voice.py
+
+      - name: Render the trailer
+        if: ${{ inputs.stage == 'all' || inputs.stage == 'trailer' }}
+        run: python update_trailer_render.py
+
+      - name: Join the trailer
+        if: ${{ inputs.stage == 'all' || inputs.stage == 'trailer' }}
+        run: python update_trailer_mux.py
+
+      # Only the small public data file is written. The homepage markup is
+      # protected, so the countdown markup in it is hand-written once and this
+      # job never edits it: it only refreshes the JSON the page reads.
+      - name: Refresh the public update file
+        run: python update_state.py
+
+      - name: Nothing protected may change
+        run: python weekly_guard.py check
+
+      - name: Run the tests
+        run: |
+          python selftest.py
+          python selftest_audit.py
+          python update_selftest.py
+
+      # Deliberately not a blanket add: the trailer frames are thousands of
+      # files and the release state has to be the only thing that lands. The
+      # public countdown file is left out on purpose: it is generated during
+      # the Pages deploy, so committing a copy here would only add a second
+      # one that could go stale.
+      - name: Commit
+        run: |
+          git config user.name "slingshot-bot"
+          git config user.email "slingshot-bot@users.noreply.github.com"
+          git add data/update_state.json data/weekly_state.json \
+                  data/update_history.json || true
+          git diff --staged --quiet || \
+            git commit -q -m "release: monthly update plan [skip ci]"
+          git push || echo "nothing to push"
+
+      - name: Keep the trailer
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trailer-${{ github.run_number }}
+          path: dist/trailer/*.mp4
+
+      - name: Announce the result
+        if: always()
+        run: python update_weekly.py --list || true

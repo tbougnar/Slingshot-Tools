@@ -34,6 +34,11 @@ PROTECTED_WORKFLOWS = [
     "wednesday-review.yml",
     "friday-build.yml",
     "friday-verify.yml",
+    # the release lane. A job that could edit its own schedule could announce
+    # a release early, skip the trailer, or bump its own budget, so it is
+    # locked exactly like the ones already here.
+    "monthly-update.yml",
+    "weekly-patch.yml",
 ]
 
 # The scripts that make the site work. Editing these changes what customers get

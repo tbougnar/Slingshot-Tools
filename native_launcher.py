@@ -3,6 +3,10 @@
 Real native window (WebView2 via pywebview) showing the same single-file HTML:
 no browser chrome, product name as the window title, and the company logo as the
 window + taskbar icon instead of Python's.
+
+The update check lives here rather than in the app, because the app is
+forbidden from making network calls and that promise is worth more than a
+convenience feature. See app_update.py.
 """
 import ctypes
 import json
@@ -20,6 +24,49 @@ BASE = Path(BUNDLE) if BUNDLE else HERE
 APP = BASE / "app" / "index.html"
 ICON_PNG = BASE / "app" / "icon.png"
 ICON_ICO = BASE / "app" / "icon.ico"
+
+# Set to 0 to ship a build that never checks. The manifest is read from the
+# installed bundle, not from the repo, so this works once frozen.
+UPDATE_CHECK = os.environ.get("SLINGSHOT_UPDATE_CHECK", "1") not in (
+    "0", "false", "no")
+
+
+def _update_notice():
+    """Whether to show the banner, and what it should say.
+
+    Every failure here returns nothing, because the window must open whether or
+    not the check works. An app that cannot reach the update file is not a
+    broken app, it is an app that opens.
+    """
+    if not UPDATE_CHECK:
+        return None
+    try:
+        # importlib so the frozen build still works when the module is absent
+        from importlib import import_module
+        mod = import_module("app_update")
+    except Exception:  # noqa: BLE001
+        return None
+    try:
+        got = mod.check(BASE, slug=_meta_slug())
+        if not got.get("update_available"):
+            return None
+        msg = f"{got.get('installed')} is installed, {got.get('latest')} is out"
+        if got.get("coming_title"):
+            msg += f" — {got['coming_title']} lands {got.get('coming')}"
+        return msg
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _meta_slug() -> str:
+    meta = BASE / "app" / "app.json"
+    if not meta.exists():
+        return ""
+    try:
+        return str(json.loads(
+            meta.read_text(encoding="utf-8-sig")).get("slug") or "")
+    except Exception:  # noqa: BLE001
+        return ""
 
 
 def _title():
@@ -82,6 +129,16 @@ def main():
                 _apply_icon(int(handle))
         except Exception:  # noqa: BLE001
             pass
+        # the banner is injected here, after the app has drawn, so the app
+        # never has to know the network exists
+        notice = _update_notice()
+        if notice:
+            try:
+                window.evaluate_js(
+                    f"window.__slingshotUpdate && "
+                    f"window.__slingshotUpdate({json.dumps(notice)})")
+            except Exception:  # noqa: BLE001
+                pass
 
     try:
         window.events.loaded += on_loaded

@@ -7,6 +7,11 @@ on:
       - "site/**"
       - "links.py"
       - "sync_links.py"
+      # the countdown on the homepage changes when these do, so a version bump
+      # or a new plan has to be able to reach the site on its own
+      - "update_state.py"
+      - "update_plan.py"
+      - "data/update_state.json"
   workflow_dispatch:
 
 permissions:
@@ -38,6 +43,14 @@ jobs:
 
       - name: Refresh the platform links
         run: python sync_links.py
+
+      # The countdown data is generated here rather than committed, for the
+      # same reason the links are: it has to be true at the moment the site is
+      # published. Committing it would leave a stale date on the page for as
+      # long as nobody touched the file, which is exactly the bug this
+      # replaced. Nothing is committed, so site/ stays protected.
+      - name: Refresh the release countdown
+        run: python update_state.py
 
       - uses: actions/configure-pages@v5
 
