@@ -24,7 +24,8 @@
     ],
     "published": true,
     "badge": "New",
-    "date": "2026-10-08"
+    "date": "2026-10-08",
+    "itch_url": "https://slingshot-tools.itch.io/"
   },
   {
     "slug": "password-manager-basic",
@@ -39,7 +40,7 @@
     ],
     "url": "https://tbougnar.github.io/Slingshot-Tools/apps/password-manager-basic/",
     "download": "",
-    "price": 0.0,
+    "price": 0,
     "free": true,
     "differences": [
       "Unlimited entries, not a three item trial",
@@ -51,6 +52,7 @@
     ],
     "published": true,
     "badge": "New",
-    "date": "2026-10-08"
+    "date": "2026-10-08",
+    "itch_url": "https://slingshot-tools.itch.io/"
   }
 ]
