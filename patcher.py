@@ -10,10 +10,7 @@ from __future__ import annotations
 import json
 import os
 import re
-import time
-import urllib.error
 
-import requests
 
 BASE = "https://api.groq.com/openai/v1"
 CHAT_MODELS = ["openai/gpt-oss-120b", "openai/gpt-oss-20b"]

@@ -101,7 +101,7 @@ def page_is_live(url: str) -> bool:
     try:
         with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
             return r.status == 200
-    except urllib.error.HTTPError as e:
+    except urllib.error.HTTPError:
         # 403 and 404 both mean it is not publicly there, which is a no
         return False
     except Exception as e:  # noqa: BLE001

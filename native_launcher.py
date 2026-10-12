@@ -98,7 +98,6 @@ def _apply_icon(hwnd):
         return
     try:
         user32 = ctypes.windll.user32
-        gdi32 = ctypes.windll.gdi32
         hicon = user32.LoadImageW(None, ico, 1, 0, 0, 0x10)  # IMAGE_ICON, LR_LOADFROMFILE
         if hicon:
             user32.SendMessageW(hwnd, 0x0080, 0, hicon)   # WM_SETICON, ICON_SMALL

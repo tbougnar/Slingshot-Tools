@@ -10,7 +10,6 @@ what makes it safe to wire into the deploy step.
 """
 from __future__ import annotations
 
-import json
 import re
 from pathlib import Path
 

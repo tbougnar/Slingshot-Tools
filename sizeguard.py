@@ -7,7 +7,6 @@ app fits generation and several repair rounds in the same minute.
 """
 from __future__ import annotations
 
-import json
 import sys
 from pathlib import Path
 

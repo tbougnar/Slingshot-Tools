@@ -66,8 +66,8 @@ def main() -> int:
     healthy, code = speaks(KNOWN_GOOD)
     if not healthy:
         if code == 402:
-            log(f"HTTP 402 on a stock public voice: this account has no "
-                f"credits left, so nothing will synthesise")
+            log("HTTP 402 on a stock public voice: this account has no "
+                "credits left, so nothing will synthesise")
             log("top the account up, or the pipeline keeps using the Edge "
                 "voice and the Shorts ship with it")
             return 0

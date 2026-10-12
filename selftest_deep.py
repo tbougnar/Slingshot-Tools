@@ -7,7 +7,6 @@ import subprocess
 import sys
 from pathlib import Path as _P
 HERE = _P(__file__).resolve().parent
-import tempfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -29,8 +28,6 @@ import make_app
 import patcher
 import sizeguard
 import buglog
-import app_scanner
-import debug_team
 
 DOC = ("<!DOCTYPE html><html><head><title>t</title>"
        "<style>html[data-theme=light]{--bg:#fff}.b{color:red}</style></head>"
@@ -119,7 +116,7 @@ def sweep_guard_rejects():
 
 def scanner_on_known_app():
     """A real generated app must scan without crashing the process."""
-    p = R = HERE
+    p = HERE
     f = p / "PATTERNS.md"
     assert f.exists(), "patterns file missing"
     n = len(f.read_text(encoding="utf-8"))

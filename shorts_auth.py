@@ -181,7 +181,7 @@ def main() -> int:
     log("  gh secret set YOUTUBE_CLIENT_SECRET --repo tbougnar/Slingshot-Tools")
     log("  gh secret set YOUTUBE_REFRESH_TOKEN --repo tbougnar/Slingshot-Tools")
     log("")
-    log(f"When it prompts, paste this for the last one:")
+    log("When it prompts, paste this for the last one:")
     log("")
     log(f"  {refresh}")
     log("")

@@ -292,7 +292,6 @@ async def find_roles(d: Discord) -> tuple[str, str]:
 
 
 async def build(d: Discord, keep_legacy: bool) -> None:
-    me = await d.whoami()
     everyone_id, bot_role_id = await find_roles(d)
 
     existing = await d.channels()

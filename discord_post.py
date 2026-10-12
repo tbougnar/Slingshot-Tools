@@ -11,7 +11,6 @@ release, so every failure is logged and reported as False.
 """
 from __future__ import annotations
 
-import asyncio
 import json
 import os
 import time
@@ -204,7 +203,7 @@ def messages(channel: str, limit: int = 100) -> list:
     if st == 403:
         # members are not meant to type here, and the bot lacks View Channel
         # in some setups; an empty list is the honest answer rather than a lie
-        log(f"cannot read #{name}: no access")
+        log(f"cannot read #{channel}: no access")
     return []
 
 

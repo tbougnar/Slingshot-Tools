@@ -11,10 +11,9 @@ price, with nothing competing for attention.
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont
+from PIL import Image, ImageDraw, ImageEnhance, ImageFont
 
 import shorts_render as sr
 

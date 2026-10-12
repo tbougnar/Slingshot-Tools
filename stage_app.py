@@ -33,17 +33,26 @@ def main() -> int:
 
     # Wait for room rather than firing into a wall. The allowance is shared per
     # minute across the whole account, so starting too early wastes the run.
+    #
+    # The test is whether there is room for what this run needs, not whether
+    # anything at all has been spent. The old loop waited whenever spent() was
+    # greater than zero, so a run with ten tokens used would sit and wait out
+    # the clock even though there were seven thousand left.
     limit = int(os.environ.get("TOKEN_LIMIT") or 8000)
     need = 4000                       # concept + a fresh app + one patch
     waited = 0
-    while tokenmeter.spent() > 0 and waited < 300:
+    while not tokenmeter.affordable(limit, need) and waited < 300:
         if waited == 0:
-            print(f"[stage] allowance already partly used "
-                  f"({tokenmeter.spent()} tokens); waiting for it to reset")
+            print(f"[stage] allowance is {tokenmeter.spent()} tokens in, "
+                  f"{tokenmeter.remaining(limit)} left, and this run needs "
+                  f"{need}; waiting for it to reset")
         time.sleep(30)
         waited += 30
     if waited:
         print(f"[stage] waited {waited}s for the allowance to reset")
+    if not tokenmeter.affordable(limit, need):
+        print(f"[stage] only {tokenmeter.remaining(limit)} tokens left and "
+              f"{need} are needed, so starting anyway is the only option")
 
     concept = make_app.pick_concept(money)
     make_app.log(f"concept: {concept['title']} ({concept['slug']})")

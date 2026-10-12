@@ -9,8 +9,8 @@ import ast
 import builtins
 import sys
 from pathlib import Path as _P
+
 HERE = _P(__file__).resolve().parent
-from pathlib import Path
 
 R = HERE
 problems = []
@@ -209,14 +209,32 @@ for name in ("monday-vote.yml", "wednesday-review.yml", "friday-build.yml",
         problems.append(("-", f"{name} runs without checking the budget"))
 
 # Nothing protected may be committed by an automated job.
+#
+# This used to be a substring test for "git add -A" plus a protected filename
+# anywhere in the workflow, with weekly_guard imported and then never called.
+# That passes any workflow that merely mentions a protected path in a comment,
+# which is how the monthly release job tripped it while only ever writing
+# data/. The real rule is asked of the guard itself, so the two cannot drift.
 sys.path.insert(0, str(R))
 try:
     import weekly_guard as _guard
     for wf_file in sorted(wf_dir.glob("*.yml")):
         text = wf_file.read_text(encoding="utf-8")
-        for bad in ("site/index.html", "check_exposure.py "):
-            if f"git add -A" in text and bad in text:
-                problems.append(("-", f"{wf_file.name} edits {bad.strip()}"))
+        if "git add -A" not in text and "git add ." not in text:
+            continue
+        for line in text.splitlines():
+            if "git add" not in line:
+                continue
+            # anything this step stages has to be allowed to change
+            for token in line.replace("\\", " ").split():
+                if token.startswith(("site/", ".github/", "pricing.",
+                                     "publish_paid", "set_itch_url",
+                                     "retire_product", "check_exposure")):
+                    rel = token.strip("'\"").rstrip(",;")
+                    if _guard.is_protected(rel):
+                        problems.append(
+                            ("-", f"{wf_file.name} stages the protected "
+                                  f"{rel} with a blanket add"))
 except ImportError:
     problems.append(("-", "weekly_guard.py cannot be imported"))
 

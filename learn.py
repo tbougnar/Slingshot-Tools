@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import os
 import re
-import subprocess
 import time
 import urllib.request
 from datetime import date, timedelta
@@ -14,7 +13,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 SITE = ROOT / "site"
 CATALOG = SITE / "apps.json"
-LESSONS = ROOT / "data" / "lessons.txt"
+# Its own file, not data/lessons.txt. That path belongs to buglog, which
+# appends the fixbook entries to it, and this script used to rewrite the whole
+# file in its own format: the Wednesday coach run would have deleted all 110
+# recorded bugs every week. The two are separate records and now live apart.
+LESSONS = ROOT / "data" / "coach_lessons.txt"
 STATS = ROOT / "data" / "stats.json"
 
 GROQ_BASE = "https://api.groq.com/openai/v1"
@@ -87,12 +90,13 @@ def main():
         except json.JSONDecodeError:
             apps = []
     signals = itch_signals()
-    prev = {}
     if STATS.exists():
         try:
-            prev = json.loads(STATS.read_text(encoding="utf-8"))
+            # read for the side effect of proving the file parses; the values
+            # are only ever written, never compared
+            json.loads(STATS.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
-            prev = {}
+            pass
     now = {a["slug"]: a.get("date", "") for a in apps}
     STATS.parent.mkdir(parents=True, exist_ok=True)
     STATS.write_text(json.dumps(now, indent=2), encoding="utf-8")
@@ -125,8 +129,19 @@ def main():
     keep = [str(x) for x in (d.get("keep") or [])][:6]
     add = [str(x) for x in (d.get("add") or [])][:6]
     drop = {str(x) for x in (d.get("drop") or [])}
-    kept = [l for l in previous_lessons.splitlines()
-            if l.strip() and not any(k[:20] in l for k in drop)]
+    old = [l for l in previous_lessons.splitlines()
+           if l.strip().startswith("- ")]
+    if keep:
+        # The model has already rewritten the list in its own words, so its
+        # "keep" is the answer. This used to be computed and thrown away,
+        # which meant the two disagreeing fields were silently resolved in
+        # favour of one of them.
+        kept = [f"- {k}" for k in keep]
+        log(f"using the model's {len(kept)} kept lesson(s)")
+    else:
+        kept = [l for l in old if not any(k[:20] in l for k in drop)]
+        log(f"no keep list; subtracting {len(drop)} dropped from "
+            f"{len(old)} carried over")
     lines = kept + add
     text = ("# Slingshot Tools lessons (updated %s)\n\n" % date.today()
             + "\n".join(f"- {l}" for l in lines[:14]) + "\n")

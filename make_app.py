@@ -5,11 +5,8 @@ Everything the Monday workflow needs. No third-party deps beyond requests.
 """
 from __future__ import annotations
 
-import base64
 import json
 import os
-import platform
-import requests
 import re
 import shutil
 import subprocess
@@ -35,14 +32,11 @@ def _safe(text) -> str:
 
 
 import time
-import urllib.parse
-import urllib.request
 from datetime import date
 from pathlib import Path
 
 import buglog
 import qa_loop
-import build_exe
 
 ROOT = Path(__file__).resolve().parent
 SITE_APPS = ROOT / "site" / "apps"
@@ -143,11 +137,11 @@ def groq(system, user, max_tokens=4000, temperature=0.8, tries=3):
             and not os.environ.get("OPENROUTER_API_KEY"):
         raise RuntimeError("no model provider is configured")
     import providers
+    # The model that answered last time is tried first, and the rest follow.
+    # Walking the whole list from the top on every call is what burns the
+    # allowance: a rate limited first model means every single generation
+    # pays for its failures before reaching one that works.
     order = [CHAT_MODEL] + [x for x in MODELS if x != CHAT_MODEL]
-    try:
-        order = providers.models("builder") + order
-    except Exception:  # noqa: BLE001
-        pass
     last = ""
     for model in order:
         for attempt in range(2):
@@ -155,6 +149,9 @@ def groq(system, user, max_tokens=4000, temperature=0.8, tries=3):
                 out = providers.chat(model, system, user, temperature,
                                    max_tokens, role="builder")
                 if out:
+                    # Remember which model answered, so the next call goes
+                    # straight there.
+                    CHAT_MODEL = model
                     return out
             except Exception as e:  # noqa: BLE001
                 last = str(e)[:200]
@@ -928,7 +925,7 @@ def publish(concept, app_dir, installer, tier="full", brand="", differences=None
     if tier == "full":
         # the paid build is never copied into the public site; it is kept in
         # paid/ and handed to the Worker, which releases it after payment
-        print(f"[publish] paid tier kept private; no files copied into site/",
+        print("[publish] paid tier kept private; no files copied into site/",
               flush=True)
     else:
         dest.mkdir(parents=True, exist_ok=True)

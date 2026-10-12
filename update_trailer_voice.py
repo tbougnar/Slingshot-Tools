@@ -18,7 +18,6 @@ import json
 from pathlib import Path
 
 import shorts_voice as sv
-import update_state as us
 
 ROOT = Path(__file__).resolve().parent
 SCRIPT = ROOT / "data" / "trailer_script.json"

@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import json
 import os
-import sys
 import time
 import urllib.error
 import urllib.parse
@@ -297,7 +296,7 @@ def check_discord() -> bool:
     try:
         with get(f"https://discord.com/api/v10/guilds/{guild}/channels",
                  head) as r:
-            chans = json.loads(r.read().decode("utf-8"))
+            json.loads(r.read().decode("utf-8"))
     except Exception as e:  # noqa: BLE001
         code = getattr(e, "code", None)
         if code == 403:

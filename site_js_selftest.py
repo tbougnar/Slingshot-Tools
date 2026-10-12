@@ -19,7 +19,6 @@ version of that line is the bug.
 
     python site_js_selftest.py
 """
-import json
 import pathlib
 import re
 import sys

@@ -42,7 +42,7 @@ for name, (a, b) in bands:
         print(f"        OVERLAPS {prev_name}")
         fails.append(f"{name}/{prev_name}")
     if b <= a:
-        print(f"        empty band")
+        print("        empty band")
         fails.append(f"{name} empty")
     prev_name, prev_end = name, b
 

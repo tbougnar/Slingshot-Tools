@@ -20,8 +20,6 @@ from __future__ import annotations
 
 import asyncio
 import os
-import sys
-import time
 
 import discord_data as dd
 
@@ -103,7 +101,7 @@ def poll_embed(poll: dict) -> discord.Embed:
     body = "\n".join(lines) or "No options."
     if poll.get("notes"):
         body += f"\n\n{clip(poll['notes'], 600)}"
-    body += f"\n\nVote with the buttons below. Results: `/vote results`"
+    body += "\n\nVote with the buttons below. Results: `/vote results`"
     return discord.Embed(title=poll.get("question", "Vote for the next tool"),
                          description=clip(body), color=0xC1272D)
 
@@ -254,7 +252,6 @@ def results_embed() -> discord.Embed:
     lines = []
     for p in closed[:10]:
         rows = p.get("result") or dd.tally(p["id"])
-        top = rows[0] if rows else {"label": "?", "votes": 0}
         win = p.get("winner")
         lines.append(f"**{p.get('question', p['id'])}**\n"
                      + "\n".join(f"- {r['label']}: {r['votes']}" for r in rows)

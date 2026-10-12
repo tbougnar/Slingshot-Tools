@@ -7,7 +7,6 @@ flagged for a human - and even then the evidence is attached.
 """
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import app_scanner
@@ -31,14 +30,11 @@ def repair_until_clean(html_path: Path, max_rounds: int = MAX_ROUNDS,
                        log=print) -> tuple[bool, dict]:
     """Return (clean, history). A false first value means 'needs a human'."""
     models = list(debug_team.CANDIDATES)
-    leaders = models[:max(debug_team.LEADERS, 3)]
     history: list[dict] = []
-    last_scan: dict = {}
 
     for rnd in range(1, max_rounds + 1):
         mode = ESCALATION[min(rnd - 1, len(ESCALATION) - 1)]
         scan = app_scanner.scan(html_path)
-        last_scan = scan
 
         if app_scanner.verdict(scan):
             log(f"[qa] round {rnd}: CLEAN - {scan.get('controls', 0)} controls "

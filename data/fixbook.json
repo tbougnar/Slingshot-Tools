@@ -1376,5 +1376,126 @@
   ],
   "detects": "selftest_audit.py: both are checked as protected",
   "verified": false
+ },
+ {
+  "id": "B111",
+  "date": "2026-10-12",
+  "symptom": "counting the weekly ballot crashed with NameError when the bot could not read a channel",
+  "cause": "the 403 branch logged an undefined name. The parameter is called channel, and name was left over from an older signature, so the graceful empty-list path was itself the thing that threw",
+  "fix": "the branch logs the channel it actually failed to read, and every status now returns an empty list instead of raising",
+  "files": [
+   "discord_post.py"
+  ],
+  "detects": "checked by hand: 403, 200, 500 and 429 all return cleanly now",
+  "verified": false
+ },
+ {
+  "id": "B112",
+  "date": "2026-10-12",
+  "symptom": "the live key checker raised UnboundLocalError the instant it was run, so it never tested anything",
+  "cause": "main() read _KEY and then assigned to it in the same function. That assignment made _KEY local, so the read above it had no value to come from",
+  "fix": "the key arrives as a parameter, so there is nothing to shadow and the function reads only what it is given",
+  "files": [
+   "groq_live_check.py"
+  ],
+  "detects": "checked by hand: empty key, wrong prefix and a fake key all return the right thing instead of crashing",
+  "verified": false
+ },
+ {
+  "id": "B113",
+  "date": "2026-10-12",
+  "symptom": "re-enabling the video captions would have crashed the renderer with NameError on every frame",
+  "cause": "caption() positioned itself with BAND_CAPTION, which was deleted when captions were removed from the videos. Nothing calls caption() so it sat there as dead code with a name that no longer exists",
+  "fix": "the function was deleted rather than given a band, because captions are not wanted and a resurrected band would be a guess",
+  "files": [
+   "shorts_render.py"
+  ],
+  "detects": "pyflakes reports no undefined names anywhere in the project",
+  "verified": false
+ },
+ {
+  "id": "B114",
+  "date": "2026-10-12",
+  "symptom": "a release could have been planned for a date that had already passed",
+  "cause": "the plan wrote a fixed day of the month, so planning near the end of a month produced a date behind us and the countdown was skipped entirely",
+  "fix": "this was caught and fixed with the release lane and is listed there again for completeness",
+  "files": [
+   "update_plan.py"
+  ],
+  "detects": "update_selftest.py: planning on the 27th and the 31st roll forward",
+  "verified": false
+ },
+ {
+  "id": "B115",
+  "date": "2026-10-12",
+  "symptom": "every Friday build waited for the model allowance even when there was almost nothing spent, and the check it computed was never used",
+  "cause": "the loop waited whenever spent() was greater than zero, so ten tokens used meant waiting out the clock with seven thousand left. The limit and need were calculated and then discarded",
+  "fix": "the loop asks tokenmeter.affordable(limit, need), which is the function that already existed for exactly this, and says so out loud when it starts anyway",
+  "files": [
+   "stage_app.py"
+  ],
+  "detects": "tokenmeter.affordable is asserted directly in selftest.py",
+  "verified": false
+ },
+ {
+  "id": "B116",
+  "date": "2026-10-12",
+  "symptom": "the coach's list of lessons to keep was calculated and then thrown away, so the model and the file could disagree",
+  "cause": "the prompt asks for keep, add and drop, but only drop was honoured: the carried-over list was rebuilt by subtraction instead of taking the model's own answer",
+  "fix": "keep wins when the model supplies it, and the subtraction is the fallback for when it does not",
+  "files": [
+   "learn.py"
+  ],
+  "detects": "both branches log which one was used, so a run shows it",
+  "verified": false
+ },
+ {
+  "id": "B117",
+  "date": "2026-10-12",
+  "symptom": "a run that could not build an app burned its allowance walking the whole model list on every single call",
+  "cause": "the function declared global CHAT_MODEL and then only ever read it. A dead global like that is the fossil of a caching step, and without it a rate limited first model is retried before every generation",
+  "fix": "the model that answered is remembered and tried first next time, so the run stops paying for models that have already failed",
+  "files": [
+   "make_app.py"
+  ],
+  "detects": "checked by hand with a stubbed provider: the second call goes straight to the working model",
+  "verified": false
+ },
+ {
+  "id": "B118",
+  "date": "2026-10-12",
+  "symptom": "every Wednesday run would have deleted all 110 recorded bugs",
+  "cause": "learn.py and buglog.py both wrote data/lessons.txt in different formats. buglog appends a line per entry, learn.py rewrites the whole file, so whichever ran last destroyed the other",
+  "fix": "the coach writes its own file. The fixbook keeps lessons.txt, and the two records can no longer touch each other",
+  "files": [
+   "learn.py",
+   ".gitignore"
+  ],
+  "detects": "learn.LESSONS and buglog.LESSONS are asserted to be different files",
+  "verified": false
+ },
+ {
+  "id": "B119",
+  "date": "2026-10-12",
+  "symptom": "importing any module could create site/licenses, which GitHub Pages would then serve and which fails the exposure check",
+  "cause": "paypal.py called LICENSE_DIR.mkdir() at module scope, and paypal_check.py imports it at module scope too. The folder is gitignored, so it never showed up in a diff, but Pages serves the working tree and check_exposure.py refuses the whole site when that folder exists, so an import could fail the release gate on its own",
+  "fix": "the mkdir moved into save_key, where something is actually written, so importing and reading no longer touch the published site",
+  "files": [
+   "paypal.py"
+  ],
+  "detects": "scan_selftest.py imports every module in a fresh interpreter and fails if anything new appears under site/",
+  "verified": false
+ },
+ {
+  "id": "B120",
+  "date": "2026-10-12",
+  "symptom": "the check that stopped an automated job committing a protected file never asked the guard, so it flagged workflows that merely mentioned one and passed ones that staged one",
+  "cause": "weekly_guard was imported as _guard and then never called. The check was a substring test for a protected filename anywhere in the file, including inside comments, which is why the release workflow tripped it",
+  "fix": "the guard is actually asked about every path a blanket git add stages, so the rule and the enforcement cannot drift apart",
+  "files": [
+   "selftest_audit.py"
+  ],
+  "detects": "checked by hand: a comment naming a protected file passes, a real blanket add of one is reported",
+  "verified": false
  }
 ]

@@ -103,9 +103,9 @@ def main() -> int:
     write_txt(entries)
 
     print(f"recorded {entry['id']} ({len(entries)} total)")
-    print(f"  data/fixbook.json")
-    print(f"  data/fixbook.md")
-    print(f"  data/lessons.txt")
+    print("  data/fixbook.json")
+    print("  data/fixbook.md")
+    print("  data/lessons.txt")
     return 0
 
 

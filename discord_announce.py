@@ -10,7 +10,6 @@ cleanly and the publish pipeline carries on untouched.
 from __future__ import annotations
 
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -30,10 +29,6 @@ OK = 0x2ECC71
 
 def log(msg: str) -> None:
     dp.log(msg)
-
-
-def log(msg: str) -> None:
-    print(f"[discord] {msg}", flush=True)
 
 
 def _load(path: Path, default):

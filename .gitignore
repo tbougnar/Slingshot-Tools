@@ -62,6 +62,9 @@ paypal_check.py
 
 # regenerated from the fixbook at build time
 data/lessons.txt
+# the Friday coach's own lessons. Separate from data/lessons.txt, which is the
+# fixbook's; sharing one file meant whichever ran last destroyed the other.
+data/coach_lessons.txt
 
 # Discord state that must never be published.
 # data/polls.json holds voters' Discord user ids, and

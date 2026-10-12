@@ -305,7 +305,6 @@ def app_window(img: Image.Image, slug: str, reveal: float,
     bottom = H - 70 if small else BAND_WINDOW[1]
     ch = max(420, min(bottom - top, int((bottom - top)
                                         * (0.72 if small else 1.0))))
-    cx = (W - cw) // 2
 
     sc = 0.95 + 0.05 * a
     nw, nh = int(cw * sc), int(ch * sc)
@@ -365,30 +364,7 @@ def app_window(img: Image.Image, slug: str, reveal: float,
 
     img.alpha_composite(layer) if img.mode == "RGBA" else None
     return img
-def caption(d: ImageDraw.ImageDraw, words: list[dict], now: float) -> None:
-    """The words being spoken, in a fixed band near the bottom.
 
-    The band is high enough to clear the URL on the closing card, which used
-    to sit underneath it.
-    """
-    live = [w for w in words if w["start"] <= now <= w["end"]]
-    text = " ".join(w["t"] for w in live).strip()
-    if not text:
-        return
-    fnt, _ = font(56, bold=True)
-    lines = wrap(d, text, fnt, W - 300)
-    lh = 78
-    top = BAND_CAPTION[1]
-    y = top - len(lines) * lh
-    for ln in lines:
-        tw = d.textlength(ln, font=fnt)
-        x = (W - tw) / 2
-        asc, desc = fnt.getmetrics()
-        d.rounded_rectangle([x - 32, y - 12, x + tw + 32, y + asc + desc + 8],
-                            radius=(asc + desc + 20) // 2,
-                            fill=(255, 255, 255, 236))
-        d.text((x, y), ln, font=fnt, fill=BG)
-        y += lh
 
 
 def _price_line(parts: list[dict], price: str) -> int:

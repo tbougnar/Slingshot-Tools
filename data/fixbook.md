@@ -883,6 +883,86 @@ the change that fixed it. Check here before proposing anything.
 - **Check for recurrence:** selftest_audit.py: both are checked as protected
 - **Status:** UNTESTED
 
+## B111 - counting the weekly ballot crashed with NameError when the bot could not read a channel
+
+- **Cause:** the 403 branch logged an undefined name. The parameter is called channel, and name was left over from an older signature, so the graceful empty-list path was itself the thing that threw
+- **Fix:** the branch logs the channel it actually failed to read, and every status now returns an empty list instead of raising
+- **Files:** discord_post.py
+- **Check for recurrence:** checked by hand: 403, 200, 500 and 429 all return cleanly now
+- **Status:** UNTESTED
+
+## B112 - the live key checker raised UnboundLocalError the instant it was run, so it never tested anything
+
+- **Cause:** main() read _KEY and then assigned to it in the same function. That assignment made _KEY local, so the read above it had no value to come from
+- **Fix:** the key arrives as a parameter, so there is nothing to shadow and the function reads only what it is given
+- **Files:** groq_live_check.py
+- **Check for recurrence:** checked by hand: empty key, wrong prefix and a fake key all return the right thing instead of crashing
+- **Status:** UNTESTED
+
+## B113 - re-enabling the video captions would have crashed the renderer with NameError on every frame
+
+- **Cause:** caption() positioned itself with BAND_CAPTION, which was deleted when captions were removed from the videos. Nothing calls caption() so it sat there as dead code with a name that no longer exists
+- **Fix:** the function was deleted rather than given a band, because captions are not wanted and a resurrected band would be a guess
+- **Files:** shorts_render.py
+- **Check for recurrence:** pyflakes reports no undefined names anywhere in the project
+- **Status:** UNTESTED
+
+## B114 - a release could have been planned for a date that had already passed
+
+- **Cause:** the plan wrote a fixed day of the month, so planning near the end of a month produced a date behind us and the countdown was skipped entirely
+- **Fix:** this was caught and fixed with the release lane and is listed there again for completeness
+- **Files:** update_plan.py
+- **Check for recurrence:** update_selftest.py: planning on the 27th and the 31st roll forward
+- **Status:** UNTESTED
+
+## B115 - every Friday build waited for the model allowance even when there was almost nothing spent, and the check it computed was never used
+
+- **Cause:** the loop waited whenever spent() was greater than zero, so ten tokens used meant waiting out the clock with seven thousand left. The limit and need were calculated and then discarded
+- **Fix:** the loop asks tokenmeter.affordable(limit, need), which is the function that already existed for exactly this, and says so out loud when it starts anyway
+- **Files:** stage_app.py
+- **Check for recurrence:** tokenmeter.affordable is asserted directly in selftest.py
+- **Status:** UNTESTED
+
+## B116 - the coach's list of lessons to keep was calculated and then thrown away, so the model and the file could disagree
+
+- **Cause:** the prompt asks for keep, add and drop, but only drop was honoured: the carried-over list was rebuilt by subtraction instead of taking the model's own answer
+- **Fix:** keep wins when the model supplies it, and the subtraction is the fallback for when it does not
+- **Files:** learn.py
+- **Check for recurrence:** both branches log which one was used, so a run shows it
+- **Status:** UNTESTED
+
+## B117 - a run that could not build an app burned its allowance walking the whole model list on every single call
+
+- **Cause:** the function declared global CHAT_MODEL and then only ever read it. A dead global like that is the fossil of a caching step, and without it a rate limited first model is retried before every generation
+- **Fix:** the model that answered is remembered and tried first next time, so the run stops paying for models that have already failed
+- **Files:** make_app.py
+- **Check for recurrence:** checked by hand with a stubbed provider: the second call goes straight to the working model
+- **Status:** UNTESTED
+
+## B118 - every Wednesday run would have deleted all 110 recorded bugs
+
+- **Cause:** learn.py and buglog.py both wrote data/lessons.txt in different formats. buglog appends a line per entry, learn.py rewrites the whole file, so whichever ran last destroyed the other
+- **Fix:** the coach writes its own file. The fixbook keeps lessons.txt, and the two records can no longer touch each other
+- **Files:** learn.py, .gitignore
+- **Check for recurrence:** learn.LESSONS and buglog.LESSONS are asserted to be different files
+- **Status:** UNTESTED
+
+## B119 - importing any module could create site/licenses, which GitHub Pages would then serve and which fails the exposure check
+
+- **Cause:** paypal.py called LICENSE_DIR.mkdir() at module scope, and paypal_check.py imports it at module scope too. The folder is gitignored, so it never showed up in a diff, but Pages serves the working tree and check_exposure.py refuses the whole site when that folder exists, so an import could fail the release gate on its own
+- **Fix:** the mkdir moved into save_key, where something is actually written, so importing and reading no longer touch the published site
+- **Files:** paypal.py
+- **Check for recurrence:** scan_selftest.py imports every module in a fresh interpreter and fails if anything new appears under site/
+- **Status:** UNTESTED
+
+## B120 - the check that stopped an automated job committing a protected file never asked the guard, so it flagged workflows that merely mentioned one and passed ones that staged one
+
+- **Cause:** weekly_guard was imported as _guard and then never called. The check was a substring test for a protected filename anywhere in the file, including inside comments, which is why the release workflow tripped it
+- **Fix:** the guard is actually asked about every path a blanket git add stages, so the rule and the enforcement cannot drift apart
+- **Files:** selftest_audit.py
+- **Check for recurrence:** checked by hand: a comment naming a protected file passes, a real blanket add of one is reported
+- **Status:** UNTESTED
+
 ## How to use this
 
 1. If the symptom matches an entry, use that fix. Do not invent a new one.

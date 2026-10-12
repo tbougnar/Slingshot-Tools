@@ -13,7 +13,7 @@ import os
 import re
 import time
 import urllib.request
-from datetime import date, timedelta
+from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent

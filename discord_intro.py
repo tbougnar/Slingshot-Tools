@@ -23,22 +23,6 @@ OK = 0x2ECC71
 
 # The first message in each channel, written once and never repeated.
 INTRO = {
-    "catalog": {
-        "title": "Welcome to Slingshot Tools",
-        "description": (
-            "One small, useful tool every week, chosen by the people who use "
-            "them.\n\n"
-            "**Every tool comes in two editions.** The Basic edition is free "
-            "and runs in your browser. The Full edition is a real Windows app "
-            "with nothing capped, sold on the site.\n\n"
-            "**Nothing is collected.** No accounts, no sign-up, no tracking, "
-            "no cookies. The tools make no network calls and your data never "
-            "leaves your device.\n\n"
-            "New here? Start in "
-            "<#1558218171138179263> for the catalog, or vote on what gets "
-            "built in <#1558218192147714161>."),
-        "color": BRAND,
-    },
     "rules": {
         "title": "Rules",
         "description": (

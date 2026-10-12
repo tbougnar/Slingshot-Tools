@@ -6,7 +6,6 @@ indistinguishable from a working one. The message names which step stopped.
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 
 import discord_post as dp

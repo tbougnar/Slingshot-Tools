@@ -81,7 +81,7 @@ def shoot(exe: str, page: Path, dest: Path, theme: str = "") -> bool:
             "--default-background-color=00000000",
         ]
         if theme:
-            cmd.append(f"--force-dark-mode")
+            cmd.append("--force-dark-mode")
             cmd.append(f"--blink-settings=preferredColorScheme="
                        f"{1 if theme == 'dark' else 0}")
         cmd += [f"--screenshot={dest}", page.resolve().as_uri()]

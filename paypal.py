@@ -17,8 +17,12 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
+# The folder is only made when something actually writes a licence into it.
+# Creating it here meant merely importing this module, which paypal_check.py
+# does at module scope, put a directory inside the published site. GitHub
+# Pages serves site/, and check_exposure.py refuses the whole site if this
+# folder exists, so an import could fail the release gate on its own.
 LICENSE_DIR = ROOT / "site" / "licenses"
-LICENSE_DIR.mkdir(parents=True, exist_ok=True)
 ADDRESS = {
     "address_line_1": "1 Rue des Oasis",
     "admin_area_2": "Casablanca",
@@ -148,6 +152,7 @@ def save_key(slug: str, key: str, order_id: str, email: str = "") -> None:
     data = json.loads(f.read_text()) if f.exists() else {}
     data[slug] = {"key": key, "order_id": order_id, "email": email,
                   "issued": int(time.time())}
+    LICENSE_DIR.mkdir(parents=True, exist_ok=True)
     f.write_text(json.dumps(data, indent=1), encoding="utf-8")
 
 

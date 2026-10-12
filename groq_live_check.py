@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import getpass
 import json
-import sys
 import urllib.error
 import urllib.request
 
@@ -62,9 +61,11 @@ def call_chat(key: str, model: str) -> tuple[bool, str]:
         return False, str(e)[:90]
 
 
-def main() -> int:
-    key = _KEY
-    _KEY = ""  # drop our reference before anything can print it
+def main(key: str = "") -> int:
+    # The key arrives as an argument rather than being read from the module
+    # global. Assigning to _KEY here made it local to main, so the very first
+    # line raised UnboundLocalError and the check never ran at all.
+    key = key or _KEY
 
     log("this checks a key you type now. it is not stored or printed back.")
 

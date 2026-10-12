@@ -6,7 +6,6 @@ tracked in git and the build republished them. It runs on every publish.
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent

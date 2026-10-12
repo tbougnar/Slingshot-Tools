@@ -116,7 +116,7 @@ def features_for(slug: str, limit: int = 10) -> list[str]:
     # the form says what it is collecting, which is a capability
     fields = re.findall(r"<label[^>]*>([^<]+)</label>", src)
     if len(fields) >= 2:
-        add(f"Stores site, username and password together in one place")
+        add("Stores site, username and password together in one place")
 
     # a single line the app states about itself
     m = re.search(r"<footer>([^<]{10,120})</footer>", src)

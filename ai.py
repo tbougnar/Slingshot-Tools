@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import json
 import os
-import urllib.error
 
 BASE = "https://api.groq.com/openai/v1"
 
