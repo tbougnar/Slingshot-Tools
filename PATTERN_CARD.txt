@@ -1,0 +1,35 @@
+MANDATORY PATTERNS (violating these makes the app fail QA):
+
+1. EVERY control needs a handler. No exceptions.
+   <button id="x">Go</button>
+   document.getElementById('x').addEventListener('click',go);
+   function go(){/*...*/}
+   Check: every button has onclick or addEventListener; every select has
+   'change'; every form has 'submit' with preventDefault().
+   Never style something to look clickable but leave it inert.
+
+2. Only call functions the file already defines. Read the ids, function names
+   and variables first and use those. If none fits, write the two or three
+   lines that update the DOM or localStorage directly.
+
+3. State:
+   const K='app.v1';
+   const load=()=>{try{return JSON.parse(localStorage.getItem(K))||null}catch{return null}};
+   const save=v=>localStorage.setItem(K,JSON.stringify(v));
+   Always wrap JSON.parse in try/catch.
+
+4. Editions from one file:
+   const PAID=new URLSearchParams(location.search).has('paid');
+   const LIM=PAID?{max:Infinity}:{max:3};
+   Never hardcode a number in a comparison.
+
+5. Theme: html[data-theme], toggle documentElement.dataset.theme, remember in
+   localStorage, read before first paint.
+
+6. Silently broken things to avoid: innerHTML with ${} from user text; a
+   listener added before the element exists; duplicate ids; <input
+   type=number> returning "".
+
+7. SIZE: aim under 7 KB. The whole reply counts against a per-minute limit,
+   so a long app leaves nothing for checking or fixing. Tight and correct
+   beats long and clever. No comments, no repeated markup.

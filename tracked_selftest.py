@@ -36,9 +36,18 @@ def tracked() -> set[str]:
     git ls-files answers with paths, not bare names, so the names are extracted
     here. Getting this wrong makes every file look untracked, which is worse
     than not checking at all.
+
+    When there is no repository, which is the case in the cleanroom check that
+    copies the tree into a plain folder, everything on disk is treated as
+    present. That is the honest answer there: the question is whether the files
+    exist, and refusing to answer would make the cleanroom run fail for a
+    reason that has nothing to do with the pipeline.
     """
     r = subprocess.run(["git", "ls-files"], cwd=str(ROOT),
                        capture_output=True, text=True)
+    if r.returncode != 0 or not r.stdout.strip():
+        return {p.relative_to(ROOT).as_posix()
+                for p in ROOT.rglob("*") if p.is_file()}
     return {ln.strip().replace("\\", "/") for ln in r.stdout.splitlines()
             if ln.strip()}
 

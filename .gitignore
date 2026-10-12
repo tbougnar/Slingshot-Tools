@@ -49,13 +49,13 @@ data/reputation.json
 *.bak2
 *.bak3
 
-# debug_team.py and mark_verified.py were in this list, and both broke the
-# Friday pipeline in CI: qa_loop.py imports the first and verify_app.py the
-# second, and a module that is not in the repository cannot be imported on a
-# runner. Every verify job would have died with "No module named ..." before
-# it could build anything. A file the pipeline imports is not a one-off.
-PATTERN_CARD.txt
-PATTERNS.md
+# These four were in this list, and each of them broke the Friday pipeline on
+# a runner. debug_team.py is imported by qa_loop.py and mark_verified.py by
+# verify_app.py, so a module that is not in the repository cannot be imported.
+# PATTERNS.md and PATTERN_CARD.txt are read by make_app.py before it builds
+# anything, so without them every app would be generated with no pattern
+# guidance at all. None of them holds a credential or paid source. A file the
+# pipeline needs at runtime is not a one-off.
 debug_team2.py
 seed_fixbook.py
 groq_check.py

@@ -39,13 +39,11 @@ FORBIDDEN_FILES = [
     "data/reputation.json",
     "data/polls.json",
     "data/discord_sent.json",
-    "PATTERN_CARD.txt",
-    "PATTERNS.md",
-    # debug_team.py and mark_verified.py were in this list, and both broke the
-    # Friday pipeline on a runner: qa_loop.py imports the first and
-    # verify_app.py the second. They hold no credentials and no paid source, so
-    # they are ordinary pipeline code and belong in the repository. Anything
-    # the pipeline imports is not a one-off script.
+    # PATTERNS.md and PATTERN_CARD.txt were in this list, and both broke the
+    # Friday build: make_app.py reads them before generating anything, so a
+    # runner without them would build every app with no pattern guidance at
+    # all, and selftest_deep.py fails outright. They are teaching material
+    # with no credentials and no paid source in them.
     "debug_team2.py",
     "seed_fixbook.py",
     "groq_check.py",
