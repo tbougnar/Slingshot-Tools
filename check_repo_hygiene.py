@@ -41,10 +41,13 @@ FORBIDDEN_FILES = [
     "data/discord_sent.json",
     "PATTERN_CARD.txt",
     "PATTERNS.md",
-    "debug_team.py",
+    # debug_team.py and mark_verified.py were in this list, and both broke the
+    # Friday pipeline on a runner: qa_loop.py imports the first and
+    # verify_app.py the second. They hold no credentials and no paid source, so
+    # they are ordinary pipeline code and belong in the repository. Anything
+    # the pipeline imports is not a one-off script.
     "debug_team2.py",
     "seed_fixbook.py",
-    "mark_verified.py",
     "groq_check.py",
     "itch_login.py",
     "paypal_check.py",

@@ -84,6 +84,37 @@ def main() -> int:
                                        html, tier="basic")
         full_dir = make_app.write_app({**concept, "brand": brand}, html, tier="full")
 
+        # Now the installer, in the same job.
+        #
+        # This was never called from here, which is why nothing has ever been
+        # sellable: every Friday wrote a perfectly good paid app and then
+        # stopped, leaving no .exe for itch.io to upload. build_paid_only.py
+        # then looked for a Setup file that nobody had built, failed, and its
+        # next step was printed as a list of things to do by hand.
+        #
+        # It is built here because this is already the Windows runner, so it
+        # costs nothing extra, and because a paid edition with no installer is
+        # a card with a price on it and nothing behind it.
+        installer = None
+        try:
+            import build_exe as be
+            title = concept.get("title") or concept["slug"]
+            built = be.build_app(full_dir, title)
+            if built:
+                import build_installer_app as bi
+                installer = bi.build_installer(built, title, full_dir)
+        except Exception as e:  # noqa: BLE001
+            make_app.log(f"installer build failed: {str(e)[:90]}")
+
+        if installer and Path(installer).exists():
+            make_app.log(f"installer ready: {installer}")
+        else:
+            # Not fatal. The free edition is still worth shipping, and a
+            # missing installer is reported every week by e2e_product.py
+            # rather than stopping a release that has value.
+            make_app.log("no installer was produced; the paid edition will "
+                         "have nothing to sell until this is fixed")
+
         # The verifier needs the candidate on disk plus enough context to judge
         # it. Nothing goes near site/, which is the published folder.
         stage = {
@@ -94,6 +125,8 @@ def main() -> int:
             "differences": diffs,
             "free_blurb": free_blurb,
             "paid_blurb": paid_blurb,
+            "installer": (str(Path(installer).resolve())
+                          if installer and Path(installer).exists() else ""),
             "candidate": (basic_dir / "app" / "index.html")
                            .relative_to(make_app.ROOT).as_posix(),
             "paid_dir": str(full_dir.resolve()),

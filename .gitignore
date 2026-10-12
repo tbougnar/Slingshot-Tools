@@ -49,13 +49,15 @@ data/reputation.json
 *.bak2
 *.bak3
 
-# One-off scripts kept while building this. Not needed to run anything.
+# debug_team.py and mark_verified.py were in this list, and both broke the
+# Friday pipeline in CI: qa_loop.py imports the first and verify_app.py the
+# second, and a module that is not in the repository cannot be imported on a
+# runner. Every verify job would have died with "No module named ..." before
+# it could build anything. A file the pipeline imports is not a one-off.
 PATTERN_CARD.txt
 PATTERNS.md
-debug_team.py
 debug_team2.py
 seed_fixbook.py
-mark_verified.py
 groq_check.py
 itch_login.py
 paypal_check.py
