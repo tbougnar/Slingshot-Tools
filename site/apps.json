@@ -1,5 +1,45 @@
 [
   {
+    "slug": "csv-viewer",
+    "base_slug": "csv-viewer",
+    "title": "CSV viewer",
+    "tier": "full",
+    "tag": "csv",
+    "blurb": "A small, focused csv tool. CSV viewer does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "csv",
+      "viewer"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/csv-viewer-basic/",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-13"
+  },
+  {
+    "slug": "csv-viewer-basic",
+    "base_slug": "csv-viewer",
+    "title": "CSV viewer (Basic)",
+    "tier": "basic",
+    "tag": "csv",
+    "blurb": "A small, focused csv tool. CSV viewer does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "csv",
+      "viewer"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/csv-viewer-basic/",
+    "download": "",
+    "price": 0.0,
+    "free": true,
+    "differences": [],
+    "published": true,
+    "badge": "New",
+    "date": "2026-10-13"
+  },
+  {
     "slug": "bandwidth-calc",
     "base_slug": "bandwidth-calc",
     "title": "Data transfer calculator",
