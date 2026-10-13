@@ -273,7 +273,7 @@ def _ignored(rel: str) -> bool | None:
 
 
 _here = _ignored("site/apps/probe/app/index.html")
-if _here is False:
+if _here is True:
     problems.append(("-", "gitignore is hiding site/apps/, which is the "
                           "deployed free catalogue"))
 for _probe, _want in (("apps/probe.py", True),
