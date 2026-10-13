@@ -159,12 +159,12 @@
   "root_cause": "The step that records the itch.io outcome has no id, so the PUBLISHED value it writes to GITHUB_OUTPUT belongs to that step and is read by nothing. The job reports success whether or not the paid edition was actually published, which is the reporting defect the audit is required to eliminate.",
   "evidence": "Workflow inspection: the only step referencing steps.publish is the one that writes the unused output.",
   "repro": "python parse of friday-verify.yml",
-  "fix": "The record step now has id: paid, writes the outcome to GITHUB_STEP_SUMMARY, and a final gate reads it. The gate runs after the free edition has been committed and deployed, so one dead destination does not cost the customer the release that worked, but the job fails with a plain message instead of reporting success. ALLOW_FREE_ONLY accepts the partial release deliberately.",
-  "regression_test": "parsed friday-verify.yml and confirmed steps.paid exists and the gate is the final step",
-  "verification": "workflow parses; steps.paid exists; selftest_audit 0 problems",
+  "fix": "The record step now has id: paid, writes the outcome to GITHUB_STEP_SUMMARY, and a final gate reads it. The gate runs after the free edition has been deployed, so one dead destination does not cost the customer the release that worked, but the job fails with a plain message. ALLOW_FREE_ONLY accepts the partial release deliberately.",
+  "regression_test": "parsed friday-verify.yml; steps.paid exists and the gate is the final step",
+  "verification": "Run 38416539839 executed the gate and reported the paid edition was not published, instead of reporting success. That is the first evidence the gate runs.",
   "uncertainty": "",
   "opened": "2026-10-13T13:51:25+00:00",
-  "updated": "2026-10-13T13:51:44+00:00"
+  "updated": "2026-10-13T15:02:14+00:00"
  },
  {
   "id": "BUG-010",
@@ -179,11 +179,11 @@
   "evidence": "git ls-files site/apps shows index.r3.bak",
   "repro": "git ls-files site/apps",
   "fix": "qa_loop writes per-round backups to data/qa_backups/ instead of beside the app, and check_exposure refuses to pass if any .bak, .trial.html, .py or .tmp reaches site/.",
-  "regression_test": "planted index.r4.bak in the published tree; check_exposure reported it, and passed again once removed",
+  "regression_test": "planted index.r4.bak in the published tree; check_exposure reported it",
   "verification": "check_exposure ok after removal; index.r3.bak untracked and deleted",
   "uncertainty": "",
   "opened": "2026-10-13T13:51:25+00:00",
-  "updated": "2026-10-13T13:51:44+00:00"
+  "updated": "2026-10-13T15:02:14+00:00"
  },
  {
   "id": "BUG-011",
@@ -278,5 +278,25 @@
   "verification": "itchurl_selftest.py: FAILURES: none. publish_paid.py password-manager now exits 1 with a plain message. check_exposure ok.",
   "uncertainty": "The upload to itch.io has still never been executed, because the credentials exist only as repository secrets. That the store is empty is confirmed by fetching the live page.",
   "opened": "2026-10-13T13:51:25+00:00"
+ },
+ {
+  "id": "BUG-016",
+  "symptom": "the installer job built the wrong product because a slug went stale",
+  "severity": "HIGH",
+  "component": "ci",
+  "files": [
+   "build_paid_only.py",
+   "data/published.json",
+   ".gitignore"
+  ],
+  "status": "VERIFIED_FIXED",
+  "root_cause": "build_paid_only took the slug from data/published.json, which the verify job writes and which was committed. Two dispatches in quick succession left published.json naming dev-converter while the artifact uploaded in that run held unit-converter, so the installer job looked for a directory that had never been uploaded.",
+  "evidence": "Run 38416539839 failed with \"no paid build at paid/dev-converter\". Downloading the paid-build artifact from that same run shows unit-converter/app/index.html and nothing named dev-converter, so the correct build was present and was simply not the one it looked for.",
+  "repro": "gh run download 38416539839 -n paid-build, then compare what arrived with what data/published.json named",
+  "fix": "When the recorded slug has no build, exactly one uploaded build is used and the mismatch is logged and recorded as RETRIED. Two or more is ambiguous and is refused rather than guessed. data/published.json is untracked, because the artifact is the authority on what was actually built and carrying the slug through git only risks it being one release stale.",
+  "regression_test": "paidbuild_selftest.py",
+  "verification": "paidbuild_selftest.py: FAILURES: none, covering the named build, the stale-slug fallback, the ambiguous refusal, and no builds at all.",
+  "uncertainty": "The itch.io upload is still unexecuted; the credentials exist only as repository secrets.",
+  "opened": "2026-10-13T15:02:14+00:00"
  }
 ]

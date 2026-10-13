@@ -28,6 +28,8 @@ import shutil
 import sys
 from pathlib import Path
 
+import auditlog
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 
@@ -166,8 +168,32 @@ def main() -> int:
     stage = json.loads(stage_file.read_text(encoding="utf-8"))
     paid = make_app.PAID_DIR / stage["slug"]
     if not paid.exists():
-        log(f"no paid build at {paid}")
-        return 1
+        # The slug in published.json is written by the verify job and can be one
+        # release behind the directory that actually crossed the job boundary.
+        # Two dispatches in quick succession produced a catalog holding
+        # unit-converter while published.json still named dev-converter, and
+        # the installer job failed with "no paid build at .../dev-converter"
+        # while the correct build sat right there under another name.
+        #
+        # A single real paid build is unambiguous, so it is used and the
+        # mismatch is said out loud rather than being a silent substitution.
+        others = sorted(p for p in make_app.PAID_DIR.glob("*")
+                        if p.is_dir() and (p / "app" / "index.html").exists()) \
+            if make_app.PAID_DIR.is_dir() else []
+        if len(others) == 1:
+            paid = others[0]
+            log(f"published.json names {stage['slug']}, which has no build; "
+                f"using the one build that was uploaded, {paid.name}")
+            auditlog.retried("build-paid", job=paid.name,
+                             reason="published.json named a slug with no build",
+                             evidence={"named": stage["slug"],
+                                       "found": paid.name})
+        else:
+            log(f"no paid build at {paid}")
+            if others:
+                log(f"and {len(others)} builds were uploaded, so none can be "
+                    f"chosen safely: {', '.join(p.name for p in others)}")
+            return 1
 
     if "--check" in args:
         found = find_existing(paid)

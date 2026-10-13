@@ -251,6 +251,32 @@ FOUND = [
      "The upload to itch.io has still never been executed, because the "
      "credentials exist only as repository secrets. That the store is empty is "
      "confirmed by fetching the live page."),
+
+    ("the installer job built the wrong product because a slug went stale",
+     "HIGH", "ci", ["build_paid_only.py", "data/published.json",
+                    ".gitignore"], "VERIFIED_FIXED",
+     "build_paid_only took the slug from data/published.json, which the verify "
+     "job writes and which was committed. Two dispatches in quick succession "
+     "left published.json naming dev-converter while the artifact uploaded in "
+     "that run held unit-converter, so the installer job looked for a "
+     "directory that had never been uploaded.",
+     "Run 38416539839 failed with \"no paid build at paid/dev-converter\". "
+     "Downloading the paid-build artifact from that same run shows "
+     "unit-converter/app/index.html and nothing named dev-converter, so the "
+     "correct build was present and was simply not the one it looked for.",
+     "gh run download 38416539839 -n paid-build, then compare what arrived "
+     "with what data/published.json named",
+     "When the recorded slug has no build, exactly one uploaded build is used "
+     "and the mismatch is logged and recorded as RETRIED. Two or more is "
+     "ambiguous and is refused rather than guessed. data/published.json is "
+     "untracked, because the artifact is the authority on what was actually "
+     "built and carrying the slug through git only risks it being one release "
+     "stale.",
+     "paidbuild_selftest.py",
+     "paidbuild_selftest.py: FAILURES: none, covering the named build, the "
+     "stale-slug fallback, the ambiguous refusal, and no builds at all.",
+     "The itch.io upload is still unexecuted; the credentials exist only as "
+     "repository secrets."),
 ]
 
 
