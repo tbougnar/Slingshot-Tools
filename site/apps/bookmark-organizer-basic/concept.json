@@ -1,15 +1,9 @@
 {
   "slug": "bookmark-organizer-basic",
+  "brand": "",
   "title": "Bookmark cleaner",
   "tag": "bookmark",
-  "blurb": "bookmark cleaner that finds duplicates and dead links",
-  "tags": [
-    "bookmark",
-    "cleaner",
-    "that",
-    "finds"
-  ],
-  "brand": "",
+  "blurb": "",
   "tier": "basic",
   "base_slug": "bookmark-organizer"
 }
