@@ -23,6 +23,7 @@ repository.
 | PowerShell files | 1 | `check.ps1` |
 | Shell scripts | 0 | no `.sh` files |
 | Selftest suites | 21 | `run_selftests.py` discovers `*selftest*.py` |
+| Fixbook entries | 138 | `data/fixbook.json`, fed to `lessons.txt` by `record_scan_lessons.py` |
 
 ### Environment
 

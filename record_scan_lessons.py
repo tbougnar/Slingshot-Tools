@@ -120,6 +120,60 @@ ENTRIES = [
      ["selftest_audit.py"],
      "checked by hand: a comment naming a protected file passes, a real "
      "blanket add of one is reported"),
+
+    # ---- an unreadable file read as zero
+    ("a corrupt token counter read as zero spent, so every call looked "
+     "affordable and the pipeline spent the whole limit before it noticed",
+     "load() caught the parse error and returned {}, and spent() reads an "
+     "empty window as zero. In a counter zero is the answer that allows "
+     "spending, so the one state that should stop a run was the state that "
+     "permitted it. The same file also swallowed its own write errors in a "
+     "bare except",
+     "an unreadable or non-dict state is reported on stderr and read as "
+     "unknown, and spent() returns a figure above any limit so affordable() "
+     "is false. The write goes to a temporary file and is swapped in, so a "
+     "job that dies halfway leaves the last good total",
+     ["tokenmeter.py", "budget.py", "stage_app.py"],
+     "audit_selftest.py writes a truncated, a list and a number to the state "
+     "and checks each is reported unknown, is not read as zero, and leaves "
+     "nothing affordable"),
+
+    ("the monthly budget approved jobs on a month that had already spent "
+     "every hour, and its own docstring said the hours were committed and "
+     "could not quietly reset",
+     "the identical fail-open shape as the token counter: a parse error "
+     "returned an empty budget, which read as zero hours used. And commit "
+     "380e29e had deliberately untracked budget.json for good security "
+     "reasons, so the docstring was asserting a protection that no longer "
+     "existed",
+     "check() refuses outright when the recorded hours cannot be read, the "
+     "write is atomic, and the docstring describes what is actually true: "
+     "untracked on purpose, protected by refusing rather than by git",
+     ["budget.py"],
+     "audit_selftest.py checks a readable budget approves and that truncated, "
+     "list and numeric budgets all refuse, and that the docstring no longer "
+     "claims the state is committed"),
+
+    ("a release could die on a PermissionError traceback and still have "
+     "printed that it saved",
+     "save() logged the success line before writing, and neither it nor "
+     "publish_public() caught the write error, so an unattended job exited on "
+     "a traceback and main() returned 0 either way",
+     "both report whether they wrote, neither claims a save it cannot prove, "
+     "and main() exits non-zero when either write failed",
+     ["update_state.py"],
+     "audit_selftest.py makes the state file read-only and checks there is "
+     "no traceback, a non-zero exit, and no claim of a save"),
+
+    ("every runner started its token allowance from the last runner's usage",
+     "the Friday job's blanket git add committed data/token_usage.json. It is "
+     "live rate-limit state for whichever machine is running, so each later "
+     "run on another runner read a total it had not earned",
+     "the file is ignored along with the temporary files the atomic writes "
+     "leave behind, so a blanket add cannot sweep up live state again",
+     [".gitignore"],
+     "checked by hand: a blanket git add -A in a copy of the tree leaves no "
+     "token_usage.json staged, verified by cleanroom_selftest.py"),
 ]
 
 
