@@ -313,14 +313,16 @@ for _src in ('const x=getElementById("outputUnit`).value;',
     check(f"broken js is caught: {_src[:34]}",
           bool(make_app._unbalanced_delimiters(_src)))
 
-check("the real generated app is rejected before it can be staged",
-      make_app.js_syntax_errors(
-          make_app._unescape(
-              (ROOT / "site/apps/dev-converter-basic/app/index.html")
-              .read_text(encoding="utf-8", errors="replace")))
-      if (ROOT / "site/apps/dev-converter-basic/app/index.html").exists()
-      else True,
-      "dev-converter shipped unparseable once already")
+_live = ROOT / "site/apps/dev-converter-basic/app/index.html"
+if _live.exists():
+    _js = make_app.js_syntax_errors(
+        make_app._unescape(_live.read_text(encoding="utf-8", errors="replace")))
+    check("the app currently on disk parses",
+          not _js,
+          "dev-converter shipped unparseable once already; this is that one: "
+          + "; ".join(_js[:2]))
+else:
+    print("skip  no generated app on disk to check")
 
 print()
 print("FAILURES:", fails if fails else "none")

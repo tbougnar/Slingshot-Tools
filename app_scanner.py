@@ -19,6 +19,21 @@ PROBE = r"""
   // mutations catches changes that keep the page length identical.
   const mo = new MutationObserver(list => { window.__mut = (window.__mut || 0) + list.length; });
   mo.observe(document.body, {childList:true, subtree:true, attributes:true, characterData:true});
+  // Ids the app's own script reads are inputs. Reading a dropdown or a text
+  // box is how it receives a value, so clicking one cannot be expected to
+  // change the page.
+  const src = [...document.querySelectorAll('script:not([src])')].map(s => s.textContent).join('\n');
+  const readIds = new Set();
+  for (const m of src.matchAll(/getElementById\(\s*["'`]([^"'`]+)["'`]\s*\)/g)) readIds.add(m[1]);
+  for (const m of src.matchAll(/\$\(\s*["'#]([^"'`]+)["'`]\s*\)/g)) readIds.add(m[1].replace(/^#/, ''));
+  window.__readIds = n => readIds.has(n.id);
+  // A control whose only job is to open a file picker cannot be exercised
+  // without a person choosing a file, so clicking it proves nothing either
+  // way. Rather than guess from the button's text, the file inputs' click is
+  // intercepted for the duration of each click: if the click reached one, that
+  // control opened a picker and is reported as skipped rather than dead.
+  const fileEls = [...document.querySelectorAll('input[type=file]')];
+  const realClicks = fileEls.map(el => el.click);
   const origErr = console.error;
   console.error = function (...a) { out.errors.push('console: ' + a.join(' ')); origErr.apply(console, a); };
 
@@ -28,6 +43,28 @@ PROBE = r"""
     const label = (n.tagName + ':' + (n.innerText || n.value || n.getAttribute('aria-label') || n.id || '')).slice(0, 60).trim();
     const text = (n.innerText || n.value || n.getAttribute('aria-label') || '').trim();
     if (/^(delete|remove|reset|clear|empty|wipe)\b/i.test(text)) { out.skipped.push(label); continue; }
+    // A submit button on a form with a required field is refused by the browser
+    // before the handler ever runs, so the app looks broken when it is not.
+    // Fill anything empty first, which is what a person would do.
+    if (n.tagName === 'BUTTON' && n.type === 'submit' || n.tagName === 'INPUT' && n.type === 'submit') {
+      const form = n.closest('form');
+      for (const f of form ? [form] : []) {
+        for (const el of f.querySelectorAll('input,textarea')) {
+          if (!el.value) {
+            try {
+              el.value = el.type === 'number' ? '1' : 'sample';
+              el.dispatchEvent(new Event('input', {bubbles: true}));
+              el.dispatchEvent(new Event('change', {bubbles: true}));
+            } catch (e) {}
+          }
+        }
+      }
+    }
+    // A control that only opens a file picker cannot be exercised without a
+    // person choosing a file, and the click is intercepted so the run can tell
+    // that apart from a control that genuinely does nothing.
+    window.__filePick = 0;
+    fileEls.forEach(el => { el.click = function () { window.__filePick++; }; });
     window.__mut = 0;
     const storeBefore = JSON.stringify(localStorage) + '|' + JSON.stringify(sessionStorage);
     const valsBefore = [...document.querySelectorAll('input,textarea')].map(i=>i.value).join(',');
@@ -37,6 +74,8 @@ PROBE = r"""
     const origAlert = window.alert; window.alert = () => { dialog = true; };
     try { n.click(); } catch (e) { out.errors.push(label + ' -> ' + e.message); }
     window.alert = origAlert;
+    const openedPicker = window.__filePick > 0;
+    fileEls.forEach((el, i) => { el.click = realClicks[i]; });
     await sleep(140);
     // a modal left open would swallow every later click and look like a bug
     for (const dlg of [...document.querySelectorAll('dialog[open], .modal.open, [role=dialog][data-open=true], .overlay:not(.hidden)')]) {
@@ -49,6 +88,16 @@ PROBE = r"""
     const responded = mutated > 0 || storeBefore !== storeAfter || valsBefore !== valsAfter;
     if (dialog) continue;
     if (n.tagName === 'A') continue;
+    // it asked for a file, which no headless run can supply
+    if (openedPicker) { out.skipped.push(label); continue; }
+    // A dropdown the app reads is an input, not a button. Clicking one cannot
+    // change anything, so demanding a DOM change from it reported every unit
+    // selector in the app as a dead control and blocked publication forever.
+    // dev-converter was refused over exactly this.
+    if (n.tagName === 'SELECT' && window.__readIds && window.__readIds(n)) continue;
+    // A submit button delegates to its form's submit handler, and a browser
+    // click does submit the form, so it is judged by what the form did rather
+    // than by a listener attached to the button itself.
     if (!responded) out.dead.push(label + (hasHandler ? ' (handler present but nothing happened)' : ' (no handler, nothing happened)'));
   }
   // controls that look interactive but have no handler at all
