@@ -30,7 +30,7 @@ def check(label, ok, detail=""):
         fails.append(label)
 
 
-def scenario(named, uploaded):
+def scenario(named, uploaded, write_stage=True):
     """Run build_paid_only --check against a paid/ tree built for the test."""
     tmp = pathlib.Path(tempfile.mkdtemp())
     real_paid_dir, real_data = make_app.PAID_DIR, make_app.DATA
@@ -38,9 +38,10 @@ def scenario(named, uploaded):
     make_app.PAID_DIR = tmp / "paid"
     make_app.DATA = tmp / "data"
     make_app.DATA.mkdir(parents=True, exist_ok=True)
-    (make_app.DATA / "published.json").write_text(
-        json.dumps({"slug": named, "title": named, "price": 3.0}),
-        encoding="utf-8")
+    if write_stage:
+        (make_app.DATA / "published.json").write_text(
+            json.dumps({"slug": named, "title": named, "price": 3.0}),
+            encoding="utf-8")
     for name in uploaded:
         (make_app.PAID_DIR / name / "app").mkdir(parents=True, exist_ok=True)
         (make_app.PAID_DIR / name / "app" / "index.html").write_text(
@@ -72,6 +73,18 @@ check("two builds and a stale slug is refused",
 
 check("a stale slug with no builds at all is refused",
       scenario("nope", []) == 1)
+
+print("\nNO STAGE FILE AT ALL, WHICH IS THE CI CASE\n")
+# data/published.json is untracked, so the installer job's fresh checkout has
+# none of it. The old code returned 0 here, so the step reported a successful
+# build while producing no installer at all.
+check("an uploaded build with no stage file is still built",
+      scenario("", ["unit-converter"], write_stage=False) == 0,
+      "this is the run that reported success and shipped nothing")
+
+check("no build and no stage file is refused, not reported as success",
+      scenario("", [], write_stage=False) == 1,
+      "it returned 0 here and claimed a build it had not made")
 
 print("\nTHE CATALOG AND THE BUILD AGREE IN THE REPOSITORY\n")
 # published.json is deliberately untracked now, so it only exists on a machine

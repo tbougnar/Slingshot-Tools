@@ -162,38 +162,54 @@ def main() -> int:
 
     args = [a.strip().lower() for a in sys.argv[1:]]
     stage_file = make_app.DATA / "published.json"
-    if not stage_file.exists():
-        log("nothing was published to build from")
-        return 0
-    stage = json.loads(stage_file.read_text(encoding="utf-8"))
-    paid = make_app.PAID_DIR / stage["slug"]
-    if not paid.exists():
-        # The slug in published.json is written by the verify job and can be one
-        # release behind the directory that actually crossed the job boundary.
-        # Two dispatches in quick succession produced a catalog holding
-        # unit-converter while published.json still named dev-converter, and
-        # the installer job failed with "no paid build at .../dev-converter"
-        # while the correct build sat right there under another name.
-        #
-        # A single real paid build is unambiguous, so it is used and the
+
+    # What was actually built is in paid/, which arrived as an artifact. The
+    # slug in published.json is only a hint, and it used to be the sole
+    # authority: the file was untracked, so a fresh checkout had none of it,
+    # this returned 0, and the step reported a successful build while
+    # producing no installer at all. Nothing about that return value was true.
+    builds = sorted(p for p in make_app.PAID_DIR.glob("*")
+                    if p.is_dir() and (p / "app" / "index.html").exists()) \
+        if make_app.PAID_DIR.is_dir() else []
+
+    if not builds:
+        log("no paid build was uploaded, so there is nothing to package")
+        auditlog.blocked("build-paid", reason="paid/ held no app to build from",
+                         evidence={"paid_dir": str(make_app.PAID_DIR)})
+        return 1
+
+    stage = {}
+    if stage_file.exists():
+        try:
+            stage = json.loads(stage_file.read_text(encoding="utf-8"))
+        except (ValueError, OSError):
+            stage = {}
+    else:
+        log("published.json is not present, which is expected: the artifact "
+            "is the authority on what was built")
+    named = str(stage.get("slug") or "")
+    paid = make_app.PAID_DIR / named if named else None
+    if paid is not None and paid.exists() and \
+            (paid / "app" / "index.html").exists():
+        pass
+    elif len(builds) == 1:
+        # Either published.json is absent or it names something that did not
+        # arrive. A single real build is unambiguous, so it is used and the
         # mismatch is said out loud rather than being a silent substitution.
-        others = sorted(p for p in make_app.PAID_DIR.glob("*")
-                        if p.is_dir() and (p / "app" / "index.html").exists()) \
-            if make_app.PAID_DIR.is_dir() else []
-        if len(others) == 1:
-            paid = others[0]
-            log(f"published.json names {stage['slug']}, which has no build; "
-                f"using the one build that was uploaded, {paid.name}")
-            auditlog.retried("build-paid", job=paid.name,
-                             reason="published.json named a slug with no build",
-                             evidence={"named": stage["slug"],
-                                       "found": paid.name})
-        else:
-            log(f"no paid build at {paid}")
-            if others:
-                log(f"and {len(others)} builds were uploaded, so none can be "
-                    f"chosen safely: {', '.join(p.name for p in others)}")
-            return 1
+        paid = builds[0]
+        log(f"published.json says {named or '(nothing)'}, which is not the "
+            f"build that was uploaded; using {paid.name}")
+        auditlog.retried("build-paid", job=paid.name,
+                         reason="the recorded slug was absent or did not match "
+                                "the uploaded build",
+                         evidence={"named": named or "", "found": paid.name})
+    else:
+        log(f"{len(builds)} paid builds were uploaded, so none can be chosen "
+            f"safely: {', '.join(p.name for p in builds)}")
+        auditlog.blocked("build-paid",
+                         reason="more than one paid build to choose from",
+                         evidence={"builds": [p.name for p in builds]})
+        return 1
 
     if "--check" in args:
         found = find_existing(paid)
