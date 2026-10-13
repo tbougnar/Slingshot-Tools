@@ -1,0 +1,15 @@
+{
+  "slug": "csv-viewer-basic",
+  "title": "CSV viewer",
+  "tag": "csv",
+  "blurb": "CSV viewer that handles huge files without freezing",
+  "tags": [
+    "CSV",
+    "viewer",
+    "that",
+    "handles"
+  ],
+  "brand": "",
+  "tier": "basic",
+  "base_slug": "csv-viewer"
+}
