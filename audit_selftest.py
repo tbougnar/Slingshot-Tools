@@ -261,6 +261,67 @@ check("budget.py says the state is deliberately untracked",
 check("and it says an unreadable state refuses the job",
       "unknown rather than" in budget_src and "REFUSING" in budget_src)
 
+# ---- 10. an app whose script cannot parse must never be staged
+# make_app escaped a model reply once per pass, so a doubly-escaped payload
+# arrived as \\"full\\" rather than "full". The whole script block failed to
+# parse, every control was reported dead, and the repair loop spent its entire
+# budget patching controls that were never broken because the fault was one
+# syntax error earlier. dev-converter shipped that way.
+print("\nAN APP THAT CANNOT PARSE IS REFUSED BEFORE IT IS STAGED\n")
+import make_app
+
+_esc = 'const TIER=\\\\"full\\\\";const K=\\\\"x\\\\";'
+_un = make_app._unescape(_esc)
+check("double-escaped javascript is unescaped fully",
+      _un == 'const TIER="full";const K="x";', _un[:50])
+
+_one = make_app._unescape('const K=\\"x\\";')
+check("single-escaped javascript is still correct",
+      _one == 'const K="x";', _one[:40])
+check("an already-clean string is left alone",
+      make_app._unescape('const K="x";') == 'const K="x";')
+check("a real backslash does not loop forever",
+      make_app._unescape("const RE=/\\\\d/;") == "const RE=/\\d/;",
+      f"it stopped at {make_app._unescape('const RE=/\\\\\\\\d/;')!r} rather "
+      "than decoding once")
+check("and a string with no escapes is untouched",
+      make_app._unescape("const K='plain';") == "const K='plain';")
+
+_bad = "<html><body><script>const TIER=\\\"full\\\";</script></body></html>"
+check("an unparseable script block is detected",
+      make_app.js_syntax_errors(_bad),
+      "the escaping bug that shipped dev-converter is invisible again")
+check("and it is refused by the staging gate",
+      any("will not parse" in p for p in make_app.html_looks_fine(_bad)))
+_ok = "<html><body>" + "<script>const K='x';localStorage.setItem(K,'1');" \
+      "</script>" + "x" * 2000 + "</body></html>"
+check("a clean script block is not falsely refused",
+      not make_app.js_syntax_errors(_ok))
+
+# the delimiter check has to be silent on valid javascript, because stage_app
+# throws away and regenerates anything html_looks_fine rejects
+for _src in ('const K="x";localStorage.setItem(K,"1");',
+             "const re=/\\d+/g;", "const t=`a ${b} c`;",
+             "const q=\"it's fine\";", "const d=\"a\\\"b\";",
+             "const s=\"`\";", "const arrow=x=>`${x}`;",
+             "if(a){b()}else{c()}"):
+    check(f"valid js is not flagged: {_src[:34]}",
+          not make_app._unbalanced_delimiters(_src),
+          make_app._unbalanced_delimiters(_src))
+for _src in ('const x=getElementById("outputUnit`).value;',
+             'const a="unclosed;', "const b=`unclosed;", "if(a{ b() }"):
+    check(f"broken js is caught: {_src[:34]}",
+          bool(make_app._unbalanced_delimiters(_src)))
+
+check("the real generated app is rejected before it can be staged",
+      make_app.js_syntax_errors(
+          make_app._unescape(
+              (ROOT / "site/apps/dev-converter-basic/app/index.html")
+              .read_text(encoding="utf-8", errors="replace")))
+      if (ROOT / "site/apps/dev-converter-basic/app/index.html").exists()
+      else True,
+      "dev-converter shipped unparseable once already")
+
 print()
 print("FAILURES:", fails if fails else "none")
 sys.exit(1 if fails else 0)

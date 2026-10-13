@@ -158,6 +158,36 @@ def groq(system, user, max_tokens=4000, temperature=0.8, tries=3):
                 time.sleep(1.5 * (attempt + 1))
     raise RuntimeError(f"every model failed: {last}")
 
+def _unescape(text: str) -> str:
+    """Undo the JSON escaping, repeating until it stops changing.
+
+    Models return the document as a JSON string, and they double-escape it more
+    often than not, so the payload arrives with two levels of escaping on it.
+    Decoding only the quotes was not enough: a template literal arrived as a
+    literal backslash-backslash-backtick, which closes the template on the
+    first backtick and leaves the rest of the line as bare code. The whole
+    script then failed to parse with "Invalid or unexpected token", every
+    handler silently stopped responding, and the repair loop spent its whole
+    budget patching controls that were never broken.
+
+    This decodes the escapes a JSON string actually uses and repeats until it
+    is stable, bounded so a string that legitimately contains a backslash
+    cannot loop. It does not touch non-ASCII, which must survive verbatim.
+    """
+    simple = (("\\/", "/"), ("\\b", "\b"), ("\\f", "\f"), ("\\r", "\r"),
+              ("\\n", "\n"), ("\\t", "\t"), ('\\"', '"'), ("\\'", "'"),
+              ("\\`", "`"), ("\\$", "$"))
+    prev = None
+    out = text
+    for _ in range(5):
+        if out == prev:
+            break
+        prev = out
+        for a, b in (("\\\\", "\\"),) + simple:
+            out = out.replace(a, b)
+    return out
+
+
 def _salvage_html(raw):
     """Pull the document out of whatever the model actually returned.
 
@@ -174,7 +204,7 @@ def _salvage_html(raw):
     m = re.search(r'"html"\s*:\s*"(.*)$', text, re.S)
     if m:
         text = m.group(1)
-        text = text.replace('\\"', '"').replace("\\n", "\n")
+        text = _unescape(text)
         if text.endswith('"'):
             text = text[:-1]
 
@@ -630,7 +660,108 @@ def html_looks_fine(html):
                      "default only, which is acceptable")
     if "localStorage" not in html and "indexedDB" not in html:
         problems.append("missing localStorage (the app would not save anything)")
+    # The single most expensive failure in this pipeline was an app whose
+    # script block did not parse. Nothing else goes wrong the same way: every
+    # handler is attached, every control looks wired, and not one of them
+    # responds. The repair loop then spends its whole budget patching controls
+    # that were never broken, because the real fault is one syntax error
+    # earlier. Catching it here costs a fraction of a second.
+    for bad in js_syntax_errors(html):
+        problems.append(f"javascript will not parse: {bad}")
     return problems
+
+
+def js_syntax_errors(html: str) -> list[str]:
+    """Return a short description of each script block that cannot parse.
+
+    Uses node when it is on the machine, because that is the only way to know
+    what a browser will think. When node is missing, falls back to the cheap
+    checks that catch the failure this pipeline actually hit: escape sequences
+    left behind by a doubly-escaped model reply.
+    """
+    blocks = re.findall(r"<script(?![^>]*\bsrc=)[^>]*>(.*?)</script>", html,
+                        re.S | re.I)
+    if not blocks:
+        return []
+    problems: list[str] = []
+    node = shutil.which("node")
+    if node:
+        for i, js in enumerate(blocks):
+            if not js.strip():
+                continue
+            try:
+                r = subprocess.run([node, "--check"], input=js,
+                                   capture_output=True, text=True, timeout=30)
+            except (OSError, subprocess.SubprocessError):
+                return problems
+            if r.returncode != 0:
+                first = next((ln.strip() for ln in
+                              (r.stderr or "").splitlines()
+                              if "Error" in ln), "parse error")
+                problems.append(f"script {i + 1}: {first[:90]}")
+        return problems
+    # no node: catch the faults this pipeline has actually hit, which all need
+    # no interpreter. A double-escaped reply leaves bare quote and brace
+    # sequences behind, and a model regularly mistypes one closing delimiter.
+    for i, js in enumerate(blocks):
+        for pattern, why in ((r'\\"', "escaped quotes left in the source"),
+                             (r'\\\$\{', "escaped interpolation left in the "
+                                         "source")):
+            if re.search(pattern, js):
+                problems.append(f"script {i + 1}: {why}, so it cannot parse")
+        if _unbalanced_delimiters(js):
+            problems.append(f"script {i + 1}: {_unbalanced_delimiters(js)}")
+    return problems
+
+
+def _unbalanced_delimiters(js: str) -> str:
+    """Describe a bracket or quote that does not close, or '' when all do.
+
+    A model wrote getElementById("outputUnit`) with a backtick where the quote
+    should close, and every control in the app went dead because of it. Bracket
+    counting alone did not catch it, because the braces were fine; only reading
+    the delimiters in order did.
+    """
+    stack = []
+    pairs = {")": "(", "]": "[", "}": "{"}
+    i, n = 0, len(js)
+    while i < n:
+        c = js[i]
+        if c == "\\":
+            i += 2
+            continue
+        if c in "\"'`":
+            quote = c
+            i += 1
+            closed = False
+            while i < n:
+                if js[i] == "\\":
+                    i += 2
+                    continue
+                if js[i] == quote:
+                    closed = True
+                    break
+                # a newline can never appear in a plain string literal, and a
+                # different quote type ends it in a template literal
+                if js[i] == "\n" and quote != "`":
+                    break
+                if js[i] in "'\"" and quote == "`":
+                    break
+                i += 1
+            if not closed:
+                return f"a {quote} string is never closed"
+            i += 1
+            continue
+        if c in "([{":
+            stack.append(c)
+        elif c in ")]}":
+            if not stack or stack[-1] != pairs[c]:
+                return f"a {c} closes the wrong bracket"
+            stack.pop()
+        i += 1
+    if stack:
+        return f"{len(stack)} bracket(s) are never closed"
+    return ""
 
 
 NSI = r"""
