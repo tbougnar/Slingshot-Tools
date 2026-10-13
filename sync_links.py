@@ -76,9 +76,23 @@ def discord_payload() -> str:
 
 
 def youtube_sample() -> str:
-    """A description with every link in it, for checking by eye."""
-    import shorts_script as ss
-    p = ss.product()
+    """A description with every link in it, for checking by eye.
+
+    This is a sample for a human to read, produced as part of syncing the
+    footer. It used to call shorts_script.product(), which raises SystemExit
+    when there is no product to advertise, and that SystemExit propagated out
+    of this script. The result was that a quiet week, with nothing to make a
+    video about, stopped the website being deployed at all. A missing product
+    is the normal case between releases, not a reason to refuse to publish.
+    """
+    try:
+        import shorts_script as ss
+    except ImportError:
+        return ""
+    try:
+        p = ss.product()
+    except SystemExit:
+        return ""
     return links.youtube_description(
         p.get("name") or "Slingshot Tool",
         ss.price_label(p.get("price")),

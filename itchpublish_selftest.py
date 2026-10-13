@@ -93,6 +93,20 @@ check("it never says a product is on itch.io when it did not get there",
       "is on itch.io at" not in combined,
       combined.strip()[-120:])
 
+print("\nA QUIET WEEK MUST NOT STOP THE SITE DEPLOYING\n")
+# sync_links calls shorts_script.product(), which raises SystemExit when there
+# is nothing to advertise. That SystemExit propagated out of sync_links and
+# the Pages job failed, so a week with no new product meant the website was
+# not deployed at all. Run 38428458061 is the evidence.
+import subprocess
+r = subprocess.run([sys.executable, "sync_links.py"], cwd=str(ROOT),
+                   capture_output=True, text=True, timeout=900)
+combined2 = r.stdout + r.stderr
+check("sync_links exits zero with no product to advertise", r.returncode == 0,
+      f"rc={r.returncode}; {combined2.strip()[-120:]}")
+check("it does not print the SystemExit message as a failure",
+      "nothing to advertise" not in combined2 or r.returncode == 0)
+
 print("\nTHE WORKFLOW GATE READS THE REAL EXIT CODE\n")
 wf = (ROOT / ".github" / "workflows" / "friday-verify.yml").read_text(
     encoding="utf-8")
