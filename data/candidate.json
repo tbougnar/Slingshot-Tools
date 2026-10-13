@@ -1,0 +1,11 @@
+{
+ "slug": "password-strength",
+ "brand": "",
+ "title": "Password strength auditor",
+ "tag": "password",
+ "differences": [],
+ "free_blurb": "",
+ "paid_blurb": "",
+ "candidate": "site/apps/password-strength-basic/app/index.html",
+ "paid_dir": "paid/password-strength"
+}
