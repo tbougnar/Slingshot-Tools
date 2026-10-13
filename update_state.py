@@ -125,11 +125,25 @@ def load() -> dict:
     return base
 
 
-def save(state: dict) -> None:
-    DATA.mkdir(parents=True, exist_ok=True)
+def save(state: dict) -> bool:
+    """Write the state, and say plainly when it could not be written.
+
+    This runs unattended, and a read-only file or a full disk raised an
+    unhandled PermissionError/OSError straight through main(), so the job died
+    on a traceback. It also used to log "saved" before checking anything, which
+    is the worse half: a caller could not tell a real save from a claim of one.
+    """
     state["updated"] = date.today().isoformat()
-    STATE.write_text(json.dumps(state, indent=2), encoding="utf-8")
+    try:
+        DATA.mkdir(parents=True, exist_ok=True)
+        STATE.write_text(json.dumps(state, indent=2), encoding="utf-8")
+    except OSError as e:
+        log(f"could not write {STATE.name}: {e}")
+        log("the release state was NOT updated, so nothing that depends on it "
+            "can be trusted this run")
+        return False
     log(f"saved {state.get('version')} to {STATE.relative_to(ROOT)}")
+    return True
 
 
 def app_version(state: dict, slug: str) -> str:
@@ -178,11 +192,15 @@ def phase(state: dict, when: date | None = None) -> str:
     return "idle"
 
 
-def publish_public(state: dict) -> None:
+def publish_public(state: dict) -> bool:
     """Write the small file the website and the apps read.
 
     Only fields the page actually needs, and nothing secret: this file is
     served publicly, so a token or an internal id must never end up in it.
+
+    Returns whether it was written. site/ is the published folder and is
+    regenerated during a deploy, so a failure here is not fatal to a release,
+    but it must not be reported as a success.
     """
     ph = phase(state)
     left = days_until(state)
@@ -202,9 +220,15 @@ def publish_public(state: dict) -> None:
         list(state.get("next_major_notes") or [])[:6],
         "trailer": state.get("last_trailer"),
     }
-    PUBLIC.parent.mkdir(parents=True, exist_ok=True)
-    PUBLIC.write_text(json.dumps(out, indent=2), encoding="utf-8")
+    try:
+        PUBLIC.parent.mkdir(parents=True, exist_ok=True)
+        PUBLIC.write_text(json.dumps(out, indent=2), encoding="utf-8")
+    except OSError as e:
+        log(f"could not write {PUBLIC.name}: {e}")
+        log("the countdown the homepage reads was NOT refreshed")
+        return False
     log(f"public file says {ph}")
+    return True
 
 
 def main() -> int:
@@ -225,8 +249,10 @@ def main() -> int:
         state["version"] = bump(state.get("version") or "1.0.0", level)
         log(f"bumped to {state['version']}")
 
-    save(state)
-    publish_public(state)
+    # both writes report whether they happened, so a run that changed nothing
+    # exits non-zero instead of looking like a successful bump
+    wrote = save(state)
+    published = publish_public(state)
 
     log(f"version {state.get('version')}")
     log(f"phase {phase(state)}")
@@ -239,6 +265,9 @@ def main() -> int:
                       "phase": phase(state),
                       "days_left": days_until(state),
                       "apps": state.get("apps") or {}}, indent=2))
+    if not (wrote and published):
+        log("the run did not complete: at least one write failed")
+        return 1
     return 0
 
 

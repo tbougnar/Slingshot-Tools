@@ -67,19 +67,24 @@ def groq_json(system, user, max_tokens=1200, temperature=0.4):
 
 
 def itch_signals():
-    """Public page hit counts if the itch.io API key is configured; otherwise
-    an honest 'no data yet' so we never invent numbers."""
-    key = (os.environ.get("ITCH_API_KEY") or "").strip() or ""
-    if not key:
-        return None
+    """Real usage signals, from the one place that already collects them.
+
+    This used to make its own request to {page}.itch.io/embed-stats, which is
+    a game-level endpoint that answers 404 for an account, and it returned a
+    different shape from the account-level api/1/x/stats/* that reputation.py
+    uses. So the coach had been reporting no usage data for weeks, while the
+    same numbers were being gathered a moment later by signals.py and thrown
+    away. One fetch, one place, one shape.
+    """
     try:
-        req = urllib.request.Request(f"https://{ITCH_PAGE}.itch.io/embed-stats",
-                                     headers={"Authorization": f"Bearer {key}"})
-        with urllib.request.urlopen(req, timeout=30) as r:
-            return json.loads(r.read().decode())
+        import reputation
+        got = reputation.itch_signals()
     except Exception as e:  # noqa: BLE001
-        log(f"itch stats unavailable: {str(e)[:120]}")
+        log(f"usage signals unavailable: {str(e)[:80]}")
         return None
+    if not got.get("available"):
+        return None
+    return {"sales": got.get("sales"), "visits": got.get("visits")}
 
 
 def main():

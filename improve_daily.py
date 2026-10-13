@@ -132,7 +132,17 @@ def attempt(state: dict) -> int:
     try:
         rc = su.main()
     except SystemExit as e:
-        rc = int(e.code or 0)
+        # SystemExit.code is anything the raiser passed, not just an int.
+        # providers.active() raises it with the message "no model provider is
+        # configured", so int() here raised ValueError and turned a clean
+        # "there is no model" into a traceback on every run without a key.
+        code = e.code
+        if isinstance(code, int):
+            rc = code
+        else:
+            why = str(code or "").strip() or "it stopped early"
+            log(f"self_upgrade stopped: {why[:70]}")
+            return skip(state, f"the improver stopped: {why[:60]}")
     except Exception as e:  # noqa: BLE001
         log(f"self_upgrade could not run: {str(e)[:70]}")
         return skip(state, f"the improver failed: {str(e)[:50]}")

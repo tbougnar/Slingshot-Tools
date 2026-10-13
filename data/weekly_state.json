@@ -1,12 +1,13 @@
 {
   "done": [
     "a11y",
-    "theme"
+    "theme",
+    "empty"
   ],
   "last": {
-    "lane": "theme",
-    "area": "interface",
-    "what": "Check light mode against dark mode in both themes",
-    "version": "1.0.2"
+    "lane": "empty",
+    "area": "onboarding",
+    "what": "Make empty states say what to do first, not just that it is empty",
+    "version": "1.0.1"
   }
 }

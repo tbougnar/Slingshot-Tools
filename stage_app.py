@@ -42,6 +42,12 @@ def main() -> int:
     need = 4000                       # concept + a fresh app + one patch
     waited = 0
     while not tokenmeter.affordable(limit, need) and waited < 300:
+        # An unreadable meter never resets, so waiting on it just burns five
+        # minutes and then starts anyway. Say what is wrong and stop waiting.
+        if tokenmeter.unknown():
+            print("[stage] the token meter cannot be read, so there is no "
+                  "allowance left to wait for; not waiting")
+            break
         if waited == 0:
             print(f"[stage] allowance is {tokenmeter.spent()} tokens in, "
                   f"{tokenmeter.remaining(limit)} left, and this run needs "
@@ -51,8 +57,12 @@ def main() -> int:
     if waited:
         print(f"[stage] waited {waited}s for the allowance to reset")
     if not tokenmeter.affordable(limit, need):
-        print(f"[stage] only {tokenmeter.remaining(limit)} tokens left and "
-              f"{need} are needed, so starting anyway is the only option")
+        if tokenmeter.unknown():
+            print("[stage] the token meter is unreadable and "
+                  f"{need} tokens are needed; this run may be cut off")
+        else:
+            print(f"[stage] only {tokenmeter.remaining(limit)} tokens left and "
+                  f"{need} are needed, so starting anyway is the only option")
 
     concept = make_app.pick_concept(money)
     make_app.log(f"concept: {concept['title']} ({concept['slug']})")

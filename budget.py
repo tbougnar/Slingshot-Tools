@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -32,9 +33,23 @@ JOB_CAP_HOURS = float(os.environ.get("SLINGSHOT_JOB_CAP_HOURS") or 1.5)
 # Emergency budget is only for a run that is repairing something already broken.
 EMERGENCY = os.environ.get("SLINGSHOT_EMERGENCY", "").strip() in ("1", "true", "yes")
 
+# Set when the recorded hours cannot be read. The module docstring promises the
+# hours "cannot quietly reset"; they did, because a parse error was swallowed
+# and an empty budget reads as a month that has spent nothing.
+_broken = ""
+
 
 def log(msg: str) -> None:
     print(f"[budget] {msg}", flush=True)
+
+
+def warn(msg: str) -> None:
+    global _broken
+    if _broken == msg:
+        # spent() and broken() both read the file; say it once, not twice
+        return
+    _broken = msg
+    print(f"[budget] PROBLEM: {msg}", file=sys.stderr, flush=True)
 
 
 def month_key(when: float | None = None) -> str:
@@ -42,22 +57,52 @@ def month_key(when: float | None = None) -> str:
     return f"{t.year:04d}-{t.month:02d}"
 
 
+def broken() -> bool:
+    """True when the recorded hours cannot be trusted."""
+    load()
+    return bool(_broken)
+
+
 def load() -> dict:
+    global _broken
     if STATE.exists():
         try:
             data = json.loads(STATE.read_text(encoding="utf-8"))
-            if isinstance(data, dict):
-                data.setdefault("months", {})
-                data.setdefault("runs", [])
-                return data
-        except (json.JSONDecodeError, OSError):
-            pass
+        except (json.JSONDecodeError, OSError) as e:
+            warn(f"cannot read {STATE.name} ({e}). Treating this month's hours "
+                 "as unknown rather than as zero, so jobs will not start on a "
+                 "budget that may already be spent.")
+            return {"months": {}, "runs": []}
+        if not isinstance(data, dict):
+            warn(f"{STATE.name} is not an object. Same treatment: the hours "
+                 "are unknown, not zero.")
+            return {"months": {}, "runs": []}
+        data.setdefault("months", {})
+        data.setdefault("runs", [])
+        _broken = ""
+        return data
+    # no file at all is a first run, which is legitimately zero
+    _broken = ""
     return {"months": {}, "runs": []}
 
 
-def save(data: dict) -> None:
-    STATE.parent.mkdir(parents=True, exist_ok=True)
-    STATE.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+def save(data: dict) -> bool:
+    """Write the hours, and report whether it worked.
+
+    The write goes to a side file and is swapped in, so a job that dies halfway
+    leaves the previous good total rather than a truncated file that the next
+    read would take for "no hours used".
+    """
+    try:
+        STATE.parent.mkdir(parents=True, exist_ok=True)
+        tmp = STATE.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        tmp.replace(STATE)
+    except OSError as e:
+        warn(f"could not record the hours ({e}). This run's cost was NOT "
+             "saved, so the budget is understated until someone repairs it.")
+        return False
+    return True
 
 
 def spent(month: str | None = None) -> dict:
@@ -70,7 +115,7 @@ def spent(month: str | None = None) -> dict:
             "total": normal + emergency}
 
 
-def record(label: str, seconds: float, emergency: bool = False) -> None:
+def record(label: str, seconds: float, emergency: bool = False) -> bool:
     hours = max(0.0, seconds) / 3600.0
     data = load()
     month = month_key()
@@ -84,7 +129,7 @@ def record(label: str, seconds: float, emergency: bool = False) -> None:
         "emergency": emergency,
         "at": int(time.time()),
     }]
-    save(data)
+    return save(data)
 
 
 def remaining() -> float:
@@ -100,10 +145,19 @@ def check(label: str = "", planned_hours: float = 0.0) -> int:
 
     Returns 0 to go ahead, 1 to stop. A job must not start something it cannot
     finish, so this also checks the planned cost.
+
+    An unreadable budget refuses outright. The old behaviour was to read a
+    corrupt or missing total as zero hours used, which approved a job on a
+    month that may already have spent all thirty hours.
     """
-    s = spent()
-    need = planned_hours or JOB_CAP_HOURS
     tag = f" ({label})" if label else ""
+    s = spent()
+    if broken():
+        log(f"REFUSING{tag or ' (budget)'}: the recorded hours cannot be read, "
+            "so there is no way to know what is left. Repair data/budget.json "
+            "or set SLINGSHOT_MONTHLY_HOURS deliberately.")
+        return 1
+    need = planned_hours or JOB_CAP_HOURS
 
     log(f"{s['month']}: {s['normal']:.2f}h of {MONTHLY_HOURS:.2f}h used, "
         f"{s['emergency']:.2f}h of {EMERGENCY_HOURS:.2f}h emergency")
@@ -146,9 +200,13 @@ class Timer:
 
     def __exit__(self, *exc):
         used = time.time() - self.start
-        record(self.label, used, self.emergency)
+        wrote = record(self.label, used, self.emergency)
         log(f"{self.label} used {used / 3600.0:.3f}h "
             f"({self.label} total this month: {spent()['total']:.2f}h)")
+        if not wrote:
+            # the job's own result is unaffected, but the budget is now wrong
+            log(f"WARNING: {self.label} cost was not saved, so the monthly "
+                "total is understated")
         return False
 
 
@@ -176,9 +234,9 @@ def main() -> int:
         return 0
 
     if args.action == "record":
-        record(args.label, args.hours * 3600.0, args.emergency)
+        wrote = record(args.label, args.hours * 3600.0, args.emergency)
         log(f"recorded {args.hours:.3f}h for {args.label}")
-        return 0
+        return 0 if wrote else 1
 
     if args.need > JOB_CAP_HOURS:
         log(f"WARNING: asked for {args.need:.2f}h but a job is capped at "

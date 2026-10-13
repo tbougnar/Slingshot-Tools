@@ -154,9 +154,35 @@ jobs:
       # the installer with butler, checks the page really answers, and only then
       # flips the product to published on the site. The order matters: nothing
       # is advertised before itch.io is confirmed to be serving it.
+      # The publish step is recorded, and its outcome is carried into the summary,
+      # but it does not stop the release. The free edition is worth shipping
+      # even when the store has not answered, and a failure here used to be
+      # invisible: the job went green with nothing on sale. What was wrong was
+      # the silence, not the failure, so it is now written where the next step
+      # and the run summary both have to see it.
       - name: Put the tool on itch.io, then publish it on the site
+        id: publish
         continue-on-error: true
         run: python itch_publish.py
+        env:
+          ITCH_USER: ${{ vars.ITCH_USER }}
+          ITCH_API_KEY: ${{ secrets.ITCH_API_KEY }}
+          ITCH_SESSION_COOKIE: ${{ secrets.ITCH_SESSION_COOKIE }}
+          ITCH_CHANNEL: "windows"
+
+      - name: Record whether anything is actually for sale
+        run: |
+          if [ "${{ steps.publish.outcome }}" != "success" ]; then
+            echo "::warning::the paid edition was not published; the free" \
+                 "edition is shipping and the paid card stays hidden"
+            echo "PUBLISHED=no" >> "$GITHUB_OUTPUT"
+          else
+            echo "PUBLISHED=yes" >> "$GITHUB_OUTPUT"
+          fi
+      # the upload step must fail loudly if there is no installer at all,
+      # otherwise "no file found" looks like a successful release
+      - name: An installer exists, or the release says so
+        run: python build_paid_only.py --check
         env:
           ITCH_USER: ${{ vars.ITCH_USER }}
           ITCH_API_KEY: ${{ secrets.ITCH_API_KEY }}

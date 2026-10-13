@@ -18,6 +18,15 @@ problems = []
 py_files = sorted(p for p in R.rglob("*.py")
                   if ".git" not in p.parts and "dist" not in p.parts
                   and "paid" not in p.parts and "_internal" not in p.parts)
+
+# Nothing scratch may be committed. A file called _t.py was swept into a
+# commit by "git add -A" once, and it stayed in the repository as a dead
+# reference after the local copy was deleted: cleanroom_selftest.py copies
+# exactly what git tracks, so it would have carried a file that does not exist
+# and the audit would have read it as a syntax error on a clean machine.
+for _p in sorted(R.glob("_*.py")):
+    problems.append((_p.name, "a scratch file must not be committed"))
+
 print(f"scanning {len(py_files)} python files\n")
 
 BUILTINS = set(dir(builtins))

@@ -53,12 +53,18 @@ jobs:
       - name: Refuse the commit if anything protected changed
         run: python weekly_guard.py check
 
+      # This is a gate, not a report. It was continue-on-error, which meant the
+      # Wednesday job went green while the audit was failing: the audit is the
+      # thing that catches an undefined name, a workflow calling a script that
+      # does not exist, and a file the pipeline imports that was never
+      # committed. Two of those had already shipped before it was noticed.
       - name: The whole-code audit still passes
-        continue-on-error: true
         run: |
           python selftest.py
           python selftest_deep.py
           python selftest_audit.py
+          python tracked_selftest.py
+          python audit_selftest.py
 
       - name: The public site never leaks a paid build
         run: python check_exposure.py
