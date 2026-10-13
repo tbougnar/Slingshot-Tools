@@ -159,33 +159,61 @@ def groq(system, user, max_tokens=4000, temperature=0.8, tries=3):
     raise RuntimeError(f"every model failed: {last}")
 
 def _unescape(text: str) -> str:
-    """Undo the JSON escaping, repeating until it stops changing.
+    """Undo the JSON escaping on a model reply, without eating real code.
 
-    Models return the document as a JSON string, and they double-escape it more
-    often than not, so the payload arrives with two levels of escaping on it.
-    Decoding only the quotes was not enough: a template literal arrived as a
-    literal backslash-backslash-backtick, which closes the template on the
-    first backtick and leaves the rest of the line as bare code. The whole
-    script then failed to parse with "Invalid or unexpected token", every
-    handler silently stopped responding, and the repair loop spent its whole
-    budget patching controls that were never broken.
+    The document arrives as a JSON string value, so one decode is correct and
+    is done with json.loads rather than by string substitution. Substituting
+    was tried first and is wrong: collapsing "\\\\" to "\\" repeatedly turns a
+    regex that means a literal backslash, /\\\\/, into //, which is not a
+    valid regular expression and produced "Invalid regular expression:
+    missing /" on every generated app that used one.
 
-    This decodes the escapes a JSON string actually uses and repeats until it
-    is stable, bounded so a string that legitimately contains a backslash
-    cannot loop. It does not touch non-ASCII, which must survive verbatim.
+    A model that double-escapes its own reply leaves the result with escaped
+    quotes still in it. That is detectable without guessing, so the decode is
+    repeated only while such a marker survives, and at most twice.
     """
-    simple = (("\\/", "/"), ("\\b", "\b"), ("\\f", "\f"), ("\\r", "\r"),
-              ("\\n", "\n"), ("\\t", "\t"), ('\\"', '"'), ("\\'", "'"),
-              ("\\`", "`"), ("\\$", "$"))
-    prev = None
     out = text
-    for _ in range(5):
-        if out == prev:
-            break
-        prev = out
-        for a, b in (("\\\\", "\\"),) + simple:
-            out = out.replace(a, b)
+    decoded = _one_json_decode(out)
+    if decoded is not None:
+        # Exactly one decode, and it is the whole answer. A reply that decoded
+        # cleanly had correct escapes: decoding twice turns /\\\\/, a regex
+        # matching a literal backslash, into /\//, which is not a regular
+        # expression at all.
+        return decoded
+
+    # It did not decode, so the payload is not a well-formed JSON string. That
+    # is what a reply escaped twice looks like: \\" inside it makes the quote
+    # that follows a string terminator, so the value cannot parse. Undo one
+    # layer of quoting and try again, which is enough because the generator
+    # never escapes three times.
+    for a, b in (('\\"', '"'), ("\\'", "'"), ("\\\\", "\\")):
+        out = out.replace(a, b)
+    decoded = _one_json_decode(out)
+    if decoded is not None:
+        return decoded
+
+    # still not JSON: unescape only the sequences that cannot shorten a
+    # legitimate escape, so the result is the best guess available
+    for a, b in (("\\/", "/"), ("\\b", "\b"), ("\\f", "\f"),
+                 ("\\r", "\r"), ("\\n", "\n"), ("\\t", "\t")):
+        out = out.replace(a, b)
     return out
+
+
+def _one_json_decode(text: str) -> str | None:
+    """One JSON string decode, or None when the text is not one.
+
+    json.loads is the authority on what an escape means. The body is already
+    an escaped JSON string value, so it is quoted and decoded as it stands.
+    Escaping any quote inside it first, which was tried, corrupts the ones that
+    were escaped on purpose: \\" inside a string became \\\\" and \\n stopped
+    decoding to a newline at all.
+    """
+    try:
+        got = json.loads('"' + text + '"')
+    except (json.JSONDecodeError, ValueError):
+        return None
+    return got if isinstance(got, str) else None
 
 
 def _salvage_html(raw):
