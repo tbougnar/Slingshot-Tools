@@ -1,5 +1,45 @@
 [
   {
+    "slug": "unit-converter",
+    "base_slug": "unit-converter",
+    "title": "Unit converter",
+    "tier": "full",
+    "tag": "unit",
+    "blurb": "A small, focused unit tool. Unit converter does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "unit",
+      "converter"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/unit-converter-basic/",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-13"
+  },
+  {
+    "slug": "unit-converter-basic",
+    "base_slug": "unit-converter",
+    "title": "Unit converter (Basic)",
+    "tier": "basic",
+    "tag": "unit",
+    "blurb": "A small, focused unit tool. Unit converter does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "unit",
+      "converter"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/unit-converter-basic/",
+    "download": "",
+    "price": 0.0,
+    "free": true,
+    "differences": [],
+    "published": true,
+    "badge": "New",
+    "date": "2026-10-13"
+  },
+  {
     "slug": "dev-converter",
     "base_slug": "dev-converter",
     "title": "Developer unit converter",

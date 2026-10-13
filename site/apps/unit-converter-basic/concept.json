@@ -1,15 +1,9 @@
 {
   "slug": "unit-converter-basic",
+  "brand": "",
   "title": "Unit converter",
   "tag": "unit",
-  "blurb": "unit converter that remembers your recent conversions",
-  "tags": [
-    "unit",
-    "converter",
-    "that",
-    "remembers"
-  ],
-  "brand": "",
+  "blurb": "",
   "tier": "basic",
   "base_slug": "unit-converter"
 }
