@@ -1,0 +1,11 @@
+{
+ "slug": "glasses-prescription",
+ "brand": "",
+ "title": "Glasses prescription converter",
+ "tag": "glasses",
+ "differences": [],
+ "free_blurb": "",
+ "paid_blurb": "",
+ "candidate": "site/apps/glasses-prescription-basic/app/index.html",
+ "paid_dir": "paid/glasses-prescription"
+}

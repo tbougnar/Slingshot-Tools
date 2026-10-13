@@ -17,7 +17,8 @@
     "differences": [],
     "published": false,
     "badge": "New",
-    "date": "2026-10-13"
+    "date": "2026-10-13",
+    "itch_url": ""
   },
   {
     "slug": "unit-converter-basic",
@@ -32,12 +33,13 @@
     ],
     "url": "https://tbougnar.github.io/Slingshot-Tools/apps/unit-converter-basic/",
     "download": "",
-    "price": 0.0,
+    "price": 0,
     "free": true,
     "differences": [],
     "published": true,
     "badge": "New",
-    "date": "2026-10-13"
+    "date": "2026-10-13",
+    "itch_url": ""
   },
   {
     "slug": "dev-converter",

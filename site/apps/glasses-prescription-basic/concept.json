@@ -1,0 +1,15 @@
+{
+  "slug": "glasses-prescription-basic",
+  "title": "Glasses prescription converter",
+  "tag": "glasses",
+  "blurb": "glasses prescription converter for old and new format",
+  "tags": [
+    "glasses",
+    "prescription",
+    "converter",
+    "for"
+  ],
+  "brand": "",
+  "tier": "basic",
+  "base_slug": "glasses-prescription"
+}
