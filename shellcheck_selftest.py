@@ -7,7 +7,6 @@ ParserError before it ran any of its logic, so the gate never actually gated
 anything.
 """
 import pathlib
-import sys
 
 import yaml
 
