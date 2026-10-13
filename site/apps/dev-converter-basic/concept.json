@@ -1,0 +1,15 @@
+{
+  "slug": "dev-converter-basic",
+  "title": "Developer unit converter",
+  "tag": "dev",
+  "blurb": "developer unit converter for bytes, bits and encodings",
+  "tags": [
+    "developer",
+    "unit",
+    "converter",
+    "for"
+  ],
+  "brand": "",
+  "tier": "basic",
+  "base_slug": "dev-converter"
+}
