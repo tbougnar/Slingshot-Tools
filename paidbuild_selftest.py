@@ -46,6 +46,13 @@ def scenario(named, uploaded, write_stage=True):
         (make_app.PAID_DIR / name / "app").mkdir(parents=True, exist_ok=True)
         (make_app.PAID_DIR / name / "app" / "index.html").write_text(
             "<html><body>app</body></html>", encoding="utf-8")
+        # find_existing also looks in dist/, which is not copied into the
+        # cleanroom. Each scenario therefore supplies its own installer, so the
+        # answer depends on which build was chosen rather than on whatever
+        # happens to be lying around on the machine running the test.
+        (make_app.PAID_DIR / name).mkdir(parents=True, exist_ok=True)
+        (make_app.PAID_DIR / name / f"{name}-Setup.exe").write_bytes(
+            b"MZ" + b"\0" * (3 * 1024 * 1024))
     if real_staged is not None:
         build_paid_only.PAID = tmp / "paid"
     try:
