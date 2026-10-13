@@ -14,9 +14,24 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import make_app
+
+
+def _rel(p: Path) -> str:
+    """A path relative to the repo, or empty if it lives outside it.
+
+    PyInstaller and NSIS write into dist/, which is inside the repo today but
+    can be pointed elsewhere by a build flag. data/candidate.json is committed,
+    so an absolute path in it publishes the build machine's own folder layout
+    to every other machine that reads it, where it resolves to nothing.
+    """
+    try:
+        return Path(p).resolve().relative_to(make_app.ROOT).as_posix()
+    except ValueError:
+        return ""
+
 
 def main() -> int:
-    import make_app
     import buglog
     import tokenmeter
     import sizeguard
@@ -135,11 +150,9 @@ def main() -> int:
             "differences": diffs,
             "free_blurb": free_blurb,
             "paid_blurb": paid_blurb,
-            "installer": (str(Path(installer).resolve())
-                          if installer and Path(installer).exists() else ""),
             "candidate": (basic_dir / "app" / "index.html")
                            .relative_to(make_app.ROOT).as_posix(),
-            "paid_dir": str(full_dir.resolve()),
+            "paid_dir": _rel(full_dir),
         }
         out = make_app.DATA / "candidate.json"
         out.parent.mkdir(parents=True, exist_ok=True)

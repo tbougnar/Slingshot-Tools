@@ -7,6 +7,9 @@ steps call scripts that do not exist.
 """
 import ast
 import builtins
+import json
+import re
+import subprocess
 import sys
 from pathlib import Path as _P
 
@@ -82,7 +85,6 @@ for f in py_files:
 wf_dir = R / ".github" / "workflows"
 for wf in sorted(wf_dir.glob("*.yml")):
     text = wf.read_text(encoding="utf-8")
-    import re
     for m in re.finditer(r"run:\s*(?:\|)?\s*([\s\S]{0,400}?)(?=\n\s*-?\s*(?:name:|uses:|run:)|\Z)",
                          text):
         block = m.group(1)
@@ -252,6 +254,56 @@ try:
                                   f"{rel} with a blanket add"))
 except ImportError:
     problems.append(("-", "weekly_guard.py cannot be imported"))
+
+# ---- an unanchored ignore pattern must not swallow the published site
+# .gitignore had "apps/" with no leading slash, and git matches an unanchored
+# pattern at EVERY depth. That hid site/apps/, which is the deployed free
+# catalogue, so the Friday job's "git add -A" committed data/candidate.json
+# pointing at an app it had never committed. The verifier then failed every run
+# with "staged file is gone", and it had failed that way on the first run too.
+# These two need a real git repository. cleanroom_selftest.py runs this suite
+# in a plain directory, where `git check-ignore` exits 128 and would otherwise
+# be read as "not ignored", passing for the wrong reason.
+def _ignored(rel: str) -> bool | None:
+    r = subprocess.run(["git", "check-ignore", "-q", rel], cwd=str(R),
+                       capture_output=True, timeout=120)
+    if r.returncode == 128:
+        return None                     # not a repository: cannot answer
+    return r.returncode == 0
+
+
+_here = _ignored("site/apps/probe/app/index.html")
+if _here is False:
+    problems.append(("-", "gitignore is hiding site/apps/, which is the "
+                          "deployed free catalogue"))
+for _probe, _want in (("apps/probe.py", True),
+                      ("paid/probe/installer.nsi", True)):
+    _got = _ignored(_probe)
+    if _got is not None and _got != _want:
+        problems.append(("-", f"gitignore no longer matches {_probe}"))
+
+# ---- a committed file must not carry the build machine's folder layout
+# data/candidate.json is tracked, and stage_app wrote paid_dir and installer as
+# str(path.resolve()). The Friday runner's own directory went into a public
+# repository, where every other machine resolved it to a path that is not
+# there, so the verifier could never find the app it had been told to check.
+for _rel in ("data/candidate.json", "data/published.json"):
+    _p = R / _rel
+    if not _p.exists():
+        continue
+    try:
+        _body = json.loads(_p.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        continue
+    if not isinstance(_body, dict):
+        continue
+    for _k, _v in _body.items():
+        if isinstance(_v, str) and re.match(r"^[A-Za-z]:[\\/]", _v):
+            problems.append((_rel, f"{_k} holds an absolute path: {_v[:50]}"))
+_src = (R / "stage_app.py").read_text(encoding="utf-8")
+if "def _rel(" not in _src:
+    problems.append(("stage_app.py", "stores paths absolutely, which publishes "
+                                     "the build machine's layout"))
 
 print("== problems ==")
 if not problems:

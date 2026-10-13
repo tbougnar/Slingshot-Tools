@@ -28,13 +28,17 @@ build/
 # and must never be copied into site/.
 site/licenses/
 
-# Paid editions must never be published
-paid/
-
 # The full native source of the paid products. These are dead products that are
 # not for sale and are not deployed, but their source has no business being in
 # a public repository. Only the free editions under site/apps/ are public.
-apps/
+#
+# These two are anchored with a leading slash on purpose. A bare "apps/" and a
+# bare "paid/" match at every depth, so they were also hiding site/apps/, which
+# is the deployed free catalogue. The Friday job's "git add -A" then committed
+# data/candidate.json pointing at an app it had never committed, and the
+# verifier failed every run with "staged file is gone".
+/apps/
+/paid/
 
 # The company's money: revenue, margins, prices, budget and public metrics.
 # Useful to a competitor, worthless to a customer.
