@@ -690,13 +690,17 @@ def js_syntax_errors(html: str) -> list[str]:
             if not js.strip():
                 continue
             try:
-                r = subprocess.run([node, "--check"], input=js,
-                                   capture_output=True, text=True, timeout=30)
+                # bytes, not text: a pipe on a Windows runner defaults to
+                # cp1252 and a single arrow character in the generated app
+                # raised UnicodeEncodeError, which killed the whole generate
+                # job rather than reporting a bad app
+                r = subprocess.run([node, "--check"], input=js.encode("utf-8"),
+                                   capture_output=True, timeout=30)
             except (OSError, subprocess.SubprocessError):
                 return problems
             if r.returncode != 0:
-                first = next((ln.strip() for ln in
-                              (r.stderr or "").splitlines()
+                err = (r.stderr or b"").decode("utf-8", "replace")
+                first = next((ln.strip() for ln in err.splitlines()
                               if "Error" in ln), "parse error")
                 problems.append(f"script {i + 1}: {first[:90]}")
         return problems
