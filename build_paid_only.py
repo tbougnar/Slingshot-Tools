@@ -78,9 +78,31 @@ def find_existing(paid: Path) -> Path | None:
     return None
 
 
+def _title_from_build(paid: Path) -> str:
+    """The product's own name, from the concept.json that shipped with it."""
+    try:
+        meta = json.loads((paid / "concept.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return ""
+    if isinstance(meta, dict):
+        return str(meta.get("title") or meta.get("slug") or "").strip()
+    return ""
+
+
 def build(stage: dict, paid: Path) -> Path | None:
     """The .exe then the installer, or nothing."""
-    title = stage.get("title") or stage["slug"]
+    # The title comes from the stage file when there is one, and from the
+    # build itself otherwise. paid/<slug>/concept.json is written by
+    # write_app and is the only description of the product that certainly
+    # exists, because it travelled with the artifact. Reading stage["slug"]
+    # unconditionally raised KeyError whenever the stage file was absent, which
+    # is every installer job since that file was untracked.
+    title = str(stage.get("title") or "").strip()
+    if not title:
+        title = _title_from_build(paid)
+    if not title:
+        log(f"no title for {paid.name}, and concept.json does not give one")
+        return None
 
     try:
         import build_exe as be
@@ -138,11 +160,17 @@ def build(stage: dict, paid: Path) -> Path | None:
     return kept
 
 
-def publish(stage: dict) -> bool:
+def publish(stage: dict, slug: str = "") -> bool:
     """Hand the finished installer to itch.io and flip the site on."""
     import itch_publish
 
-    slug = stage["slug"]
+    # The slug is the directory that was actually built, passed in by the
+    # caller. Reading stage["slug"] here raised KeyError whenever the stage
+    # file was absent, after the installer had already been built.
+    slug = slug or str(stage.get("slug") or "")
+    if not slug:
+        log("no slug to publish under")
+        return False
     log(f"publishing {slug} to itch.io")
     try:
         # itch_publish.main reads data/published.json and takes no arguments
@@ -233,7 +261,7 @@ def main() -> int:
     log(f"ready for itch.io: {setup} ({size:.1f} MB)")
 
     if "--publish" in args:
-        if publish(stage):
+        if publish(stage, paid.name):
             log("it is on sale")
             return 0
         log("the upload did not finish; the paid tier stays hidden")

@@ -12,6 +12,7 @@ out loud. Two or more is ambiguous and must be refused rather than guessed.
 """
 import json
 import pathlib
+import re
 import sys
 import tempfile
 
@@ -92,6 +93,28 @@ check("an uploaded build with no stage file is still built",
 check("no build and no stage file is refused, not reported as success",
       scenario("", [], write_stage=False) == 1,
       "it returned 0 here and claimed a build it had not made")
+
+print("\nNOTHING READS A STAGE FIELD THAT MAY NOT BE THERE\n")
+# build() read stage["slug"] and publish() read it too, so with the stage file
+# gone the installer job raised KeyError after it had already selected the
+# right build. Reading a dict key is only safe when the key is guaranteed.
+for name in ("build_paid_only.py",):
+    body = (ROOT / name).read_text(encoding="utf-8", errors="replace")
+    bad = [ln.strip() for ln in body.splitlines()
+           if re.search(r'stage\["', ln) and not ln.strip().startswith("#")]
+    check(f"{name} never indexes the stage dict directly", not bad,
+          "; ".join(bad[:2]))
+
+print("\nTHE TITLE COMES FROM THE BUILD WHEN THERE IS NO STAGE FILE\n")
+tmp = pathlib.Path(tempfile.mkdtemp())
+(tmp / "concept.json").write_text(
+    json.dumps({"title": "Colour Picker", "slug": "color-picker"}),
+    encoding="utf-8")
+check("a title is read out of the shipped concept.json",
+      build_paid_only._title_from_build(tmp) == "Colour Picker")
+(tmp / "concept.json").write_text("{not json", encoding="utf-8")
+check("a corrupt concept.json yields no title rather than raising",
+      build_paid_only._title_from_build(tmp) == "")
 
 print("\nTHE CATALOG AND THE BUILD AGREE IN THE REPOSITORY\n")
 # published.json is deliberately untracked now, so it only exists on a machine
