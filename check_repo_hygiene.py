@@ -180,14 +180,34 @@ def check_paid_in_site() -> list[str]:
         return problems
     catalog = ROOT / "site" / "apps.json"
     paid_slugs = set()
+    known = set()
     if catalog.exists():
         try:
             import json
             for entry in json.loads(catalog.read_text(encoding="utf-8")):
                 if entry.get("tier") == "full":
                     paid_slugs.add(entry.get("base_slug") or entry.get("slug"))
+                if entry.get("slug"):
+                    known.add(entry["slug"])
+                if entry.get("base_slug"):
+                    known.add(entry["base_slug"])
         except (ValueError, OSError):
             problems.append("site/apps.json could not be read")
+
+    # The generate job stages the free edition and commits it so the verifier,
+    # which runs an hour later on another machine, can find it. That happens
+    # before the catalog entry is written, so a freshly generated app is not in
+    # apps.json yet. Reading it as a leftover made every Friday run fail at the
+    # hygiene gate and never reach the verifier at all.
+    staged = ROOT / "data" / "candidate.json"
+    if staged.exists():
+        try:
+            import json
+            got = json.loads(staged.read_text(encoding="utf-8"))
+            if isinstance(got, dict) and got.get("slug"):
+                known.add(got["slug"])
+        except (ValueError, OSError):
+            pass
 
     for d in sorted(site_apps.iterdir()):
         if not d.is_dir():
@@ -200,7 +220,7 @@ def check_paid_in_site() -> list[str]:
         # anything else has to be the free edition of a product that exists,
         # or it is a leftover that has no business being public
         basic = name[:-6] if name.endswith("-basic") else None
-        if basic is None or basic not in paid_slugs:
+        if basic is None or basic not in known:
             problems.append(f"site/apps/{name} is not a known free edition "
                             f"and must not be public")
     return problems

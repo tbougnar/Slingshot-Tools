@@ -54,6 +54,20 @@ def main() -> int:
     paid = [a["slug"] for a in catalog if a.get("tier") == "full"]
     basic = {a["slug"] for a in catalog if a.get("tier") == "basic"}
 
+    # The generate job commits the free edition an hour before the verifier
+    # writes its catalog entry, so a freshly staged app is in site/apps/ but not
+    # yet in apps.json. Reading that as exposure failed the release gate on
+    # every run and would have blocked publishing the very app it was checking.
+    staged = ROOT / "data" / "candidate.json"
+    if staged.exists():
+        try:
+            got = json.loads(staged.read_text(encoding="utf-8"))
+        except (ValueError, OSError):
+            got = None
+        if isinstance(got, dict) and got.get("slug"):
+            basic.add(f"{got['slug']}-basic")
+            basic.add(got["slug"])
+
     problems = []
     blockers = []
     for slug in paid:
