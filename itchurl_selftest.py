@@ -14,6 +14,7 @@ product rather than an account, and the page has to be fetched and shown to
 contain a purchase or download section.
 """
 import json
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -23,6 +24,24 @@ sys.path.insert(0, str(ROOT))
 
 import set_itch_url
 import publish_paid
+
+# links.py deliberately links the store as navigation. That is correct, and it
+# is not a product URL, so it is named rather than flagged.
+ALLOWED_STORE_LINK = "links.py"
+
+
+def sources_of(name: str) -> str:
+    """File contents with comment-only lines removed.
+
+    The comment explaining the old bug names the very URL that must no longer
+    appear in code. Reading the raw file flags the explanation of the fix as if
+    it were the fix.
+    """
+    lines = (ROOT / name).read_text(encoding="utf-8",
+                                    errors="replace").splitlines()
+    return "\n".join(ln for ln in lines
+                     if not ln.lstrip().startswith("#"))
+
 
 fails = []
 
@@ -96,6 +115,51 @@ account_only = [a["slug"] for a in catalog
                 if a.get("itch_url") and not set_itch_url.valid(a["itch_url"])]
 check("no catalog entry holds an itch_url that is not a product page",
       not account_only, str(account_only))
+
+print("\nNO CODE SUBSTITUTES AN ACCOUNT PAGE FOR A PRODUCT\n")
+# pricing.py filled every entry without an itch_url with the account front page
+# on every run, which put the dead end back within one cycle of it being fixed.
+# A test on the validator alone would not have caught that. Searching source
+# text for "itch.io" is useless here: the API host, the butler download and
+# every log message mention it, and none of those is a product URL. So this
+# looks at the one assignment that matters, through the syntax tree.
+import ast
+
+problems = []
+for f in sorted(ROOT.glob("*.py")):
+    if f.name.endswith("_selftest.py"):
+        continue
+    try:
+        tree = ast.parse(f.read_text(encoding="utf-8", errors="replace"))
+    except SyntaxError:
+        continue
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Assign):
+            continue
+        targets = [ast.unparse(t) for t in node.targets]
+        if not any("itch_url" in t for t in targets):
+            continue
+        # walk every string constant reachable from the assigned value
+        for sub in ast.walk(node.value):
+            if isinstance(sub, ast.Constant) and isinstance(sub.value, str):
+                if re.match(r"^https://[a-z0-9\-]+\.itch\.io/?$", sub.value):
+                    problems.append(f"{f.name}:{sub.lineno} assigns {sub.value}")
+
+check("no module assigns an account front page to itch_url", not problems,
+      "; ".join(problems[:3]))
+
+pricing_src = sources_of("pricing.py")
+check("pricing.py has no hardcoded itch.io URL at all",
+      "https://slingshot-tools.itch.io/" not in pricing_src,
+      "it still names the account page somewhere in code")
+
+check("the store navigation link is still there",
+      "slingshot-tools.itch.io" in sources_of(ALLOWED_STORE_LINK),
+      "linking your own store from the footer is correct and was not lost")
+
+check("the release gate rejects a non-product itch_url",
+      "is not a product page" in sources_of("check_exposure.py"),
+      "nothing stops a bad URL being written")
 
 print()
 print("FAILURES:", fails if fails else "none")

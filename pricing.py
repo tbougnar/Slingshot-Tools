@@ -276,8 +276,14 @@ def main():
         a["tier"] = entry.get("tier", "full")
         a["free"] = a["tier"] == "basic"
         a["price"] = 0 if a["free"] else entry.get("price", START_PRICE)
+        # No fallback. This line used to fill every entry without an
+        # itch_url with https://slingshot-tools.itch.io/, which is the
+        # account's front page and lists nothing. It reintroduced the exact
+        # dead end the audit had just fixed, on every run, and check_exposure
+        # then failed the release. An empty value means "not for sale yet",
+        # which is true and is what publish_paid.py needs to see.
         a["itch_url"] = a.get("itch_url") or os.environ.get(
-            "ITCH_PAGE_URL", "https://slingshot-tools.itch.io/")
+            "ITCH_PAGE_URL", "")
 
     PRICES.write_text(json.dumps(prices, indent=2), encoding="utf-8")
     LOG.write_text(json.dumps(history[-200:], indent=2), encoding="utf-8")
