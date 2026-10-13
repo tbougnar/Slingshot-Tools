@@ -72,7 +72,7 @@ pyflakes           2 findings, both in audit scratch files
 run_selftests.py   all 16 selftests pass
 selftest_audit.py  0 problems across 115 files
 cleanroom          all 8 checks pass on a clean checkout
-e2e_all.py         3 of 4 journeys BROKEN (pre-existing, §6)
+e2e_all.py         3 of 4 journeys BROKEN (the baseline; 2 of 4 at the end)
 ```
 
 ---
@@ -166,12 +166,15 @@ kept.
 
 ### Pre-existing commercial gap, unchanged and documented
 
-`e2e_all.py` still reports 3 of 4 journeys broken. These are real and are not
-bugs in the code:
+`e2e_all.py` reports 2 of 4 journeys broken, improved from 3 of 4 at the start
+of this pass. The remaining failures are real and are not bugs in the code:
 
-- the paid edition has no `itch_url`, so the buy button has nowhere to go
+- the paid edition has no `itch_url`, so the buy button has nowhere to go. Both
+  entries in `site/apps.json` point at `https://slingshot-tools.itch.io/`, a
+  store page that exists but has no paid product in it, which is why the links
+  journey now fails on the itch.io link as well
 - the paid build on this machine is a 59-byte placeholder
-- no installer was published, and the itch.io store page is empty
+- no installer has been published, and the itch.io store page is empty
 
 The machinery to fix all three is in place and exercised as far as the
 credentials allow: `stage_app.py` builds the installer, `build_paid_only.py`
@@ -207,7 +210,7 @@ Commands actually run, with outcomes.
 | `python audit_selftest.py` | no failures |
 | `python property_selftest.py` | no failures |
 | `python cwd_selftest.py` | no failures, 20 entry points |
-| `python e2e_all.py` | 3 of 4 journeys broken (§8) |
+| `python e2e_all.py` | **2 of 4 journeys broken** (§8); improved from 3 of 4 |
 | `powershell -File .\check.ps1` | runs; reports the required variables missing, and the optional ones separately |
 | `gh workflow run friday-build.yml` | first ever successful run, after the module fixes |
 | `python build_paid_only.py --check` | finds a real installer, ignores the 110 KB stubs |
