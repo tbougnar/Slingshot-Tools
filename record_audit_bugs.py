@@ -277,6 +277,31 @@ FOUND = [
      "stale-slug fallback, the ambiguous refusal, and no builds at all.",
      "The itch.io upload is still unexecuted; the credentials exist only as "
      "repository secrets."),
+
+    ("itch.io publishing reported success for having done nothing",
+     "CRITICAL", "itch.io publishing", ["itch_publish.py"], "VERIFIED_FIXED",
+     "itch_publish.main() returned 0 when there was no data/published.json, "
+     "printing 'nothing was built this week'. The release gate reads the step "
+     "outcome, so 0 became PUBLISHED=yes, and the run summary printed 'the "
+     "paid edition is on itch.io and advertised'. No request was ever made to "
+     "itch.io.",
+     "Run 38424937223 is the proof. Its log contains '[itch] nothing was built "
+     "this week', then 'PUBLISHED: yes', then 'paid edition is on itch.io and "
+     "advertised'. Fetching https://slingshot-tools.itch.io/ after that run "
+     "showed the store still listing no products at all. The gate was working "
+     "correctly and was fed a lie.",
+     "python itch_publish.py with no paid build and no stage file, which "
+     "exited 0",
+     "Doing nothing now exits 1 and says so. When the stage file is absent but "
+     "exactly one paid build exists, that build is published using the title "
+     "from its own concept.json, so an untracked stage file no longer stops "
+     "the release. More than one build is ambiguous and is refused.",
+     "itchpublish_selftest.py",
+     "itchpublish_selftest.py: FAILURES: none, covering no build at all, more "
+     "than one build, the real module's own output, and that the gate still "
+     "keys off the real exit code.",
+     "The upload itself still needs the repository secrets; what is fixed is "
+     "that the system can no longer claim it happened when it did not."),
 ]
 
 

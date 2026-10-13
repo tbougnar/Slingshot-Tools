@@ -427,12 +427,97 @@ def publish(slug: str, title: str, price: float, version: str = "") -> bool:
     return True
 
 
+def _built_products() -> list[str]:
+    """Which products actually have a paid build on this machine.
+
+    paid/ is what the installer job built and what the upload came from, so it
+    is the authority, in the same way the artifact is for the installer.
+    """
+    if not PAID.is_dir():
+        return []
+    out = []
+    for d in sorted(PAID.iterdir()):
+        if d.is_dir() and (d / "app" / "index.html").exists():
+            out.append(d.name)
+    return out
+
+
+def _describe(slug: str) -> tuple[str, float]:
+    """Title and price for a product, preferring what the build itself says."""
+    title, price = slug, 0.0
+    meta = PAID / slug / "concept.json"
+    if meta.exists():
+        try:
+            got = json.loads(meta.read_text(encoding="utf-8"))
+            if isinstance(got, dict):
+                title = got.get("title") or title
+        except (ValueError, OSError):
+            pass
+    for entry in load_catalog():
+        if (entry.get("base_slug") or entry.get("slug")) != slug:
+            continue
+        paid = entry if entry.get("tier") == "full" else entry.get("full") or {}
+        if isinstance(paid, dict):
+            title = paid.get("title") or title
+            try:
+                price = float(paid.get("price") or price)
+            except (TypeError, ValueError):
+                pass
+        break
+    return title, price
+
+
 def main() -> int:
     stage_file = ROOT / "data" / "published.json"
+    built = _built_products()
+
+    if len(built) > 1:
+        log(f"{len(built)} paid builds are present: {', '.join(built)}")
+        log("refusing to guess which one to publish")
+        auditlog.blocked("itch-publish",
+                         reason="more than one paid build to choose from",
+                         evidence={"builds": built})
+        return 1
+
+    slug = built[0] if built else ""
+
     if not stage_file.exists():
-        log("nothing was built this week")
-        auditlog.not_verified("itch-publish", reason="no data/published.json")
-        return 0
+        if slug:
+            # The stage file is untracked and absent on a fresh checkout, which
+            # is every installer job. The build is still here and still needs
+            # publishing, so it is published from what the build says.
+            log(f"no published.json, but {slug} has a paid build; publishing it")
+            title, price = _describe(slug)
+            if not (1.0 <= price <= 10.0):
+                price = float(os.environ.get("PRICE_START") or 3.0)
+            auditlog.started("itch-publish", job=slug,
+                             action=f"publish {title}",
+                             tool="itch_publish.py",
+                             reason="no stage file; taken from the paid build")
+            ok = publish(slug, title, price)
+            if ok:
+                auditlog.succeeded("itch-publish", job=slug,
+                                   evidence={"exit_code": 0, "slug": slug,
+                                             "price": price})
+            else:
+                auditlog.failed("itch-publish", job=slug,
+                                error="itch_publish.publish returned false",
+                                evidence={"exit_code": 1, "slug": slug})
+            return 0 if ok else 1
+
+        # Returning 0 here claimed success for doing nothing, and the release
+        # gate read that as "the paid edition is on itch.io and advertised".
+        # The store was fetched after that run and still listed no products.
+        # A job that published nothing has not published, so it says so.
+        log("there is no paid build and no published.json, so there is "
+            "nothing to publish")
+        log("this is not a successful publication; the paid tier stays hidden")
+        auditlog.failed("itch-publish",
+                        error="no paid build and no published.json; this was "
+                              "previously reported as a success",
+                        evidence={"exit_code": 1})
+        return 1
+
     stage = json.loads(stage_file.read_text(encoding="utf-8"))
     slug = stage["slug"]
     price = float(stage.get("price") or 0)
