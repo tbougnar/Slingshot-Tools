@@ -8,8 +8,14 @@ Every job calls ``budget.check`` first and ``budget.spend`` afterwards, so a run
 that would blow the budget refuses to start rather than being killed halfway
 through and leaving a half-written commit.
 
-State lives in data/budget.json, which is committed, so the hours are visible
-in the repository and cannot quietly reset.
+State lives in data/budget.json. It is deliberately NOT tracked: 380e29e
+untracked it along with the rest of the business data, because the hours and
+the revenue they were derived from are not the customer's business. That makes
+the old claim here ("committed, so the hours are visible in the repository and
+cannot quietly reset") false, and the reset was real: a parse error was
+swallowed and an empty budget read as a month that had spent nothing. The
+protection against a quiet reset is now that an unreadable state refuses the
+job instead of approving it.
 """
 from __future__ import annotations
 

@@ -252,10 +252,14 @@ finally:
         real_budget.unlink(missing_ok=True)
     bg.STATE = real_budget
 
-check("budget.py says so in its own docstring too",
-      "cannot quietly reset" in (ROOT / "budget.py").read_text(encoding="utf-8")
-      and "unknown rather than" in (ROOT / "budget.py").read_text(encoding="utf-8"),
-      "the promise and the behaviour no longer agree")
+budget_src = (ROOT / "budget.py").read_text(encoding="utf-8")
+check("budget.py does not still claim its state is committed",
+      "which is committed" not in budget_src,
+      "380e29e untracked it, so the docstring is claiming something false")
+check("budget.py says the state is deliberately untracked",
+      "NOT tracked" in budget_src)
+check("and it says an unreadable state refuses the job",
+      "unknown rather than" in budget_src and "REFUSING" in budget_src)
 
 print()
 print("FAILURES:", fails if fails else "none")

@@ -43,6 +43,13 @@ data/prices.json
 data/price_log.json
 data/budget.json
 data/reputation.json
+# Per-minute token counters. These are live rate-limit state for whichever
+# machine is running: committing one publishes the total to every runner, where
+# a later run reads it and starts from someone else's usage. The Friday job's
+# "git add -A" committed one by accident in 0274226.
+data/token_usage.json
+data/token_usage.json.tmp
+data/budget.json.tmp
 
 # Stale copies of the generator from earlier runs.
 *.bak
