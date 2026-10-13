@@ -130,6 +130,7 @@ jobs:
       # butler is itch.io's own uploader. Without it the installer cannot be
       # pushed, so it is fetched here rather than trusted to be on the runner.
       - name: Install butler, itch.io's uploader
+        shell: bash
         run: |
           curl -sSL -o butler.zip https://broth.itch.zone/butler/windows-amd64/LATEST/archive/default
           7z x butler.zip -obutler -y
@@ -189,6 +190,7 @@ jobs:
       # watching a release go wrong.
       - name: Record whether anything is actually for sale
         id: paid
+        shell: bash
         run: |
           if [ "${{ steps.publish.outcome }}" != "success" ]; then
             echo "::warning::the paid edition was not published; the free" \
@@ -277,6 +279,7 @@ jobs:
       # to accept the partial release deliberately.
       - name: Say plainly whether the paid edition reached the store
         if: always()
+        shell: bash
         env:
           PUBLISHED: ${{ steps.paid.outputs.PUBLISHED }}
           ALLOW_FREE_ONLY: ${{ vars.ALLOW_FREE_ONLY }}
