@@ -19,6 +19,17 @@ SITE = ROOT / "site"
 APPS = SITE / "apps"
 
 
+def _product_page(url: str) -> bool:
+    """True when the URL names one itch.io product rather than an account.
+
+    Imported from set_itch_url so there is one rule rather than two that can
+    disagree, which is how the account page came to be stored in the first
+    place.
+    """
+    from set_itch_url import valid
+    return valid(url)
+
+
 def check_tier_families(catalog):
     """Both tiers of a product must share one base_slug.
 
@@ -122,9 +133,19 @@ def main() -> int:
     # needs one person to open an itch.io page, and a gate nobody can pass is a
     # gate that stops being read.
     for a in catalog:
+        url = str(a.get("itch_url") or "")
+        # Any entry at all, published or not, must not carry a URL that is not
+        # a product page. The account front page is a valid itch.io URL and was
+        # accepted by the old validator, so it sat in the catalog as the
+        # product URL. A run from before that was fixed put it back once.
+        if url and not _product_page(url):
+            problems.append(
+                f"{a['slug']} has an itch_url that is not a product page: "
+                f"{url} (a buy button must go to "
+                f"https://yourslug.itch.io/the-product)")
         if a.get("tier") != "full" or a.get("published") is not True:
             continue
-        if not str(a.get("itch_url") or "").startswith("http"):
+        if not url.startswith("http"):
             blockers.append(
                 f"{a['slug']} is published for sale but has no itch_url, so "
                 f"nobody can buy it (fix: python set_itch_url.py "
