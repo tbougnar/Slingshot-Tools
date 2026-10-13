@@ -1,0 +1,11 @@
+{
+ "slug": "bookmark-organizer",
+ "brand": "",
+ "title": "Bookmark cleaner",
+ "tag": "bookmark",
+ "differences": [],
+ "free_blurb": "",
+ "paid_blurb": "",
+ "candidate": "site/apps/bookmark-organizer-basic/app/index.html",
+ "paid_dir": "paid/bookmark-organizer"
+}
