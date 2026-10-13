@@ -135,13 +135,145 @@ def session_cookie() -> str:
     return ""
 
 
-def check_session() -> bool:
+def mint_session() -> str:
+    """Log in with the account credentials and return a fresh itchio_token.
+
+    This is the answer to a session cookie that expires. The cookie was the
+    only thing the publisher needed and the only thing that ever stopped it:
+    itch.io has no API for creating a project, so a browser session is
+    unavoidable, but a session does not have to be pasted. The account's user
+    name and password do not expire, so the publisher logs in and mints a
+    cookie whenever the stored one is refused.
+
+    That converts a credential that breaks every few weeks into two that do not
+    expire, and it is the difference between a pipeline that needs a person
+    every month and one that runs itself.
+
+    Returns the cookie, or "" if the login did not work. The password is never
+    logged and never written to disk.
+    """
+    user = (os.environ.get("ITCH_LOGIN") or os.environ.get("ITCH_USERNAME")
+            or "").strip()
+    password = os.environ.get("ITCH_PASSWORD") or ""
+    if not user or not password:
+        log("no ITCH_LOGIN and ITCH_PASSWORD, so a new session cannot be made")
+        return ""
+
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        log("playwright is not installed, so a new session cannot be made")
+        return ""
+
+    try:
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch()
+            ctx = browser.new_context()
+            page = ctx.new_page()
+            page.goto("https://itch.io/login", wait_until="domcontentloaded",
+                      timeout=TIMEOUT * 1000)
+
+            # itch.io may present the form immediately or behind a toggle, so
+            # each field is tried by a few of the names it has used.
+            filled_user = _fill_first(page, ("input[name='user']",
+                                             "input[name='username']",
+                                             "#user", "input[type='email']"),
+                                      user)
+            filled_pass = _fill_first(page, ("input[name='password']",
+                                             "input[type='password']"),
+                                      password)
+            if not (filled_user and filled_pass):
+                log(f"the login form was not what was expected "
+                    f"(user field: {filled_user}, password field: {filled_pass})")
+                browser.close()
+                return ""
+
+            _click_first(page, ("button[type='submit']", "input[type='submit']",
+                                "form button", "button:has-text('Log in')",
+                                "button:has-text('Sign in')"))
+            page.wait_for_load_state("networkidle", timeout=TIMEOUT * 1000)
+            landed = (page.url or "")
+
+            token = ""
+            for c in ctx.cookies():
+                if c.get("name") == "itchio_token" and c.get("value"):
+                    token = c["value"]
+                    break
+            browser.close()
+
+            if not token:
+                log(f"logging in did not produce a session cookie "
+                    f"(landed on {landed})")
+                return ""
+            if "/login" in landed or "itch.io/login" in landed:
+                log("itch.io refused those credentials")
+                return ""
+            log("logged in and got a fresh session")
+            return token
+    except Exception as e:  # noqa: BLE001
+        log(f"could not log in: {str(e)[:110]}")
+        return ""
+
+
+def _fill_first(page, selectors: tuple[str, ...], value: str) -> bool:
+    for sel in selectors:
+        try:
+            el = page.query_selector(sel)
+        except Exception:  # noqa: BLE001
+            continue
+        if el is None:
+            continue
+        try:
+            el.fill(value)
+            return True
+        except Exception:  # noqa: BLE001
+            continue
+    return False
+
+
+def _click_first(page, selectors: tuple[str, ...]) -> bool:
+    for sel in selectors:
+        try:
+            el = page.query_selector(sel)
+        except Exception:  # noqa: BLE001
+            continue
+        if el is None:
+            continue
+        try:
+            el.click()
+            return True
+        except Exception:  # noqa: BLE001
+            continue
+    return False
+
+
+def working_session() -> str:
+    """A session cookie that works, from the stored one or a fresh login.
+
+    The stored cookie is tried first because it is free. Only when it is
+    refused, or absent, does this spend a login.
+    """
+    cookie = session_cookie()
+    if cookie and check_session(cookie):
+        return cookie
+    if not cookie:
+        log("no stored session cookie")
+    fresh = mint_session()
+    if not fresh:
+        return ""
+    if not check_session(fresh):
+        log("the freshly minted session was refused too")
+        return ""
+    return fresh
+
+
+def check_session(cookie: str = "") -> bool:
     """Is the cookie still good?
 
     Asked before anything is attempted, because an expired session otherwise
-    shows up as a confusing "project was not created" rather than the truth.
+    fails much later and much less clearly.
     """
-    cookie = session_cookie()
+    cookie = cookie or session_cookie()
     if not cookie:
         return False
     req = urllib.request.Request(
@@ -160,14 +292,18 @@ def check_session() -> bool:
 
 
 def create_project(title: str, slug: str, price: float,
-                   icon: Path | None = None) -> str:
+                   icon: Path | None = None, session: str = "") -> str:
     """Create the project page in a real browser, and return its URL.
 
     itch.io offers no API for this, and butler refuses it outright, so the only
-    way is to drive the page a person would use. The session is checked first by
-    the caller, so reaching here means it is still good.
+    way is to drive the page a person would use.
+
+    The session is passed in rather than read here, because the caller may have
+    just minted it by logging in. Reading the stored cookie from inside this
+    function is what let an expired cookie reach the browser and produce a
+    redirect to the login page instead of a clear message.
     """
-    cookie = session_cookie()
+    cookie = session or session_cookie()
     try:
         from playwright.sync_api import sync_playwright
     except ImportError:
@@ -377,17 +513,21 @@ def publish(slug: str, title: str, price: float, version: str = "") -> bool:
             log(f"1. the project already exists: {url}")
     if not url:
         log("1. no project yet, so one has to be created")
-        if not session_cookie():
-            log("   no itch.io session cookie is set")
-            log("   that is needed only for creating a project, not for "
-                "uploading to one")
+        # A stored cookie is used when it works and a fresh one is minted when
+        # it does not. Before this, an expired cookie stopped every run and
+        # the only remedy was for a person to paste a new one into the
+        # repository secrets, which is why this kept coming back.
+        cookie = working_session()
+        if not cookie:
+            log("   no usable itch.io session could be established")
+            log("   set ITCH_LOGIN and ITCH_PASSWORD once and this logs "
+                "itself in from then on:")
+            log("   gh secret set ITCH_LOGIN --repo tbougnar/Slingshot-Tools")
+            log("   gh secret set ITCH_PASSWORD --repo tbougnar/Slingshot-Tools")
+            log("   the old ITCH_SESSION_COOKIE secret can then be deleted")
             return False
-        if not check_session():
-            log("   the session cookie is expired or was refused")
-            log("   set a new one: gh secret set ITCH_SESSION_COOKIE "
-                "--repo tbougnar/Slingshot-Tools")
-            return False
-        url = create_project(title, slug, price, (PAID / slug / "icon.png"))
+        url = create_project(title, slug, price, (PAID / slug / "icon.png"),
+                             session=cookie)
         if not url:
             log("   the project could not be created")
             return False

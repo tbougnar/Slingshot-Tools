@@ -83,11 +83,19 @@ check("the module still runs and reports its own blocker",
       out.returncode != 0 and "itch" in (out.stdout + out.stderr).lower(),
       f"rc={out.returncode}")
 combined = (out.stdout + out.stderr)
-check("it names the concrete blocker rather than claiming success",
-      "no itch.io session cookie is set" in combined
-      or "nothing to publish" in combined
-      or "ITCH_USER is not set" in combined,
-      combined.strip()[-120:])
+# Which blocker is reached depends on whether a paid build is present, and the
+# cleanroom has no paid/ directory. Both are correct outcomes, so the assertion
+# is that it named a concrete blocker and never claimed success.
+check("it names a concrete blocker rather than claiming success",
+      any(m in combined for m in (
+          "no usable itch.io session",
+          "no session cookie",
+          "no itch.io session cookie is set",
+          "no ITCH_LOGIN and ITCH_PASSWORD",
+          "could not log in",
+          "no paid build",
+          "nothing to publish")),
+      combined.strip()[-140:])
 # The claim that must never appear is the one the old code produced.
 check("it never says a product is on itch.io when it did not get there",
       "is on itch.io at" not in combined,
@@ -114,6 +122,44 @@ check("the gate still fails when the publish step did not succeed",
       "steps.publish.outcome" in wf)
 check("and succeeds only when it did",
       'if [ "$PUBLISHED" = "yes" ]' in wf)
+
+print("\nAN EXPIRING COOKIE NO LONGER NEEDS A PERSON\n")
+# The session cookie is the one credential that expires, and it was the only
+# way in, so every few weeks the pipeline stopped and a human had to paste a
+# new cookie into the repository secrets. Account credentials do not expire, so
+# the publisher now logs in and mints a cookie when the stored one is refused.
+check("the module knows how to log in", hasattr(ip, "mint_session"))
+check("and how to obtain a session that works",
+      hasattr(ip, "working_session"))
+src = (ROOT / "itch_publish.py").read_text(encoding="utf-8")
+check("it reads a user name and a password",
+      "ITCH_LOGIN" in src and "ITCH_PASSWORD" in src)
+check("the password is never logged",
+      'log(f"{password}"' not in src and "log(password" not in src)
+check("the password is never written to disk",
+      "write_text" not in src.split("def mint_session")[1]
+      .split("def _fill_first")[0],
+      "the login writes something out")
+check("a refused cookie leads to a fresh login, not to a failure",
+      "working_session()" in src and "the session cookie is expired" not in src,
+      "it still tells a person to paste a new cookie")
+
+print("\nA MISSING CREDENTIAL SAYS WHAT TO DO, ONCE\n")
+_r = subprocess.run([sys.executable, "itch_publish.py"], cwd=str(ROOT),
+                    capture_output=True, text=True, timeout=900)
+_out = (_r.stdout + _r.stderr)
+check("it exits non-zero", _r.returncode != 0, f"rc={_r.returncode}")
+# with no paid build it never reaches the session check, so the credentials
+# are only named when there is a product to publish
+if "no paid build" not in _out:
+    check("it names the two secrets that fix it permanently",
+          "ITCH_LOGIN" in _out and "ITCH_PASSWORD" in _out,
+          _out.strip()[-140:])
+else:
+    print("skip  no paid build here, so it never reached the session check")
+check("it no longer asks for the cookie",
+      "set a new one: gh secret set ITCH_SESSION_COOKIE" not in _out,
+      "it still asks for the expiring credential")
 
 print()
 print("FAILURES:", fails if fails else "none")
