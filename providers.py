@@ -270,6 +270,23 @@ def models(role: str = "debug") -> list[str]:
     return found[:3] if role == "debug" else found[:1]
 
 
+def _rate_limit_wait(attempt: int) -> int:
+    """How long to sit out a 429.
+
+    Groq's limit is on tokens per minute, so waiting ten seconds just spends
+    another request inside the same window. Wait out the window the meter is
+    actually using, and a little past it, so the next call starts fresh. The
+    backoff still grows so a genuinely exhausted key does not spin.
+    """
+    window = 60.0
+    try:
+        import tokenmeter
+        window = float(tokenmeter.WINDOW)
+    except (ImportError, AttributeError, TypeError, ValueError):
+        pass
+    return min(90, int(window + 5) * (attempt + 1))
+
+
 def chat(model: str, system: str, user: str, temperature: float = 0.2,
          max_tokens: int = 4000, tries: int = 2, role: str = "debug") -> str:
     _, _, send = for_role(role)
@@ -285,7 +302,12 @@ def chat(model: str, system: str, user: str, temperature: float = 0.2,
         except Exception as e:  # noqa: BLE001
             last = str(e)[:200]
         if "429" in last or "Rate limit" in last:
-            time.sleep(10 * (attempt + 1))
+            # The allowance is per minute, so a fixed 10s backoff spent the
+            # whole retry budget inside the same window and every attempt got
+            # the same refusal. This was the reason the Friday verifier gave up
+            # with "2 controls still dead": it never waited long enough to be
+            # allowed to try again.
+            time.sleep(_rate_limit_wait(attempt))
     raise RuntimeError(last or "no reply")
 
 
