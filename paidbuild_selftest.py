@@ -22,6 +22,16 @@ sys.path.insert(0, str(ROOT))
 import build_paid_only
 import make_app
 
+# These scenarios deliberately drive the builder into every failure path, so
+# they would otherwise fill the real audit log with BLOCKED and FAILED events
+# that no run produced. A log full of test failures is not evidence of
+# anything, so every event from this suite goes to a temporary file.
+import auditlog as _auditlog
+
+_real_log = _auditlog.LOG
+_auditlog.LOG = pathlib.Path(tempfile.mkdtemp(prefix="paidbuild-selftest-")) \
+    / "events.jsonl"
+
 fails = []
 
 
@@ -184,6 +194,8 @@ check("the NSIS return code is checked", "r.returncode != 0" in _nsis)
 check("the previous installer is removed before the build",
       _nsis.find("unlink(missing_ok=True)") < _nsis.find("subprocess.run"),
       "a stale installer can be returned as this week's")
+
+_auditlog.LOG = _real_log
 
 print()
 print("FAILURES:", fails if fails else "none")

@@ -25,6 +25,15 @@ sys.path.insert(0, str(ROOT))
 import set_itch_url
 import publish_paid
 
+# This suite drives publish_paid through several failure paths on purpose, so
+# it must not write BLOCKED and FAILED events into the real audit log. A log
+# full of test failures is not evidence of anything.
+import auditlog as _auditlog
+
+_real_log = _auditlog.LOG
+_auditlog.LOG = Path(tempfile.mkdtemp(prefix="itchurl-selftest-")) \
+    / "events.jsonl"
+
 # links.py deliberately links the store as navigation. That is correct, and it
 # is not a product URL, so it is named rather than flagged.
 ALLOWED_STORE_LINK = "links.py"
@@ -160,6 +169,8 @@ check("the store navigation link is still there",
 check("the release gate rejects a non-product itch_url",
       "is not a product page" in sources_of("check_exposure.py"),
       "nothing stops a bad URL being written")
+
+_auditlog.LOG = _real_log
 
 print()
 print("FAILURES:", fails if fails else "none")

@@ -149,6 +149,21 @@ for e in al.read():
 check("no event is missing a required field", not missing_fields,
       str(sorted(missing_fields)))
 
+print("\nTHE TEST SUITES DO NOT POLLUTE THE REAL LOG\n")
+# Running the suites drives the builder and the publisher through every failure
+# path on purpose. Before they were redirected, they wrote 47 BLOCKED and
+# FAILED events into data/audit/events.jsonl, so 213 of the recorded events were
+# failures no run had produced. A log full of test failures is not evidence of
+# anything.
+_REAL = Path(__file__).resolve().parent / "data" / "audit" / "events.jsonl"
+_before = (_REAL.stat().st_size if _REAL.exists() else 0)
+for _suite in ("paidbuild_selftest.py", "itchurl_selftest.py"):
+    _r = subprocess.run([sys.executable, str(ROOT / _suite)], cwd=str(ROOT),
+                        capture_output=True, text=True, timeout=1800)
+    _after = (_REAL.stat().st_size if _REAL.exists() else 0)
+    check(f"{_suite} leaves the real log alone", _after == _before,
+          f"it grew the log by {_after - _before} bytes")
+
 print()
-print("FAILURES:", fails if fails else "none")
+print("FAILURES:", fails if fails else 0)
 sys.exit(1 if fails else 0)
