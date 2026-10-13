@@ -25,6 +25,8 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+import auditlog
+
 ROOT = Path(__file__).resolve().parent
 CATALOG = ROOT / "site" / "apps.json"
 STATE = ROOT / "data" / "itch.json"
@@ -429,6 +431,7 @@ def main() -> int:
     stage_file = ROOT / "data" / "published.json"
     if not stage_file.exists():
         log("nothing was built this week")
+        auditlog.not_verified("itch-publish", reason="no data/published.json")
         return 0
     stage = json.loads(stage_file.read_text(encoding="utf-8"))
     slug = stage["slug"]
@@ -438,6 +441,9 @@ def main() -> int:
     if not USER:
         log("ITCH_USER is not set, so nothing can be pushed")
         log("it is the part of your itch.io URL before .itch.io")
+        auditlog.blocked("itch-publish", job=slug,
+                         reason="ITCH_USER is not set; the store credentials "
+                                "exist only as repository secrets")
         return 1
 
     # an explicit slug on the command line wins, for a rerun
@@ -449,7 +455,19 @@ def main() -> int:
         title = paid.get("title") or slug
         price = float(paid.get("price") or price)
 
-    return 0 if publish(slug, title, price, stage.get("version") or "") else 1
+    auditlog.started("itch-publish", job=slug, action=f"publish {title}",
+                     tool="itch_publish.py",
+                     reason="the Windows installer was built and verified")
+    ok = publish(slug, title, price, stage.get("version") or "")
+    if ok:
+        auditlog.succeeded("itch-publish", job=slug,
+                           evidence={"exit_code": 0, "slug": slug,
+                                     "price": price})
+    else:
+        auditlog.failed("itch-publish", job=slug,
+                        error="itch_publish.publish returned false",
+                        evidence={"exit_code": 1, "slug": slug})
+    return 0 if ok else 1
 
 
 if __name__ == "__main__":

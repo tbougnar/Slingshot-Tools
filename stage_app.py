@@ -15,6 +15,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import make_app
+import auditlog
 
 
 def _rel(p: Path) -> str:
@@ -94,14 +95,25 @@ def main() -> int:
             make_app.log(f"note: {note}")
         if issues:
             make_app.log(f"attempt {attempt} rejected: {issues}")
+            auditlog.retried("generate", job=concept["slug"],
+                             reason=f"attempt {attempt} failed the staging gate",
+                             evidence={"issues": issues, "bytes": len(html)})
             continue
         ok, why = sizeguard.verdict(len(html))
         if not ok:
             make_app.log(f"attempt {attempt} {why}")
+            auditlog.retried("generate", job=concept["slug"], reason=why,
+                             evidence={"bytes": len(html)})
             continue
         if why:
             make_app.log(f"attempt {attempt} warning: {why}")
         make_app.log(f"attempt {attempt} ok ({len(html)} bytes, brand={brand!r})")
+        auditlog.succeeded("generate", job=concept["slug"],
+                           reason="the app passed the staging gate and the "
+                                  "size guard",
+                           tool="stage_app.py",
+                           evidence={"attempt": attempt, "bytes": len(html),
+                                     "concept": concept["slug"]})
 
         # write_app appends "-basic" itself for the basic tier, so passing an
         # already-suffixed slug produced "password-manager-basic-basic"
