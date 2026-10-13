@@ -1,0 +1,15 @@
+{
+  "slug": "bandwidth-calc-basic",
+  "title": "Data transfer calculator",
+  "tag": "bandwidth",
+  "blurb": "data transfer calculator for streaming and downloads",
+  "tags": [
+    "data",
+    "transfer",
+    "calculator",
+    "for"
+  ],
+  "brand": "",
+  "tier": "basic",
+  "base_slug": "bandwidth-calc"
+}

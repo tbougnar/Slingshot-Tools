@@ -1,0 +1,11 @@
+{
+ "slug": "bandwidth-calc",
+ "brand": "",
+ "title": "Data transfer calculator",
+ "tag": "bandwidth",
+ "differences": [],
+ "free_blurb": "",
+ "paid_blurb": "",
+ "candidate": "site/apps/bandwidth-calc-basic/app/index.html",
+ "paid_dir": "paid/bandwidth-calc"
+}
