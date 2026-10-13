@@ -1,5 +1,45 @@
 [
   {
+    "slug": "color-picker",
+    "base_slug": "color-picker",
+    "title": "Color picker",
+    "tier": "full",
+    "tag": "color",
+    "blurb": "A small, focused color tool. Color picker does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "color",
+      "picker"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/color-picker-basic/",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-13"
+  },
+  {
+    "slug": "color-picker-basic",
+    "base_slug": "color-picker",
+    "title": "Color picker (Basic)",
+    "tier": "basic",
+    "tag": "color",
+    "blurb": "A small, focused color tool. Color picker does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "color",
+      "picker"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/color-picker-basic/",
+    "download": "",
+    "price": 0.0,
+    "free": true,
+    "differences": [],
+    "published": true,
+    "badge": "New",
+    "date": "2026-10-13"
+  },
+  {
     "slug": "glasses-prescription",
     "base_slug": "glasses-prescription",
     "title": "Glasses prescription converter",

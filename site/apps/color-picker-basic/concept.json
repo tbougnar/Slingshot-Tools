@@ -1,15 +1,9 @@
 {
   "slug": "color-picker-basic",
+  "brand": "",
   "title": "Color picker",
   "tag": "color",
-  "blurb": "color picker with contrast checker and palette export",
-  "tags": [
-    "color",
-    "picker",
-    "with",
-    "contrast"
-  ],
-  "brand": "",
+  "blurb": "",
   "tier": "basic",
   "base_slug": "color-picker"
 }
