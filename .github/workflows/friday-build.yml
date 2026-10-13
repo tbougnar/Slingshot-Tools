@@ -51,7 +51,22 @@ jobs:
           python -m pip install --quiet pillow requests pyinstaller pywebview playwright pyyaml
           python -m playwright install chromium
           choco install nsis -y --no-progress
-          makensis /VERSION
+          # choco installs NSIS but this step's PATH is the one from before the
+          # install, so makensis was "not recognised" straight after a
+          # successful choco run. Look in the install location directly rather
+          # than depending on a refreshed PATH.
+          $makensis = "$env:ProgramFiles\NSIS\makensis.exe"
+          if (-not (Test-Path $makensis)) {
+            $makensis = "${env:ProgramFiles(x86)}\NSIS\makensis.exe"
+          }
+          if (-not (Test-Path $makensis)) {
+            Write-Output "::error::NSIS installed but makensis.exe was not found"
+            Get-ChildItem "C:\Program Files*\NSIS" -ErrorAction SilentlyContinue
+            exit 1
+          }
+          Write-Output "makensis at $makensis"
+          & $makensis /VERSION
+          Add-Content -Path $env:GITHUB_PATH -Value (Split-Path $makensis)
 
       - name: Is there budget left this month
         run: python budget.py check --label friday-generate --need 0.6

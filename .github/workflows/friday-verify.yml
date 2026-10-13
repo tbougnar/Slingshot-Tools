@@ -114,6 +114,18 @@ jobs:
         run: |
           choco install nsis -y --no-progress
           python -m pip install --quiet pillow requests pyinstaller pywebview
+          # same PATH problem as the generate job: choco reports success, and
+          # the next line says makensis is not recognised
+          $makensis = "$env:ProgramFiles\NSIS\makensis.exe"
+          if (-not (Test-Path $makensis)) {
+            $makensis = "${env:ProgramFiles(x86)}\NSIS\makensis.exe"
+          }
+          if (-not (Test-Path $makensis)) {
+            Write-Output "::error::NSIS installed but makensis.exe was not found"
+            exit 1
+          }
+          Write-Output "makensis at $makensis"
+          Add-Content -Path $env:GITHUB_PATH -Value (Split-Path $makensis)
 
       # butler is itch.io's own uploader. Without it the installer cannot be
       # pushed, so it is fetched here rather than trusted to be on the runner.
