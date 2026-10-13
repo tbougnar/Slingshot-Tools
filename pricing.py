@@ -259,8 +259,16 @@ def main():
             continue
         cur = float(entry["price"])
         new, why = decide(int(entry.get("sales") or 0), int(entry.get("views") or 0), cur)
-        new = charm(clamp(new))
-        if abs(new - cur) >= 0.01:
+        # decide() returns the current price to mean "hold", so charm() must not be
+        # applied to it: charm subtracts a cent unconditionally, which turned
+        # every hold into a real one-cent drop and slid the price down a cent
+        # per run for ever. Clamp after charm, never before, or charm(clamp(x))
+        # can land below the hard floor and the product could never be listed.
+        if round(new - cur, 2) == 0.0:
+            entry["price"] = cur          # held; leave it exactly as it was
+            continue
+        new = clamp(charm(new))
+        if abs(round(new - cur, 2)) >= 0.01:
             entry["price"] = new
             entry.setdefault("history", []).append(
                 {"price": new, "date": date.today().isoformat(), "reason": why})

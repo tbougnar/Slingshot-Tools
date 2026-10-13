@@ -239,11 +239,34 @@ def main() -> int:
     need = int(round(want * FPS))
     have = len(frames)
     if need != have:
+        # This adjustment has to happen on disk. ffmpeg is given the
+        # "%05d.jpg" pattern, so it reads however many files are in the
+        # directory, and a list that was trimmed in memory changed nothing:
+        # the log said "trim or extend frames: have 880, need 918", the video
+        # stayed 880 frames long, and -shortest then cut the narration off
+        # mid-word at the call to action. The only trace was a reassuring
+        # message.
         log(f"trim or extend frames: have {have}, need {need}")
+        numbered = sorted(frames_dir.glob("*.jpg"))
         if have > need:
-            frames = frames[:need]
+            for extra in numbered[need:]:
+                extra.unlink(missing_ok=True)
         else:
-            frames = frames + [frames[-1]] * (need - have)
+            # hold the final frame, which is what padding a still video means
+            last = numbered[-1] if numbered else None
+            if last is not None:
+                payload = last.read_bytes()
+                for i in range(need - have):
+                    # ffmpeg's pattern starts at 00001, so the next number
+                    # after `have` files is have + 1. Starting at have
+                    # overwrote the last real frame and left the directory
+                    # one file short.
+                    (frames_dir / f"{have + i + 1:05d}.jpg").write_bytes(payload)
+        now = len(sorted(frames_dir.glob("*.jpg")))
+        if now != need:
+            log(f"could not reach {need} frames; {now} are on disk")
+        else:
+            log(f"frames are now {need}")
 
     slug = json.loads((ROOT / "data" / "shorts_script.json")
                       .read_text(encoding="utf-8")).get("slug", "short")

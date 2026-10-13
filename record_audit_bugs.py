@@ -302,6 +302,151 @@ FOUND = [
      "keys off the real exit code.",
      "The upload itself still needs the repository secrets; what is fixed is "
      "that the system can no longer claim it happened when it did not."),
+
+    ("a quiet week stopped the website being deployed",
+     "HIGH", "ci", ["sync_links.py", "shorts_script.py"], "VERIFIED_FIXED",
+     "sync_links calls shorts_script.product() to build a sample YouTube "
+     "description for a person to read. That helper raises SystemExit when "
+     "there is no product to advertise, and the SystemExit propagated out of "
+     "sync_links and failed the Pages job. Between releases there is always "
+     "no product to advertise, so the site was only deployable in the window "
+     "right after a release.",
+     "Run 38428458061 failed at 'Refresh the platform links' with '[shorts] "
+     "no product record; nothing to advertise' and exit code 1, and no deploy "
+     "step ran.",
+     "gh workflow run pages.yml, which failed at the same step",
+     "The sample is skipped when there is nothing to say and sync_links exits "
+     "zero. A missing product is the normal case between releases.",
+     "itchpublish_selftest.py runs sync_links.py and checks the exit code",
+     "itchpublish_selftest.py: FAILURES: none. Run 38429073380 deployed the "
+     "site successfully.",
+     ""),
+
+    # ---- external blockers: confirmed, not fixable from here
+    ("the itch.io session cookie is expired, so nothing can be uploaded",
+     "HIGH", "itch.io publishing", ["itch_publish.py"], "BLOCKED",
+     "The repository holds an ITCH_SESSION_COOKIE that itch.io refuses. This "
+     "is a credential that expires and has to be replaced by the account "
+     "holder; it cannot be generated or refreshed from here.",
+     "Run 38427165880: '[itch] could not check the session: HTTP Error 404: "
+     "Not Found' followed by 'the session cookie is expired or was refused'. "
+     "The release gate then failed the run with PUBLISHED=no, which is the "
+     "correct outcome.",
+     "python itch_publish.py with credentials present",
+     "none available: the cookie must be replaced by the account holder",
+     "itchpublish_selftest.py covers the reporting path",
+     "The pipeline now attempts a real upload, reports the precise blocker, "
+     "and fails the release instead of claiming success. Everything up to the "
+     "credential is verified working.",
+     "Needs a fresh ITCH_SESSION_COOKIE set as a repository secret."),
+
+    ("no product has ever been uploaded to itch.io",
+     "CRITICAL", "itch.io publishing", ["site/apps.json"], "BLOCKED",
+     "Every path to a first upload requires a valid session cookie, which is "
+     "blocked above. Until one product is uploaded there is nothing to sell, "
+     "and the customer purchase journey cannot complete.",
+     "https://slingshot-tools.itch.io/ was fetched during this audit and "
+     "lists no products. site/apps.json marks every paid tier "
+     "published=false with an empty itch_url, which is the truth and is what "
+     "the fixes made it say.",
+     "webfetch https://slingshot-tools.itch.io/",
+     "none available: dependent on the credential above",
+     "itchurl_selftest.py asserts the catalog never claims to be on sale",
+     "itchurl_selftest.py: FAILURES: none. The catalog is honest: 6 free "
+     "editions published, 6 paid tiers kept private, no itch_url.",
+     "A genuine purchase has never been exercised. No money was spent and no "
+     "account was altered at any point in this audit."),
+
+    # ---- second, independent pass
+    ("a price could be set below the hard floor and could never be sold",
+     "CRITICAL", "pricing", ["pricing.py"], "VERIFIED_FIXED",
+     "charm() subtracts a cent unconditionally and was applied after clamp(), "
+     "so charm(clamp(1.00)) is 0.99. publish_paid.py and itch_publish.record() "
+     "both refuse any price outside $1-$10, so a product nudged to $0.99 could "
+     "never be listed. Worse, decide() signals a hold by returning the current "
+     "price, so every run also applied charm to a price that had been decided "
+     "not to move, sliding it down a cent per run for ever, and writing "
+     "audit-log entries that read 'held' beside a price that had moved.",
+     "Executed over the full legal range: charm(clamp(1.00)) == 0.99, below "
+     "FLOOR, and 323 of 901 legal price points had a float delta of at least "
+     "0.01 against the held price.",
+     "python -c 'import pricing; pricing.charm(pricing.clamp(1.00))'",
+     "A hold now returns before charm is applied, so the price stays exactly "
+     "where it was. Clamp happens after charm, never before, and the "
+     "comparison is rounded to cents so a float artefact cannot rewrite a "
+     "price.",
+     "property_selftest.py",
+     "property_selftest.py: no failure across 4505 decide/clamp/charm cases; "
+     "ten idle runs leave the price at $3.00 and a real cut and raise still "
+     "move it.",
+     ""),
+
+    ("loading the release state destroyed the per-app version map",
+     "HIGH", "release state", ["update_state.py"], "VERIFIED_FIXED",
+     "load() coerced both 'apps' and 'next_major_notes' to lists. 'apps' is a "
+     "dict of slug to version, so every load replaced it with an empty list.",
+     "Reproduced: a state file with apps={'password-manager': '1.4.0'} loaded "
+     "to apps=[], app_version() then answered 2.0.0, the company-wide version, "
+     "and set_app_version() raised TypeError: list indices must be integers.",
+     "python -c 'import update_state; s=update_state.load()' against a state "
+     "file with a populated apps map",
+     "Each key is coerced to its own type, dict for apps and list for notes.",
+     "audit_selftest.py",
+     "apps survives load(), app_version() returns the recorded version and "
+     "set_app_version() adds without raising.",
+     ""),
+
+    ("a failed installer build returned the previous release's binary",
+     "HIGH", "packaging", ["build_installer_app.py"], "VERIFIED_FIXED",
+     "The NSIS return code was never checked. Only the existence of the output "
+     "file was, and dist/ kept the previous release's installer, so a compile "
+     "error, a timeout or a full disk still found last week's file and "
+     "returned it while printing 'installer built'. build_paid_only.plausible() "
+     "only checks size and the MZ header, which a genuine but outdated binary "
+     "passes.",
+     "The code read 'if not out_exe.exists()' with no test of "
+     "r.returncode anywhere before it.",
+     "the branch as written",
+     "The previous installer is removed before the build, the exit status is "
+     "checked, and a failed build also unlinks any partial output. The file's "
+     "existence now means this build produced it.",
+     "audit_selftest.py checks the return code is examined and the unlink "
+     "happens before the build",
+     "Both confirmed by reading the compiled source.",
+     ""),
+
+    ("shorts captions were placed outside the clip they belong to",
+     "HIGH", "shorts", ["shorts_voice.py"], "VERIFIED_FIXED",
+     "_words_from_text already returns offsets in seconds, matching the "
+     "ElevenLabs alignment path. The estimate path then multiplied them by the "
+     "clip duration a second time.",
+     "Executed: a 3.0 second line of six words produced offsets "
+     "[0.0, 0.5, 1.0, 1.5, 2.0, 2.5] and then [0.0, 1.5, 3.0, 4.5, 6.0, 7.5], "
+     "so the last caption fired 4.5 seconds after the clip ended. Nothing "
+     "logged it.",
+     "python -c 'import shorts_voice as s; print(s._words_from_text(\"a b c\", 3.0))'",
+     "The offsets are rounded and used as they come.",
+     "audit_selftest.py",
+     "Offsets for 1, 3 and 10 second lines all fall inside their clip.",
+     ""),
+
+    ("a video shorter than its narration lost the call to action",
+     "HIGH", "shorts", ["shorts_mux.py"], "VERIFIED_FIXED",
+     "The frame list was trimmed or padded in memory and then discarded. "
+     "ffmpeg is given the '%05d.jpg' pattern and reads however many files are "
+     "on disk, so the adjustment changed nothing and -shortest then cut the "
+     "audio to the shorter video.",
+     "The log line 'trim or extend frames: have 880, need 918' was printed "
+     "while the directory still held 880 files. The only trace of the problem "
+     "was a reassuring message.",
+     "read the source: the adjusted list had no reader after the assignment",
+     "The trim and the pad happen on disk, the resulting count is verified and "
+     "reported, and padding continues the ffmpeg numbering from have + 1 "
+     "because starting at have overwrote the last real frame.",
+     "checked directly over five trim and pad cases",
+     "5->8, 8->3, 880->918, 918->880 and 10->10 all reach the exact count, and "
+     "the padded tail is the real final frame.",
+     ""),
 ]
 
 

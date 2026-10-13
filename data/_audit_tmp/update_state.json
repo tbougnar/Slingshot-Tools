@@ -1,0 +1,13 @@
+{
+  "version": "2.0.0",
+  "updated": "2026-10-13",
+  "next_major": null,
+  "next_major_title": null,
+  "next_major_notes": [],
+  "discord_event_id": null,
+  "last_trailer": null,
+  "apps": {
+    "password-manager": "1.4.0",
+    "gst-calculator": "1.1.0"
+  }
+}

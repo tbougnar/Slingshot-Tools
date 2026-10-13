@@ -133,6 +133,58 @@ else:
     print("skip  published.json is untracked and absent, which is correct "
           "between runs")
 
+print("\nSECOND PASS: STATE, PACKAGING, CAPTIONS AND FRAMES\n")
+# Found by an independent audit pass, all reproduced before being fixed.
+import update_state as us2
+
+_tmp2 = pathlib.Path(tempfile.mkdtemp())
+_real_state = us2.STATE
+try:
+    us2.STATE = _tmp2 / "update_state.json"
+    us2.STATE.write_text(json.dumps(
+        {"version": "2.0.0", "apps": {"password-manager": "1.4.0"}}),
+        encoding="utf-8")
+    _st = us2.load()
+    check("load() keeps the per-app version map as a dict",
+          isinstance(_st.get("apps"), dict)
+          and _st["apps"].get("password-manager") == "1.4.0",
+          f"apps is {type(_st.get('apps')).__name__}: {_st.get('apps')}")
+    check("app_version() returns the recorded version, not the company one",
+          us2.app_version(_st, "password-manager") == "1.4.0",
+          str(us2.app_version(_st, "password-manager")))
+    try:
+        us2.set_app_version(_st, "recipe-scaler", "3.2.1")
+        check("set_app_version() does not raise after load()", True)
+    except TypeError as e:
+        check("set_app_version() does not raise after load()", False, str(e))
+    check("next_major_notes is still coerced to a list",
+          isinstance(_st.get("next_major_notes"), list))
+finally:
+    us2.STATE = _real_state
+
+import shorts_voice as svoice
+
+for _dur, _txt in ((3.0, "one two three four five six"), (10.0, "a b c")):
+    _m = svoice._words_from_text(_txt, _dur)
+    check(f"captions for a {_dur}s line stay inside the clip",
+          bool(_m) and all(x["offset"] <= _dur for x in _m),
+          f"last offset {_m[-1]['offset'] if _m else None}")
+
+_mux = (ROOT / "shorts_mux.py").read_text(encoding="utf-8")
+check("the frame adjustment happens on disk, not on a discarded list",
+      "frames_dir.glob(\"*.jpg\")" in _mux
+      and "frames = frames + [frames[-1]]" not in _mux,
+      "the padded list was never read by ffmpeg")
+check("padding continues the ffmpeg numbering rather than overwriting",
+      "have + i + 1" in _mux,
+      "starting at have overwrites the last real frame")
+
+_nsis = (ROOT / "build_installer_app.py").read_text(encoding="utf-8")
+check("the NSIS return code is checked", "r.returncode != 0" in _nsis)
+check("the previous installer is removed before the build",
+      _nsis.find("unlink(missing_ok=True)") < _nsis.find("subprocess.run"),
+      "a stale installer can be returned as this week's")
+
 print()
 print("FAILURES:", fails if fails else "none")
 sys.exit(1 if fails else 0)

@@ -156,6 +156,44 @@ st["changes"] = [{"at": "not a date"}]
 check("an unreadable timestamp does not wedge it",
       idd.on_cooldown(st) == 0)
 
+print("\nPRICING NEVER LEAVES THE ALLOWED RANGE\n")
+# charm() subtracts a cent. Applied after clamp(), charm(clamp(1.00)) is 0.99,
+# which publish_paid.py and itch_publish.record() both refuse, so the product
+# could never be listed. Applied to a "hold", it slid the price down a cent per
+# run for ever, because decide() signals a hold by returning the current price.
+def settle(sales, views, cur):
+    new, why = pricing.decide(sales, views, cur)
+    if round(new - cur, 2) == 0.0:
+        return cur, why, "held"
+    return pricing.clamp(pricing.charm(new)), why, "moved"
+
+out_of_range = []
+for cur in [1.0 + i / 100 for i in range(0, 901)]:
+    for sales, views in ((0, 0), (6, 400), (50, 5000), (60, 400), (500, 1000)):
+        try:
+            got, _, _ = settle(sales, views, cur)
+        except Exception as e:  # noqa: BLE001
+            out_of_range.append(f"decide({sales},{views},{cur}) raised {e}")
+            continue
+        if not (pricing.FLOOR - 1e-9 <= got <= pricing.CEILING + 1e-9):
+            out_of_range.append(f"{cur:.2f} + {sales}/{views} -> {got:.4f}")
+check("no price decision can leave $1-$10, over 4505 cases", not out_of_range,
+      "; ".join(out_of_range[:3]))
+
+drift = []
+cur = 3.00
+for _ in range(10):
+    cur, _, _ = settle(0, 0, cur)
+if cur != 3.00:
+    drift.append(f"ten idle runs moved the price to {cur:.2f}")
+check("ten runs with no sales leave the price exactly where it was",
+      not drift, "; ".join(drift))
+
+check("a real cut still happens",
+      settle(50, 5000, 3.00)[0] < 3.00, "pricing stopped reacting")
+check("a real raise still happens",
+      settle(60, 400, 3.00)[0] > 3.00, "pricing stopped reacting")
+
 print()
 print("FAILURES:", fails if fails else "none")
 sys.exit(1 if fails else 0)

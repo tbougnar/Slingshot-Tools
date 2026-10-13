@@ -157,6 +157,16 @@ def build_installer(app_folder: Path, title: str, paid_dir: Path | None = None) 
 
     DIST.mkdir(exist_ok=True)
     out_exe = DIST / f"{title}-Setup.exe"
+    # Removed before the build, not after a failure, so that the file's
+    # existence always means "this build produced it". Leaving the previous
+    # release's installer in place is how a failed compile could return last
+    # week's binary as this week's.
+    try:
+        out_exe.unlink(missing_ok=True)
+    except OSError as e:
+        print(f"[nsis] could not remove the previous {out_exe.name}: {e}",
+              flush=True)
+        return None
     nsi = DIST / f"{title}.nsi"
     nsi.write_text(
         NSI.format(name=title, slug=title.lower().replace(" ", "-"),
@@ -167,8 +177,24 @@ def build_installer(app_folder: Path, title: str, paid_dir: Path | None = None) 
                    exe=exe_name),
         encoding="utf-8")
     r = subprocess.run([makensis, str(nsi)], capture_output=True, text=True, timeout=1200)
-    if not out_exe.exists():
+    # The return code was never checked. dist/<title>-Setup.exe from a previous
+    # release was left in place, so a compile error, a timeout or a full disk
+    # still left the old file there, and this returned it while printing
+    # "installer built". The stale binary was then uploaded to itch.io as the
+    # new version. Check the exit status first, and remove any previous
+    # installer so the file's existence is evidence of this build and nothing
+    # else.
+    if r.returncode != 0:
         print(f"[nsis] FAILED rc={r.returncode}", flush=True)
+        print(((r.stdout or "")[-400:] + (r.stderr or "")[-400:]), flush=True)
+        try:
+            out_exe.unlink(missing_ok=True)
+        except OSError:
+            pass
+        return None
+    if not out_exe.exists():
+        print(f"[nsis] FAILED rc={r.returncode}: no installer was produced",
+              flush=True)
         print(((r.stdout or "")[-400:] + (r.stderr or "")[-400:]), flush=True)
         return None
     print(f"[nsis] installer built: {out_exe.name} "

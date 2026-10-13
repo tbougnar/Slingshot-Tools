@@ -118,10 +118,15 @@ def load() -> dict:
     base = _empty()
     if isinstance(d, dict):
         base.update(d)
-    # a state file written before a key existed must not make the rest fail
-    for key in ("apps", "next_major_notes"):
-        if not isinstance(base.get(key), list):
-            base[key] = []
+    # a state file written before a key existed must not make the rest fail.
+    # apps is a dict of slug -> version and next_major_notes is a list, and
+    # they were both treated as lists here. Every load() therefore replaced the
+    # per-app version map with [], so app_version() answered with the
+    # company-wide version for every app, and set_app_version() raised
+    # TypeError: list indices must be integers.
+    for key, want in (("apps", dict), ("next_major_notes", list)):
+        if not isinstance(base.get(key), want):
+            base[key] = want()
     return base
 
 

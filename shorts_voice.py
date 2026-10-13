@@ -256,8 +256,14 @@ def speak_line(line: str, dest: Path, index: int) -> dict:
                 raise RuntimeError("no audio came back")
             if not marks:
                 marks = _words_from_text(line, dur)
-                marks = [{"offset": m["offset"] * dur,
-                          "text": m["text"]} for m in marks]
+                # _words_from_text already returns offsets in seconds, the
+                # same units as the ElevenLabs alignment path above. They were
+                # multiplied by dur a second time here, so a three-second line
+                # of six words placed its captions at 0, 1.5, 3, 4.5, 6 and
+                # 7.5 seconds: the last caption fired four and a half seconds
+                # after the clip had ended. Nothing logged it.
+                marks = [{"offset": round(m["offset"], 3), "text": m["text"]}
+                         for m in marks]
             return {"file": dest.name, "offset": marks, "text": line,
                     "seconds": dur or (marks[-1]["offset"] + 0.4)}
         except SystemExit:
