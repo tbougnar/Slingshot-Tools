@@ -20,7 +20,7 @@
     "published": false,
     "badge": "New",
     "date": "2026-10-13",
-    "itch_url": "https://slingshot-tools.itch.io/"
+    "itch_url": ""
   },
   {
     "slug": "dev-converter-basic",
@@ -43,7 +43,7 @@
     "published": true,
     "badge": "New",
     "date": "2026-10-13",
-    "itch_url": "https://slingshot-tools.itch.io/"
+    "itch_url": ""
   },
   {
     "slug": "password-manager",
@@ -71,7 +71,7 @@
     "published": false,
     "badge": "New",
     "date": "2026-10-08",
-    "itch_url": "https://slingshot-tools.itch.io/"
+    "itch_url": ""
   },
   {
     "slug": "password-manager-basic",
@@ -99,6 +99,6 @@
     "published": false,
     "badge": "New",
     "date": "2026-10-08",
-    "itch_url": "https://slingshot-tools.itch.io/"
+    "itch_url": ""
   }
 ]
