@@ -16,7 +16,7 @@
   "regression_test": "selftest_audit.py",
   "verification": "selftest_audit passes; the guard was confirmed by reverting .gitignore and watching it report the problem.",
   "uncertainty": "",
-  "opened": "2026-10-13T13:51:25+00:00"
+  "opened": "2026-10-13T18:54:13+00:00"
  },
  {
   "id": "BUG-002",
@@ -35,7 +35,7 @@
   "regression_test": "selftest_audit.py checks no tracked state file holds a Windows absolute path.",
   "verification": "selftest_audit reports 0 problems and the committed file now reads paid/dev-converter.",
   "uncertainty": "",
-  "opened": "2026-10-13T13:51:25+00:00"
+  "opened": "2026-10-13T18:54:13+00:00"
  },
  {
   "id": "BUG-003",
@@ -54,7 +54,7 @@
   "regression_test": "verified by the next run reaching the installer step",
   "verification": "Run 38401429866 generated and committed; the generate job completed with makensis resolved.",
   "uncertainty": "",
-  "opened": "2026-10-13T13:51:25+00:00"
+  "opened": "2026-10-13T18:54:13+00:00"
  },
  {
   "id": "BUG-004",
@@ -72,7 +72,7 @@
   "regression_test": "stubbed sender: a 429 on the first two attempts returns the third successfully, after 65s then 90s",
   "verification": "verified locally with a stubbed provider",
   "uncertainty": "",
-  "opened": "2026-10-13T13:51:25+00:00"
+  "opened": "2026-10-13T18:54:13+00:00"
  },
  {
   "id": "BUG-005",
@@ -91,7 +91,7 @@
   "regression_test": "check_repo_hygiene.py and check_exposure.py both pass with the staged app present",
   "verification": "both scripts report ok",
   "uncertainty": "",
-  "opened": "2026-10-13T13:51:25+00:00"
+  "opened": "2026-10-13T18:54:13+00:00"
  },
  {
   "id": "BUG-006",
@@ -109,7 +109,7 @@
   "regression_test": "jscheck_selftest.py proves the fallback does not cry wolf on ten valid snippets; audit_selftest.py checks the real generated app parses",
   "verification": "the next generate run reported \"attempt 1 ok\" and the app scans with 0 dead and 0 errors",
   "uncertainty": "",
-  "opened": "2026-10-13T13:51:25+00:00"
+  "opened": "2026-10-13T18:54:13+00:00"
  },
  {
   "id": "BUG-007",
@@ -127,7 +127,7 @@
   "regression_test": "scanner_selftest.py builds a page with four genuinely broken controls, all of which must still be reported dead",
   "verification": "scanner_selftest.py: FAILURES: none. dev-converter: dead=[], skipped=['BUTTON:Import My Data']",
   "uncertainty": "",
-  "opened": "2026-10-13T13:51:25+00:00"
+  "opened": "2026-10-13T18:54:13+00:00"
  },
  {
   "id": "BUG-008",
@@ -145,7 +145,7 @@
   "regression_test": "nodecheck_selftest.py runs the node branch against a stub and fails if the arrow raises",
   "verification": "nodecheck_selftest.py: PASS",
   "uncertainty": "",
-  "opened": "2026-10-13T13:51:25+00:00"
+  "opened": "2026-10-13T18:54:13+00:00"
  },
  {
   "id": "BUG-009",
@@ -163,8 +163,8 @@
   "regression_test": "parsed friday-verify.yml; steps.paid exists and the gate is the final step",
   "verification": "Run 38416539839 executed the gate and reported the paid edition was not published, instead of reporting success. That is the first evidence the gate runs.",
   "uncertainty": "",
-  "opened": "2026-10-13T13:51:25+00:00",
-  "updated": "2026-10-13T15:02:14+00:00"
+  "opened": "2026-10-13T18:54:13+00:00",
+  "updated": "2026-10-13T18:54:33+00:00"
  },
  {
   "id": "BUG-010",
@@ -182,8 +182,8 @@
   "regression_test": "planted index.r4.bak in the published tree; check_exposure reported it",
   "verification": "check_exposure ok after removal; index.r3.bak untracked and deleted",
   "uncertainty": "",
-  "opened": "2026-10-13T13:51:25+00:00",
-  "updated": "2026-10-13T15:02:14+00:00"
+  "opened": "2026-10-13T18:54:13+00:00",
+  "updated": "2026-10-13T18:54:33+00:00"
  },
  {
   "id": "BUG-011",
@@ -202,7 +202,7 @@
   "regression_test": "cleanroom_selftest.py copies what git tracks and asserts it survives",
   "verification": "token_usage.json is ignored and untracked",
   "uncertainty": "",
-  "opened": "2026-10-13T13:51:25+00:00"
+  "opened": "2026-10-13T18:54:13+00:00"
  },
  {
   "id": "BUG-012",
@@ -221,7 +221,7 @@
   "regression_test": "audit_selftest.py writes truncated, list and numeric states and checks each is unknown, not zero, and leaves nothing affordable",
   "verification": "audit_selftest.py: FAILURES: none",
   "uncertainty": "",
-  "opened": "2026-10-13T13:51:25+00:00"
+  "opened": "2026-10-13T18:54:13+00:00"
  },
  {
   "id": "BUG-013",
@@ -239,7 +239,7 @@
   "regression_test": "audit_selftest.py checks a readable budget approves and corrupt ones refuse",
   "verification": "audit_selftest.py: FAILURES: none",
   "uncertainty": "",
-  "opened": "2026-10-13T13:51:25+00:00"
+  "opened": "2026-10-13T18:54:13+00:00"
  },
  {
   "id": "BUG-014",
@@ -257,7 +257,7 @@
   "regression_test": "audit_selftest.py makes the state file read-only and checks no traceback, a non-zero exit and no claimed save",
   "verification": "audit_selftest.py: FAILURES: none",
   "uncertainty": "",
-  "opened": "2026-10-13T13:51:25+00:00"
+  "opened": "2026-10-13T18:54:13+00:00"
  },
  {
   "id": "BUG-015",
@@ -277,7 +277,7 @@
   "regression_test": "itchurl_selftest.py",
   "verification": "itchurl_selftest.py: FAILURES: none. publish_paid.py password-manager now exits 1 with a plain message. check_exposure ok.",
   "uncertainty": "The upload to itch.io has still never been executed, because the credentials exist only as repository secrets. That the store is empty is confirmed by fetching the live page.",
-  "opened": "2026-10-13T13:51:25+00:00"
+  "opened": "2026-10-13T18:54:13+00:00"
  },
  {
   "id": "BUG-016",
@@ -297,7 +297,7 @@
   "regression_test": "paidbuild_selftest.py",
   "verification": "paidbuild_selftest.py: FAILURES: none, covering the named build, the stale-slug fallback, the ambiguous refusal, and no builds at all.",
   "uncertainty": "The itch.io upload is still unexecuted; the credentials exist only as repository secrets.",
-  "opened": "2026-10-13T15:02:14+00:00"
+  "opened": "2026-10-13T18:54:13+00:00"
  },
  {
   "id": "BUG-017",
@@ -315,7 +315,7 @@
   "regression_test": "itchpublish_selftest.py",
   "verification": "itchpublish_selftest.py: FAILURES: none, covering no build at all, more than one build, the real module's own output, and that the gate still keys off the real exit code.",
   "uncertainty": "The upload itself still needs the repository secrets; what is fixed is that the system can no longer claim it happened when it did not.",
-  "opened": "2026-10-13T15:58:33+00:00"
+  "opened": "2026-10-13T18:54:13+00:00"
  },
  {
   "id": "BUG-018",
@@ -334,7 +334,7 @@
   "regression_test": "itchpublish_selftest.py runs sync_links.py and checks the exit code",
   "verification": "itchpublish_selftest.py: FAILURES: none. Run 38429073380 deployed the site successfully.",
   "uncertainty": "",
-  "opened": "2026-10-13T16:18:08+00:00"
+  "opened": "2026-10-13T18:54:13+00:00"
  },
  {
   "id": "BUG-019",
@@ -345,14 +345,14 @@
    "itch_publish.py"
   ],
   "status": "BLOCKED",
-  "root_cause": "The repository holds an ITCH_SESSION_COOKIE that itch.io refuses. This is a credential that expires and has to be replaced by the account holder; it cannot be generated or refreshed from here.",
+  "root_cause": "The repository held an ITCH_SESSION_COOKIE that itch.io refuses. This is a credential that expires, and it was the only way in, so the pipeline needed a person to paste a new one every few weeks. It cannot be generated from here; the account holder has to supply credentials once.",
   "evidence": "Run 38427165880: '[itch] could not check the session: HTTP Error 404: Not Found' followed by 'the session cookie is expired or was refused'. The release gate then failed the run with PUBLISHED=no, which is the correct outcome.",
   "repro": "python itch_publish.py with credentials present",
-  "fix": "none available: the cookie must be replaced by the account holder",
-  "regression_test": "itchpublish_selftest.py covers the reporting path",
-  "verification": "The pipeline now attempts a real upload, reports the precise blocker, and fails the release instead of claiming success. Everything up to the credential is verified working.",
-  "uncertainty": "Needs a fresh ITCH_SESSION_COOKIE set as a repository secret.",
-  "opened": "2026-10-13T16:18:22+00:00"
+  "fix": "The expiring dependency is gone from the design. itch_publish now logs in with ITCH_LOGIN and ITCH_PASSWORD, which do not expire, and mints its own session whenever the stored cookie is refused. Those two secrets have to be set once by the account holder; until they are, the upload is still blocked.",
+  "regression_test": "itchpublish_selftest.py covers the login path, that the password is neither logged nor written, and that a refused cookie leads to a login rather than to a person",
+  "verification": "itchpublish_selftest.py: FAILURES: none. The publishing path up to the credential is verified working in CI: the Windows installer is built, uploaded as an artifact and offered to itch.io.",
+  "uncertainty": "Needs ITCH_LOGIN and ITCH_PASSWORD set as repository secrets. The expiring ITCH_SESSION_COOKIE can then be deleted.",
+  "opened": "2026-10-13T18:54:14+00:00"
  },
  {
   "id": "BUG-020",
@@ -370,7 +370,7 @@
   "regression_test": "itchurl_selftest.py asserts the catalog never claims to be on sale",
   "verification": "itchurl_selftest.py: FAILURES: none. The catalog is honest: 6 free editions published, 6 paid tiers kept private, no itch_url.",
   "uncertainty": "A genuine purchase has never been exercised. No money was spent and no account was altered at any point in this audit.",
-  "opened": "2026-10-13T16:18:22+00:00"
+  "opened": "2026-10-13T18:54:14+00:00"
  },
  {
   "id": "BUG-021",
@@ -388,7 +388,7 @@
   "regression_test": "property_selftest.py",
   "verification": "property_selftest.py: no failure across 4505 decide/clamp/charm cases; ten idle runs leave the price at $3.00 and a real cut and raise still move it.",
   "uncertainty": "",
-  "opened": "2026-10-13T16:31:36+00:00"
+  "opened": "2026-10-13T18:54:14+00:00"
  },
  {
   "id": "BUG-022",
@@ -406,7 +406,7 @@
   "regression_test": "audit_selftest.py",
   "verification": "apps survives load(), app_version() returns the recorded version and set_app_version() adds without raising.",
   "uncertainty": "",
-  "opened": "2026-10-13T16:31:36+00:00"
+  "opened": "2026-10-13T18:54:14+00:00"
  },
  {
   "id": "BUG-023",
@@ -424,7 +424,7 @@
   "regression_test": "audit_selftest.py checks the return code is examined and the unlink happens before the build",
   "verification": "Both confirmed by reading the compiled source.",
   "uncertainty": "",
-  "opened": "2026-10-13T16:31:36+00:00"
+  "opened": "2026-10-13T18:54:14+00:00"
  },
  {
   "id": "BUG-024",
@@ -442,7 +442,7 @@
   "regression_test": "audit_selftest.py",
   "verification": "Offsets for 1, 3 and 10 second lines all fall inside their clip.",
   "uncertainty": "",
-  "opened": "2026-10-13T16:31:36+00:00"
+  "opened": "2026-10-13T18:54:14+00:00"
  },
  {
   "id": "BUG-025",
@@ -460,6 +460,6 @@
   "regression_test": "checked directly over five trim and pad cases",
   "verification": "5->8, 8->3, 880->918, 918->880 and 10->10 all reach the exact count, and the padded tail is the real final frame.",
   "uncertainty": "",
-  "opened": "2026-10-13T16:31:36+00:00"
+  "opened": "2026-10-13T18:54:14+00:00"
  }
 ]

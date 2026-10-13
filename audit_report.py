@@ -265,9 +265,11 @@ def main() -> int:
     section("H. Remaining risks")
     print("| Risk | Why it is still open |")
     print("|---|---|")
-    print("| Nothing is for sale | the itch.io session cookie has expired and "
-          "only the account holder can replace it. Every code path up to the "
-          "credential is verified; the credential is not |")
+    print("| Nothing is for sale | itch.io account credentials have never been "
+          "set, so the publisher cannot log in and mint a session. The "
+          "expiring session cookie that used to be needed is no longer "
+          "required; two permanent credentials are. Everything up to that "
+          "point is verified |")
     print("| No purchase has ever been exercised | dependent on the above. No "
           "money was spent and no checkout was bypassed at any point |")
     print("| The Windows installer has not been run on a customer machine | CI "
@@ -299,25 +301,31 @@ def main() -> int:
               "with zero open.")
         print()
         print("The work that remains cannot be done from here. No product has "
-              "ever been uploaded to itch.io, because the session cookie in "
-              "the repository secrets has expired and only the account holder "
-              "can replace it. The purchase journey cannot be exercised at all "
-              "until one upload succeeds.")
+              "ever been uploaded to itch.io, because the account credentials "
+              "have never been added to the repository secrets, and only the "
+              "account holder can add them. The purchase journey cannot be "
+              "exercised at all until one upload succeeds.")
         print()
         print("The code is not what is stopping this. The publishing path was "
               "exercised end to end in CI: the Windows installer was built, "
               "uploaded as an artifact, and offered to itch.io, which refused "
               "the credential.")
         print()
-        print("To unblock: set a fresh cookie with")
+        print("This is also the last recurring failure. It used to be a "
+              "session cookie that expired every few weeks and needed a "
+              "person to paste a new one into the secrets. That dependency is "
+              "gone: the publisher now logs in with the account credentials, "
+              "which do not expire, and mints its own session. Set these two "
+              "once and nobody has to touch the credentials again:")
         print()
         print("```")
-        print("gh secret set ITCH_SESSION_COOKIE --repo tbougnar/Slingshot-Tools")
+        print("gh secret set ITCH_LOGIN --repo tbougnar/Slingshot-Tools")
+        print("gh secret set ITCH_PASSWORD --repo tbougnar/Slingshot-Tools")
         print("```")
         print()
-        print("then dispatch `friday-build.yml`. The pipeline will build, "
-              "upload, verify the page answers, publish the site and announce "
-              "it, with no manual step.")
+        print("After that, dispatch `friday-build.yml`. The pipeline will "
+              "build, upload, verify the page answers, publish the site and "
+              "announce it, with no manual step.")
     else:
         print("**PASS — ZERO KNOWN ACTIONABLE BUGS WITHIN VERIFIED SCOPE**")
     print()

@@ -325,20 +325,28 @@ FOUND = [
     # ---- external blockers: confirmed, not fixable from here
     ("the itch.io session cookie is expired, so nothing can be uploaded",
      "HIGH", "itch.io publishing", ["itch_publish.py"], "BLOCKED",
-     "The repository holds an ITCH_SESSION_COOKIE that itch.io refuses. This "
-     "is a credential that expires and has to be replaced by the account "
-     "holder; it cannot be generated or refreshed from here.",
+     "The repository held an ITCH_SESSION_COOKIE that itch.io refuses. This is "
+     "a credential that expires, and it was the only way in, so the pipeline "
+     "needed a person to paste a new one every few weeks. It cannot be "
+     "generated from here; the account holder has to supply credentials once.",
      "Run 38427165880: '[itch] could not check the session: HTTP Error 404: "
      "Not Found' followed by 'the session cookie is expired or was refused'. "
      "The release gate then failed the run with PUBLISHED=no, which is the "
      "correct outcome.",
      "python itch_publish.py with credentials present",
-     "none available: the cookie must be replaced by the account holder",
-     "itchpublish_selftest.py covers the reporting path",
-     "The pipeline now attempts a real upload, reports the precise blocker, "
-     "and fails the release instead of claiming success. Everything up to the "
-     "credential is verified working.",
-     "Needs a fresh ITCH_SESSION_COOKIE set as a repository secret."),
+     "The expiring dependency is gone from the design. itch_publish now logs "
+     "in with ITCH_LOGIN and ITCH_PASSWORD, which do not expire, and mints its "
+     "own session whenever the stored cookie is refused. Those two secrets "
+     "have to be set once by the account holder; until they are, the upload is "
+     "still blocked.",
+     "itchpublish_selftest.py covers the login path, that the password is "
+     "neither logged nor written, and that a refused cookie leads to a login "
+     "rather than to a person",
+     "itchpublish_selftest.py: FAILURES: none. The publishing path up to the "
+     "credential is verified working in CI: the Windows installer is built, "
+     "uploaded as an artifact and offered to itch.io.",
+     "Needs ITCH_LOGIN and ITCH_PASSWORD set as repository secrets. The "
+     "expiring ITCH_SESSION_COOKIE can then be deleted."),
 
     ("no product has ever been uploaded to itch.io",
      "CRITICAL", "itch.io publishing", ["site/apps.json"], "BLOCKED",
