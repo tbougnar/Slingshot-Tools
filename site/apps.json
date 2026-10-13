@@ -1,5 +1,47 @@
 [
   {
+    "slug": "glasses-prescription",
+    "base_slug": "glasses-prescription",
+    "title": "Glasses prescription converter",
+    "tier": "full",
+    "tag": "glasses",
+    "blurb": "A small, focused glasses tool. Glasses prescription converter does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "glasses",
+      "prescription",
+      "converter"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/glasses-prescription-basic/",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-13"
+  },
+  {
+    "slug": "glasses-prescription-basic",
+    "base_slug": "glasses-prescription",
+    "title": "Glasses prescription converter (Basic)",
+    "tier": "basic",
+    "tag": "glasses",
+    "blurb": "A small, focused glasses tool. Glasses prescription converter does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "glasses",
+      "prescription",
+      "converter"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/glasses-prescription-basic/",
+    "download": "",
+    "price": 0.0,
+    "free": true,
+    "differences": [],
+    "published": true,
+    "badge": "New",
+    "date": "2026-10-13"
+  },
+  {
     "slug": "unit-converter",
     "base_slug": "unit-converter",
     "title": "Unit converter",
