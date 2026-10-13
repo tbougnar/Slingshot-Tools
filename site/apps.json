@@ -22,10 +22,10 @@
       "Brings entries in from another manager",
       "Stores site, username and password together in one place"
     ],
-    "published": true,
+    "published": false,
     "badge": "New",
     "date": "2026-10-08",
-    "itch_url": "https://slingshot-tools.itch.io/"
+    "itch_url": ""
   },
   {
     "slug": "password-manager-basic",
@@ -50,9 +50,9 @@
       "Brings entries in from another manager",
       "Stores site, username and password together in one place"
     ],
-    "published": true,
+    "published": false,
     "badge": "New",
     "date": "2026-10-08",
-    "itch_url": "https://slingshot-tools.itch.io/"
+    "itch_url": ""
   }
 ]

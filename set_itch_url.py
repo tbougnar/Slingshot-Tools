@@ -39,10 +39,26 @@ def save(apps: list) -> None:
 
 
 def valid(url: str) -> bool:
-    """Only an itch.io page, so a typo cannot point a buy button at a stranger."""
+    """Only an itch.io page for an actual product, so a buy button cannot be
+    pointed at a stranger or at the account's own front page.
+
+    The old check was len(path.split("/")) >= 1. For "https://slug.itch.io/"
+    the path is "/", so strip("/") is "" and "".split("/") is [""], which has
+    length one and passed. That let the account page be stored as a product's
+    URL. The site then advertised a paid edition whose Buy button went to a
+    store listing nothing at all, and the paid tier was marked published.
+
+    A product page has a non-empty first path segment: the project's slug.
+    """
     u = urlparse(url)
-    return u.scheme == "https" and u.netloc.endswith("itch.io") \
-        and len(u.path.strip("/").split("/")) >= 1
+    if u.scheme != "https" or not u.netloc.endswith("itch.io"):
+        return False
+    # A buy button belongs to one account, which is a subdomain. Accepting the
+    # bare itch.io host would point a purchase at the site itself.
+    if u.netloc == "itch.io":
+        return False
+    segments = [s for s in u.path.split("/") if s]
+    return len(segments) >= 1
 
 
 def show(apps: list) -> int:

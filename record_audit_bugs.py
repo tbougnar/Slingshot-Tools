@@ -223,6 +223,34 @@ FOUND = [
      "audit_selftest.py makes the state file read-only and checks no traceback, "
      "a non-zero exit and no claimed save",
      "audit_selftest.py: FAILURES: none", ""),
+
+    ("the site advertised a paid product that was not for sale",
+     "CRITICAL", "itch.io publishing",
+     ["set_itch_url.py", "publish_paid.py", "site/apps.json"], "VERIFIED_FIXED",
+     "set_itch_url.valid() required at least one path segment, computed as "
+     "len(path.strip('/').split('/')) >= 1. An account front page has the "
+     "path '/', so strip gives the empty string, and ''.split('/') is [''], "
+     "which has length one and passed. The catalog therefore held the account "
+     "page as the product URL, publish_paid.py saw a URL present and a price in "
+     "range, and set published=True.",
+     "The live store was fetched during the audit and lists zero products. "
+     "site/apps.json carried published=true with itch_url pointing at the "
+     "account page, and e2e_product.py reported the catalog as published while "
+     "the itch.io check failed.",
+     "python publish_paid.py password-manager, which exited 0 and left the "
+     "tier marked published",
+     "valid() now requires a non-empty first path segment and an account "
+     "subdomain. publish_paid.py refuses on the same ground and then fetches "
+     "the page, refusing to mark anything on sale unless the response contains "
+     "a purchase or download section. The catalog was corrected: the paid tier "
+     "is published=false with an empty itch_url until a real product page "
+     "exists.",
+     "itchurl_selftest.py",
+     "itchurl_selftest.py: FAILURES: none. publish_paid.py password-manager "
+     "now exits 1 with a plain message. check_exposure ok.",
+     "The upload to itch.io has still never been executed, because the "
+     "credentials exist only as repository secrets. That the store is empty is "
+     "confirmed by fetching the live page."),
 ]
 
 

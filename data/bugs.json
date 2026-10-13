@@ -16,7 +16,7 @@
   "regression_test": "selftest_audit.py",
   "verification": "selftest_audit passes; the guard was confirmed by reverting .gitignore and watching it report the problem.",
   "uncertainty": "",
-  "opened": "2026-10-13T13:21:14+00:00"
+  "opened": "2026-10-13T13:51:25+00:00"
  },
  {
   "id": "BUG-002",
@@ -35,7 +35,7 @@
   "regression_test": "selftest_audit.py checks no tracked state file holds a Windows absolute path.",
   "verification": "selftest_audit reports 0 problems and the committed file now reads paid/dev-converter.",
   "uncertainty": "",
-  "opened": "2026-10-13T13:21:14+00:00"
+  "opened": "2026-10-13T13:51:25+00:00"
  },
  {
   "id": "BUG-003",
@@ -54,7 +54,7 @@
   "regression_test": "verified by the next run reaching the installer step",
   "verification": "Run 38401429866 generated and committed; the generate job completed with makensis resolved.",
   "uncertainty": "",
-  "opened": "2026-10-13T13:21:14+00:00"
+  "opened": "2026-10-13T13:51:25+00:00"
  },
  {
   "id": "BUG-004",
@@ -72,7 +72,7 @@
   "regression_test": "stubbed sender: a 429 on the first two attempts returns the third successfully, after 65s then 90s",
   "verification": "verified locally with a stubbed provider",
   "uncertainty": "",
-  "opened": "2026-10-13T13:21:14+00:00"
+  "opened": "2026-10-13T13:51:25+00:00"
  },
  {
   "id": "BUG-005",
@@ -91,7 +91,7 @@
   "regression_test": "check_repo_hygiene.py and check_exposure.py both pass with the staged app present",
   "verification": "both scripts report ok",
   "uncertainty": "",
-  "opened": "2026-10-13T13:21:14+00:00"
+  "opened": "2026-10-13T13:51:25+00:00"
  },
  {
   "id": "BUG-006",
@@ -109,7 +109,7 @@
   "regression_test": "jscheck_selftest.py proves the fallback does not cry wolf on ten valid snippets; audit_selftest.py checks the real generated app parses",
   "verification": "the next generate run reported \"attempt 1 ok\" and the app scans with 0 dead and 0 errors",
   "uncertainty": "",
-  "opened": "2026-10-13T13:21:14+00:00"
+  "opened": "2026-10-13T13:51:25+00:00"
  },
  {
   "id": "BUG-007",
@@ -127,7 +127,7 @@
   "regression_test": "scanner_selftest.py builds a page with four genuinely broken controls, all of which must still be reported dead",
   "verification": "scanner_selftest.py: FAILURES: none. dev-converter: dead=[], skipped=['BUTTON:Import My Data']",
   "uncertainty": "",
-  "opened": "2026-10-13T13:21:14+00:00"
+  "opened": "2026-10-13T13:51:25+00:00"
  },
  {
   "id": "BUG-008",
@@ -145,7 +145,7 @@
   "regression_test": "nodecheck_selftest.py runs the node branch against a stub and fails if the arrow raises",
   "verification": "nodecheck_selftest.py: PASS",
   "uncertainty": "",
-  "opened": "2026-10-13T13:21:14+00:00"
+  "opened": "2026-10-13T13:51:25+00:00"
  },
  {
   "id": "BUG-009",
@@ -161,10 +161,10 @@
   "repro": "python parse of friday-verify.yml",
   "fix": "The record step now has id: paid, writes the outcome to GITHUB_STEP_SUMMARY, and a final gate reads it. The gate runs after the free edition has been committed and deployed, so one dead destination does not cost the customer the release that worked, but the job fails with a plain message instead of reporting success. ALLOW_FREE_ONLY accepts the partial release deliberately.",
   "regression_test": "parsed friday-verify.yml and confirmed steps.paid exists and the gate is the final step",
-  "verification": "workflow parses; the paid output is now consumed; selftest_audit 0 problems across 122 files",
+  "verification": "workflow parses; steps.paid exists; selftest_audit 0 problems",
   "uncertainty": "",
-  "opened": "2026-10-13T13:21:14+00:00",
-  "updated": "2026-10-13T13:23:24+00:00"
+  "opened": "2026-10-13T13:51:25+00:00",
+  "updated": "2026-10-13T13:51:44+00:00"
  },
  {
   "id": "BUG-010",
@@ -178,12 +178,12 @@
   "root_cause": "qa_loop writes index.rN.bak beside the app it is repairing and nothing removes it. git add -A committed one into site/, which GitHub Pages serves. Development-only material shipped in a release.",
   "evidence": "git ls-files site/apps shows index.r3.bak",
   "repro": "git ls-files site/apps",
-  "fix": "qa_loop writes its per-round backups to data/qa_backups/ instead of beside the app, and check_exposure refuses to pass if any .bak, .trial.html, .py or .tmp reaches site/.",
+  "fix": "qa_loop writes per-round backups to data/qa_backups/ instead of beside the app, and check_exposure refuses to pass if any .bak, .trial.html, .py or .tmp reaches site/.",
   "regression_test": "planted index.r4.bak in the published tree; check_exposure reported it, and passed again once removed",
   "verification": "check_exposure ok after removal; index.r3.bak untracked and deleted",
   "uncertainty": "",
-  "opened": "2026-10-13T13:21:14+00:00",
-  "updated": "2026-10-13T13:23:24+00:00"
+  "opened": "2026-10-13T13:51:25+00:00",
+  "updated": "2026-10-13T13:51:44+00:00"
  },
  {
   "id": "BUG-011",
@@ -202,7 +202,7 @@
   "regression_test": "cleanroom_selftest.py copies what git tracks and asserts it survives",
   "verification": "token_usage.json is ignored and untracked",
   "uncertainty": "",
-  "opened": "2026-10-13T13:21:15+00:00"
+  "opened": "2026-10-13T13:51:25+00:00"
  },
  {
   "id": "BUG-012",
@@ -221,7 +221,7 @@
   "regression_test": "audit_selftest.py writes truncated, list and numeric states and checks each is unknown, not zero, and leaves nothing affordable",
   "verification": "audit_selftest.py: FAILURES: none",
   "uncertainty": "",
-  "opened": "2026-10-13T13:21:15+00:00"
+  "opened": "2026-10-13T13:51:25+00:00"
  },
  {
   "id": "BUG-013",
@@ -239,7 +239,7 @@
   "regression_test": "audit_selftest.py checks a readable budget approves and corrupt ones refuse",
   "verification": "audit_selftest.py: FAILURES: none",
   "uncertainty": "",
-  "opened": "2026-10-13T13:21:15+00:00"
+  "opened": "2026-10-13T13:51:25+00:00"
  },
  {
   "id": "BUG-014",
@@ -257,6 +257,26 @@
   "regression_test": "audit_selftest.py makes the state file read-only and checks no traceback, a non-zero exit and no claimed save",
   "verification": "audit_selftest.py: FAILURES: none",
   "uncertainty": "",
-  "opened": "2026-10-13T13:21:15+00:00"
+  "opened": "2026-10-13T13:51:25+00:00"
+ },
+ {
+  "id": "BUG-015",
+  "symptom": "the site advertised a paid product that was not for sale",
+  "severity": "CRITICAL",
+  "component": "itch.io publishing",
+  "files": [
+   "set_itch_url.py",
+   "publish_paid.py",
+   "site/apps.json"
+  ],
+  "status": "VERIFIED_FIXED",
+  "root_cause": "set_itch_url.valid() required at least one path segment, computed as len(path.strip('/').split('/')) >= 1. An account front page has the path '/', so strip gives the empty string, and ''.split('/') is [''], which has length one and passed. The catalog therefore held the account page as the product URL, publish_paid.py saw a URL present and a price in range, and set published=True.",
+  "evidence": "The live store was fetched during the audit and lists zero products. site/apps.json carried published=true with itch_url pointing at the account page, and e2e_product.py reported the catalog as published while the itch.io check failed.",
+  "repro": "python publish_paid.py password-manager, which exited 0 and left the tier marked published",
+  "fix": "valid() now requires a non-empty first path segment and an account subdomain. publish_paid.py refuses on the same ground and then fetches the page, refusing to mark anything on sale unless the response contains a purchase or download section. The catalog was corrected: the paid tier is published=false with an empty itch_url until a real product page exists.",
+  "regression_test": "itchurl_selftest.py",
+  "verification": "itchurl_selftest.py: FAILURES: none. publish_paid.py password-manager now exits 1 with a plain message. check_exposure ok.",
+  "uncertainty": "The upload to itch.io has still never been executed, because the credentials exist only as repository secrets. That the store is empty is confirmed by fetching the live page.",
+  "opened": "2026-10-13T13:51:25+00:00"
  }
 ]
