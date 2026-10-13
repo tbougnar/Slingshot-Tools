@@ -1,15 +1,9 @@
 {
   "slug": "password-strength-basic",
+  "brand": "",
   "title": "Password strength auditor",
   "tag": "password",
-  "blurb": "password strength auditor that explains the score",
-  "tags": [
-    "password",
-    "strength",
-    "auditor",
-    "that"
-  ],
-  "brand": "",
+  "blurb": "",
   "tier": "basic",
   "base_slug": "password-strength"
 }

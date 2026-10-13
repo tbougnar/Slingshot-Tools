@@ -1,5 +1,47 @@
 [
   {
+    "slug": "password-strength",
+    "base_slug": "password-strength",
+    "title": "Password strength auditor",
+    "tier": "full",
+    "tag": "password",
+    "blurb": "A small, focused password tool. Password strength auditor does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "password",
+      "strength",
+      "auditor"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/password-strength-basic/",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-13"
+  },
+  {
+    "slug": "password-strength-basic",
+    "base_slug": "password-strength",
+    "title": "Password strength auditor (Basic)",
+    "tier": "basic",
+    "tag": "password",
+    "blurb": "A small, focused password tool. Password strength auditor does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "password",
+      "strength",
+      "auditor"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/password-strength-basic/",
+    "download": "",
+    "price": 0.0,
+    "free": true,
+    "differences": [],
+    "published": true,
+    "badge": "New",
+    "date": "2026-10-13"
+  },
+  {
     "slug": "csv-viewer",
     "base_slug": "csv-viewer",
     "title": "CSV viewer",
