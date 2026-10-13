@@ -112,6 +112,12 @@ data/shots/
 data/shots.json
 data/shorts_thumb.json
 
+# Per-repair backups of an app while the QA loop works on it. These used to be
+# written into site/, which GitHub Pages serves, so a blanket git add shipped
+# one to customers as part of the release.
+data/qa_backups/
+site/**/*.bak
+
 # Release state. Tracked, because the count of what has shipped is history.
 # Only the generated frame dump and the trailer's working files are not.
 data/trailer_frames/

@@ -96,7 +96,19 @@ def repair_until_clean(html_path: Path, max_rounds: int = MAX_ROUNDS,
                             "reason": "no patch worked"})
             continue
 
-        html_path.with_suffix(f".r{rnd}.bak").write_text(html, encoding="utf-8")
+        # Backups go outside site/. site/ is the published folder and GitHub
+        # Pages serves it, so a .bak written beside the app was committed by
+        # the next "git add -A" and shipped to customers as part of the
+        # release.
+        bak_dir = Path(__file__).resolve().parent / "data" / "qa_backups"
+        try:
+            bak_dir.mkdir(parents=True, exist_ok=True)
+            bak = bak_dir / f"{html_path.parent.parent.name}-r{rnd}.bak.html"
+            bak.write_text(html, encoding="utf-8")
+            log(f"[qa] round {rnd}: previous version kept at "
+                f"{bak.relative_to(bak_dir.parent.parent)}")
+        except OSError as e:
+            log(f"[qa] round {rnd}: could not keep a backup ({e})")
         html_path.write_text(repaired, encoding="utf-8")
         log(f"[qa] round {rnd}: {by} reduced the broken controls; re-scanning")
         history.append({"round": rnd, "clean": False, "mode": mode,

@@ -10,6 +10,7 @@ run unless ``--strict`` is passed.
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -84,6 +85,25 @@ def main() -> int:
     lic = SITE / "licenses"
     if lic.exists():
         problems.append("the public site contains a licenses folder")
+
+    # Development-only material must never reach a customer. A .bak written
+    # beside an app while the QA loop worked on it was committed by the next
+    # blanket git add and served by GitHub Pages as part of the release.
+    junk_suffixes = (".bak", ".trial.html", ".orig", ".rej", ".tmp",
+                     ".py", ".log", ".bak.html")
+    for f in sorted(SITE.rglob("*")):
+        if not f.is_file():
+            continue
+        name = f.name
+        if any(name.endswith(sfx) for sfx in junk_suffixes) or \
+                ".r0" in name or re.search(r"\.r\d+\.", name):
+            problems.append(f"a development file is published: "
+                            f"{f.relative_to(SITE).as_posix()}")
+    if (SITE / "apps").is_dir():
+        for f in sorted((SITE / "apps").rglob("*")):
+            if f.is_file() and f.suffix.lower() in (".py", ".json.tmp"):
+                problems.append(f"a development file is published: "
+                                f"{f.relative_to(SITE).as_posix()}")
 
     for a in catalog:
         if "-basic-basic" in str(a.get("url", "")):
