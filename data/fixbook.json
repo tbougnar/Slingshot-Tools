@@ -654,7 +654,7 @@
    "make_app.py"
   ],
   "detects": "recurs if any catalog entry has an empty blurb or an empty tags list",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B053",
@@ -667,7 +667,7 @@
    "check_exposure.py"
   ],
   "detects": "recurs if any product family has just one tier in site/apps.json",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B054",
@@ -680,7 +680,7 @@
    "discord_polls.py"
   ],
   "detects": "recurs if a ballot closes but pick_concept does not mention the community vote",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B055",
@@ -692,7 +692,7 @@
    "make_app.py"
   ],
   "detects": "recurs if a published product is missing from data/already_built.json",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B056",
@@ -1080,7 +1080,7 @@
    "site/index.html"
   ],
   "detects": "site_js_selftest.py: the key:k pattern is refused, and the function is executed in a real browser against a two-entry catalog",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B087",
@@ -1092,7 +1092,7 @@
    "site/index.html"
   ],
   "detects": "site_js_selftest.py: JSON.stringify must not appear in render()",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B088",
@@ -1104,7 +1104,7 @@
    "site/index.html"
   ],
   "detects": "site_js_selftest.py: the button may not interpolate the price variable",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B089",
@@ -1117,7 +1117,7 @@
    "app_update.py"
   ],
   "detects": "update_selftest.py: the parse, bump and compare boundaries",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B090",
@@ -1129,7 +1129,7 @@
    "update_state.py"
   ],
   "detects": "update_selftest.py: 1.9.9 plus a patch is 1.9.10",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B091",
@@ -1142,7 +1142,7 @@
    "app_update.py"
   ],
   "detects": "update_selftest.py: 1.10.0 is newer than 1.9.0",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B092",
@@ -1155,7 +1155,7 @@
    "native_launcher.py"
   ],
   "detects": "update_selftest.py: a missing public file is not a crash",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B093",
@@ -1168,7 +1168,7 @@
    "native_launcher.py"
   ],
   "detects": "update_selftest.py plus the existing html_looks_fine check",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B094",
@@ -1180,7 +1180,7 @@
    "app_update.py"
   ],
   "detects": "update_selftest.py: injecting twice leaves exactly one banner",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B095",
@@ -1192,7 +1192,7 @@
    "app_update.py"
   ],
   "detects": "update_selftest.py: a page with no body is refused and unchanged",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B096",
@@ -1205,7 +1205,7 @@
    ".github/workflows/pages.yml"
   ],
   "detects": "update_selftest.py: idle and live both publish a null date",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B097",
@@ -1217,7 +1217,7 @@
    "update_state.py"
   ],
   "detects": "update_selftest.py: no event id appears in the published file",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B098",
@@ -1229,7 +1229,7 @@
    "site/index.html"
   ],
   "detects": "site_js_selftest.py: the fetch has an empty catch and escapes its text",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B099",
@@ -1241,7 +1241,7 @@
    "update_plan.py"
   ],
   "detects": "update_selftest.py: planning on the 27th and the 31st both roll forward",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B100",
@@ -1253,7 +1253,7 @@
    "update_plan.py"
   ],
   "detects": "update_selftest.py: fallback lands on the menu and avoids repeats",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B101",
@@ -1266,7 +1266,7 @@
    "update_trailer_script.py"
   ],
   "detects": "update_selftest.py: the fallback and the menu agree",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B102",
@@ -1278,7 +1278,7 @@
    "update_discord.py"
   ],
   "detects": "update_selftest.py: existing() reads the stored id",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B103",
@@ -1290,7 +1290,7 @@
    "update_weekly.py"
   ],
   "detects": "checked by hand: with a major three days out the weekly exits without bumping",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B104",
@@ -1302,7 +1302,7 @@
    "update_weekly.py"
   ],
   "detects": "update_selftest.py: 1.4.2 becomes 1.4.3 and never 1.5.0 or 2.0.0",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B105",
@@ -1314,7 +1314,7 @@
    "update_trailer_render.py"
   ],
   "detects": "update_selftest.py: the trailer is landscape and the Shorts is not",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B106",
@@ -1326,7 +1326,7 @@
    "update_trailer_render.py"
   ],
   "detects": "checked visually across four timestamps",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B107",
@@ -1338,7 +1338,7 @@
    "update_trailer_render.py"
   ],
   "detects": "update_selftest.py: every frame renders at the canvas size, and the split was checked visually",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B108",
@@ -1350,7 +1350,7 @@
    "update_trailer_script.py"
   ],
   "detects": "update_selftest.py: a leading cue and bold markers are removed",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B109",
@@ -1362,7 +1362,7 @@
    "shorts_script_selftest.py"
   ],
   "detects": "the suite runs to completion again",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B110",
@@ -1375,7 +1375,7 @@
    "selftest_audit.py"
   ],
   "detects": "selftest_audit.py: both are checked as protected",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B111",
@@ -1387,7 +1387,7 @@
    "discord_post.py"
   ],
   "detects": "checked by hand: 403, 200, 500 and 429 all return cleanly now",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B112",
@@ -1399,7 +1399,7 @@
    "groq_live_check.py"
   ],
   "detects": "checked by hand: empty key, wrong prefix and a fake key all return the right thing instead of crashing",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B113",
@@ -1411,7 +1411,7 @@
    "shorts_render.py"
   ],
   "detects": "pyflakes reports no undefined names anywhere in the project",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B114",
@@ -1423,7 +1423,7 @@
    "update_plan.py"
   ],
   "detects": "update_selftest.py: planning on the 27th and the 31st roll forward",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B115",
@@ -1435,7 +1435,7 @@
    "stage_app.py"
   ],
   "detects": "tokenmeter.affordable is asserted directly in selftest.py",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B116",
@@ -1447,7 +1447,7 @@
    "learn.py"
   ],
   "detects": "both branches log which one was used, so a run shows it",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B117",
@@ -1459,7 +1459,7 @@
    "make_app.py"
   ],
   "detects": "checked by hand with a stubbed provider: the second call goes straight to the working model",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B118",
@@ -1472,7 +1472,7 @@
    ".gitignore"
   ],
   "detects": "learn.LESSONS and buglog.LESSONS are asserted to be different files",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B119",
@@ -1484,7 +1484,7 @@
    "paypal.py"
   ],
   "detects": "scan_selftest.py imports every module in a fresh interpreter and fails if anything new appears under site/",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B120",
@@ -1496,7 +1496,7 @@
    "selftest_audit.py"
   ],
   "detects": "checked by hand: a comment naming a protected file passes, a real blanket add of one is reported",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B121",
@@ -1509,7 +1509,7 @@
    "weekly_review.py"
   ],
   "detects": "recurs every Wednesday; one entry per week is expected",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B122",
@@ -1522,7 +1522,7 @@
    "signals.py"
   ],
   "detects": "check_exposure.py prints the slug and the command that fixes it, and exits 1 under --strict",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B123",
@@ -1534,7 +1534,7 @@
    "itch_publish.py"
   ],
   "detects": "no automatic check yet; signals.py reports catalog_on_sale, which is 0 until an itch_url exists",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B124",
@@ -1546,7 +1546,7 @@
    "signals.py"
   ],
   "detects": "growth_selftest.py: five orders against two hundred visits is 2.5%, and itch's own figure still wins when it has one",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B125",
@@ -1558,7 +1558,7 @@
    "improve_daily.py"
   ],
   "detects": "the lane runs and reports a real reason instead of an AttributeError",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B126",
@@ -1570,7 +1570,7 @@
    "self_upgrade.py"
   ],
   "detects": "self_upgrade.TEST_SUITE is checked against the filesystem at runtime",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B127",
@@ -1583,7 +1583,7 @@
    "selftest_audit.py"
   ],
   "detects": "selftest_audit.py: each of them is checked as protected",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B128",
@@ -1597,7 +1597,7 @@
    "e2e_all.py"
   ],
   "detects": "python e2e_customer.py: the buy link must carry an itch.io address, and the run fails until it does",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B129",
@@ -1613,7 +1613,7 @@
    "e2e_all.py"
   ],
   "detects": "python e2e_all.py exits non-zero while any journey is broken",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B130",
@@ -1625,7 +1625,7 @@
    "e2e_product.py"
   ],
   "detects": "python e2e_product.py fails on a paid app under 2000 bytes or with no inputs",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B131",
@@ -1637,7 +1637,7 @@
    "e2e_product.py"
   ],
   "detects": "python e2e_product.py: there is an installer to hand over",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B132",
@@ -1649,7 +1649,7 @@
    "e2e_links.py"
   ],
   "detects": "python e2e_links.py: the itch.io store actually lists the product",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B133",
@@ -1661,7 +1661,7 @@
    "e2e_links.py"
   ],
   "detects": "python e2e_links.py, and the GitHub line now passes",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B134",
@@ -1673,7 +1673,7 @@
    "paypal.py"
   ],
   "detects": "scan_selftest.py imports every module in a fresh interpreter and fails if anything new appears under site/",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B135",
@@ -1687,7 +1687,7 @@
    "stage_app.py"
   ],
   "detects": "audit_selftest.py writes a truncated, a list and a number to the state and checks each is reported unknown, is not read as zero, and leaves nothing affordable",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B136",
@@ -1699,7 +1699,7 @@
    "budget.py"
   ],
   "detects": "audit_selftest.py checks a readable budget approves and that truncated, list and numeric budgets all refuse, and that the docstring no longer claims the state is committed",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B137",
@@ -1711,7 +1711,7 @@
    "update_state.py"
   ],
   "detects": "audit_selftest.py makes the state file read-only and checks there is no traceback, a non-zero exit, and no claim of a save",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B138",
@@ -1723,6 +1723,6 @@
    ".gitignore"
   ],
   "detects": "checked by hand: a blanket git add -A in a copy of the tree leaves no token_usage.json staged, verified by cleanroom_selftest.py",
-  "verified": false
+  "verified": true
  }
 ]

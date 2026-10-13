@@ -417,7 +417,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** validate blurb and tags at publish time and fall back to a deterministic sentence built from the app title; always lead tags with the product category
 - **Files:** make_app.py
 - **Check for recurrence:** recurs if any catalog entry has an empty blurb or an empty tags list
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B053 - the store showed two separate cards because the basic tier carried base_slug 'password-manager-basic'
 
@@ -425,7 +425,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** strip a trailing tier marker from base_slug at publish time and fail check_exposure when a family is left with only one tier
 - **Files:** make_app.py, check_exposure.py
 - **Check for recurrence:** recurs if any product family has just one tier in site/apps.json
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B054 - community ballot winners never reached the build step because the winner was stored as a display label and compared against slugs
 
@@ -433,7 +433,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** store winner_slug when the ballot closes, and normalise labels to slugs when reading recent winners
 - **Files:** discord_data.py, discord_polls.py
 - **Check for recurrence:** recurs if a ballot closes but pick_concept does not mention the community vote
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B055 - a tool that was already live was about to be generated again because data/already_built.json had lost its entry
 
@@ -441,7 +441,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** merge the public catalog into load_built() so anything on the site counts as built regardless of the record
 - **Files:** make_app.py
 - **Check for recurrence:** recurs if a published product is missing from data/already_built.json
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B056 - discord_setup_server.py created a second copy of every channel on each run, and deleted the copy it had just made
 
@@ -689,7 +689,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** the family key is read from the pair itself, key:(full.base_slug||full.slug), which is always in scope where it is used
 - **Files:** site/index.html
 - **Check for recurrence:** site_js_selftest.py: the key:k pattern is refused, and the function is executed in a real browser against a two-entry catalog
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B087 - clicking 'See options' on any product threw 'Unexpected end of input' and no purchase dialog would ever open
 
@@ -697,7 +697,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** the button passes an index instead, openDialogByIndex(idx), and the handler looks the product up. No JSON is ever written into markup
 - **Files:** site/index.html
 - **Check for recurrence:** site_js_selftest.py: JSON.stringify must not appear in render()
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B088 - the index passed to the card button came out as '$3.00' instead of a number
 
@@ -705,7 +705,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** the map callback takes (item, idx) and the button uses idx
 - **Files:** site/index.html
 - **Check for recurrence:** site_js_selftest.py: the button may not interpolate the price variable
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B089 - there was no version anywhere: the installer hardcoded 1.0.0 and the catalog had no version field, so an installed app could not be compared with a published one
 
@@ -713,7 +713,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** update_state.py is the only place a version is stored or changed, and every other script reads it
 - **Files:** update_state.py, app_update.py
 - **Check for recurrence:** update_selftest.py: the parse, bump and compare boundaries
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B090 - a patch bump turned 1.9.9 into 1.9.0, which is older than what was already installed
 
@@ -721,7 +721,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** bump() parses into three integers and adds to the right one, so 1.9.9 becomes 1.9.10
 - **Files:** update_state.py
 - **Check for recurrence:** update_selftest.py: 1.9.9 plus a patch is 1.9.10
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B091 - the update check said 1.10.0 was older than 1.9.0
 
@@ -729,7 +729,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** is_newer() compares parsed integer tuples
 - **Files:** update_state.py, app_update.py
 - **Check for recurrence:** update_selftest.py: 1.10.0 is newer than 1.9.0
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B092 - an app that could not reach the update file would have had to show an error, breaking the promise that an app always opens
 
@@ -737,7 +737,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** every failure path returns no banner instead of an error, and the check is off by default when switched off
 - **Files:** app_update.py, native_launcher.py
 - **Check for recurrence:** update_selftest.py: a missing public file is not a crash
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B093 - an in-app update notice would have broken the promise that these apps never make network calls
 
@@ -745,7 +745,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** the check lives in native_launcher.py, which is the native shell and not the app, and injects the banner after load. The app HTML is unchanged and still passes html_looks_fine
 - **Files:** app_update.py, native_launcher.py
 - **Check for recurrence:** update_selftest.py plus the existing html_looks_fine check
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B094 - every rebuild would stack another update banner on top of the last
 
@@ -753,7 +753,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** the injected block is detected by its id and a second injection is refused
 - **Files:** app_update.py
 - **Check for recurrence:** update_selftest.py: injecting twice leaves exactly one banner
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B095 - the app file was left corrupted when it had no <body>
 
@@ -761,7 +761,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** a document with no body is refused and left untouched
 - **Files:** app_update.py
 - **Check for recurrence:** update_selftest.py: a page with no body is refused and unchanged
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B096 - the homepage kept announcing a release that had already shipped
 
@@ -769,7 +769,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** the countdown is generated during the Pages deploy from the live state and is never committed. Outside the announcement window the file carries no date at all, so the banner hides itself
 - **Files:** update_state.py, .github/workflows/pages.yml
 - **Check for recurrence:** update_selftest.py: idle and live both publish a null date
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B097 - the Discord event id and other internal state were one copy-paste away from being published on the public site
 
@@ -777,7 +777,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** the published file is built field by field and never copies the raw state
 - **Files:** update_state.py
 - **Check for recurrence:** update_selftest.py: no event id appears in the published file
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B098 - the countdown banner could have broken the homepage
 
@@ -785,7 +785,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** every step is guarded and the catch is empty, so the banner stays hidden and the rest of the page is unaffected
 - **Files:** site/index.html
 - **Check for recurrence:** site_js_selftest.py: the fetch has an empty catch and escapes its text
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B099 - a release could be planned for a date that had already passed, which would skip the countdown entirely
 
@@ -793,7 +793,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** target_date() rolls forward a whole month until there are at least ten days left
 - **Files:** update_plan.py
 - **Check for recurrence:** update_selftest.py: planning on the 27th and the 31st both roll forward
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B100 - a month could have no plan at all, because the plan depended on the model being reachable
 
@@ -801,7 +801,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** there is a fixed menu of themes that can actually be built, and the model may only choose from it. If the model cannot be reached the menu decides instead
 - **Files:** update_plan.py
 - **Check for recurrence:** update_selftest.py: fallback lands on the menu and avoids repeats
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B101 - the trailer could advertise a feature nobody built
 
@@ -809,7 +809,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** an id that is not on the menu is discarded rather than trusted, so only buildable themes ever reach the script or the trailer
 - **Files:** update_plan.py, update_trailer_script.py
 - **Check for recurrence:** update_selftest.py: the fallback and the menu agree
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B102 - re-running the announce step would create a second Discord event for the same release
 
@@ -817,7 +817,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** the event id is stored in the update state and reused; a stored id that no longer exists falls through to creating a fresh one rather than wedging the release
 - **Files:** update_discord.py
 - **Check for recurrence:** update_selftest.py: existing() reads the stored id
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B103 - the weekly patch lane could have announced itself alongside a major release
 
@@ -825,7 +825,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** the weekly refuses to run while a major is already in the announced phase
 - **Files:** update_weekly.py
 - **Check for recurrence:** checked by hand: with a major three days out the weekly exits without bumping
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B104 - a weekly release would have been announced as a major change
 
@@ -833,7 +833,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** the weekly is hard coded to a patch bump, and update_selftest.py checks that major and minor are left alone
 - **Files:** update_weekly.py
 - **Check for recurrence:** update_selftest.py: 1.4.2 becomes 1.4.3 and never 1.5.0 or 2.0.0
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B105 - the trailer could not reuse the Shorts renderer, because that file is pinned to a 1080x1920 phone frame
 
@@ -841,7 +841,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** update_trailer_render.py draws its own landscape background and uses shorts_render only for helpers that take no size: font, wrap, ease, the logo and the screenshots
 - **Files:** update_trailer_render.py
 - **Check for recurrence:** update_selftest.py: the trailer is landscape and the Shorts is not
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B106 - the trailer's headline was drawn twice, once as a shadow at the wrong offset, so a ghost of it showed through
 
@@ -849,7 +849,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** the shadow offsets are applied to the same position the fill uses
 - **Files:** update_trailer_render.py
 - **Check for recurrence:** checked visually across four timestamps
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B107 - the app card sat on top of the trailer's headline and narration
 
@@ -857,7 +857,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** the frame is a fixed two-column split: the card owns the right, the text is wrapped to the space on the left of it
 - **Files:** update_trailer_render.py
 - **Check for recurrence:** update_selftest.py: every frame renders at the canvas size, and the split was checked visually
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B108 - the voiceover would have read '[upbeat music]' out loud
 
@@ -865,7 +865,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** leading cues and markdown are stripped from every line before it is written
 - **Files:** update_trailer_script.py
 - **Check for recurrence:** update_selftest.py: a leading cue and bold markers are removed
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B109 - shorts_script_selftest.py crashed with TypeError: sequence item 4: expected str instance, list found
 
@@ -873,7 +873,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** the test joins only the string values, which is what it meant to check
 - **Files:** shorts_script_selftest.py
 - **Check for recurrence:** the suite runs to completion again
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B110 - the release workflows were not protected from the self-improvement job
 
@@ -881,7 +881,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** both new workflows are in PROTECTED_WORKFLOWS and selftest_audit.py asserts they are protected
 - **Files:** weekly_guard.py, selftest_audit.py
 - **Check for recurrence:** selftest_audit.py: both are checked as protected
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B111 - counting the weekly ballot crashed with NameError when the bot could not read a channel
 
@@ -889,7 +889,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** the branch logs the channel it actually failed to read, and every status now returns an empty list instead of raising
 - **Files:** discord_post.py
 - **Check for recurrence:** checked by hand: 403, 200, 500 and 429 all return cleanly now
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B112 - the live key checker raised UnboundLocalError the instant it was run, so it never tested anything
 
@@ -897,7 +897,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** the key arrives as a parameter, so there is nothing to shadow and the function reads only what it is given
 - **Files:** groq_live_check.py
 - **Check for recurrence:** checked by hand: empty key, wrong prefix and a fake key all return the right thing instead of crashing
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B113 - re-enabling the video captions would have crashed the renderer with NameError on every frame
 
@@ -905,7 +905,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** the function was deleted rather than given a band, because captions are not wanted and a resurrected band would be a guess
 - **Files:** shorts_render.py
 - **Check for recurrence:** pyflakes reports no undefined names anywhere in the project
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B114 - a release could have been planned for a date that had already passed
 
@@ -913,7 +913,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** this was caught and fixed with the release lane and is listed there again for completeness
 - **Files:** update_plan.py
 - **Check for recurrence:** update_selftest.py: planning on the 27th and the 31st roll forward
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B115 - every Friday build waited for the model allowance even when there was almost nothing spent, and the check it computed was never used
 
@@ -921,7 +921,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** the loop asks tokenmeter.affordable(limit, need), which is the function that already existed for exactly this, and says so out loud when it starts anyway
 - **Files:** stage_app.py
 - **Check for recurrence:** tokenmeter.affordable is asserted directly in selftest.py
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B116 - the coach's list of lessons to keep was calculated and then thrown away, so the model and the file could disagree
 
@@ -929,7 +929,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** keep wins when the model supplies it, and the subtraction is the fallback for when it does not
 - **Files:** learn.py
 - **Check for recurrence:** both branches log which one was used, so a run shows it
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B117 - a run that could not build an app burned its allowance walking the whole model list on every single call
 
@@ -937,7 +937,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** the model that answered is remembered and tried first next time, so the run stops paying for models that have already failed
 - **Files:** make_app.py
 - **Check for recurrence:** checked by hand with a stubbed provider: the second call goes straight to the working model
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B118 - every Wednesday run would have deleted all 110 recorded bugs
 
@@ -945,7 +945,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** the coach writes its own file. The fixbook keeps lessons.txt, and the two records can no longer touch each other
 - **Files:** learn.py, .gitignore
 - **Check for recurrence:** learn.LESSONS and buglog.LESSONS are asserted to be different files
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B119 - importing any module could create site/licenses, which GitHub Pages would then serve and which fails the exposure check
 
@@ -953,7 +953,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** the mkdir moved into save_key, where something is actually written, so importing and reading no longer touch the published site
 - **Files:** paypal.py
 - **Check for recurrence:** scan_selftest.py imports every module in a fresh interpreter and fails if anything new appears under site/
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B120 - the check that stopped an automated job committing a protected file never asked the guard, so it flagged workflows that merely mentioned one and passed ones that staged one
 
@@ -961,7 +961,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** the guard is actually asked about every path a blanket git add stages, so the rule and the enforcement cannot drift apart
 - **Files:** selftest_audit.py
 - **Check for recurrence:** checked by hand: a comment naming a protected file passes, a real blanket add of one is reported
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B121 - weekly review 2026-W42: 0 order(s), $0.00, 0 star(s), 0 vote(s) on the open ballot
 
@@ -969,7 +969,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** read data/weekly_reviews.json before the next build; it carries this week's numbers and what to change
 - **Files:** data/weekly_reviews.json, weekly_review.py
 - **Check for recurrence:** recurs every Wednesday; one entry per week is expected
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B122 - nothing has ever been buyable: the paid edition is marked published but has no itch_url, so the buy button leads nowhere
 
@@ -977,7 +977,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** check_exposure.py now reports any published paid edition with no itch_url. It is a warning rather than a failure by default, because nothing is leaking and fixing it needs one person to open a page; --strict makes it fatal
 - **Files:** check_exposure.py, signals.py
 - **Check for recurrence:** check_exposure.py prints the slug and the command that fixes it, and exits 1 under --strict
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B123 - the paid build on this machine is a 59-byte placeholder, not an app
 
@@ -985,7 +985,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** reported rather than papered over: it is local and gitignored, so it was never published, but it means the paid edition has never actually been built and cannot be sold as it stands
 - **Files:** itch_publish.py
 - **Check for recurrence:** no automatic check yet; signals.py reports catalog_on_sale, which is 0 until an itch_url exists
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B124 - conversion was reported as zero percent while five sales were recorded
 
@@ -993,7 +993,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** the order count stands in when itch has no sales of its own, and the result records which source it came from so the two can be compared
 - **Files:** signals.py
 - **Check for recurrence:** growth_selftest.py: five orders against two hundred visits is 2.5%, and itch's own figure still wins when it has one
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B125 - the daily lane assumed two APIs that do not exist
 
@@ -1001,7 +1001,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** budget.remaining() is the real call and self_upgrade.main() takes no argument. The caught-and-carried-on handler stays, because a failing improver must not fail the job
 - **Files:** improve_daily.py
 - **Check for recurrence:** the lane runs and reports a real reason instead of an AttributeError
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B126 - the self-improvement gate did not know about the new lanes
 
@@ -1009,7 +1009,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** TEST_SUITE now includes every lane's selftest plus the link and exposure checks, so a patch that renders a broken card is discarded
 - **Files:** self_upgrade.py
 - **Check for recurrence:** self_upgrade.TEST_SUITE is checked against the filesystem at runtime
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B127 - nothing stopped a self-improving job from rewriting the goal it is measured against
 
@@ -1017,7 +1017,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** goals.py, signals.py and improve_daily.py are in MONEY_AND_DEATH for the same reason pricing.py is, and selftest_audit asserts it
 - **Files:** weekly_guard.py, selftest_audit.py
 - **Check for recurrence:** selftest_audit.py: each of them is checked as protected
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B128 - a customer cannot buy anything: the buy button leads to an empty checkout link
 
@@ -1025,7 +1025,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** found by e2e_customer.py, which follows the journey a person follows. The fix needs a human to create the itch.io page and run set_itch_url.py; the tests now say so out loud on every run
 - **Files:** e2e_customer.py, e2e_product.py, e2e_all.py
 - **Check for recurrence:** python e2e_customer.py: the buy link must carry an itch.io address, and the run fails until it does
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B129 - every test passed while the business could not take a single payment
 
@@ -1033,7 +1033,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** four end-to-end journeys now exist that go through a browser or over the network: arrive and buy, is there a product, does the free app work, do the links work. e2e_all.py runs them and refuses to call the project healthy while any of them is broken
 - **Files:** e2e_customer.py, e2e_product.py, e2e_app.py, e2e_links.py, e2e_all.py
 - **Check for recurrence:** python e2e_all.py exits non-zero while any journey is broken
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B130 - the paid edition is a 59-byte file, not an application
 
@@ -1041,7 +1041,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** e2e_product.py now asks whether the paid app is real: over two thousand bytes, an html document, and something to click. It reports the byte count so a placeholder cannot be mistaken for a build
 - **Files:** e2e_product.py
 - **Check for recurrence:** python e2e_product.py fails on a paid app under 2000 bytes or with no inputs
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B131 - there is no installer, so even a working itch.io page would sell nothing
 
@@ -1049,7 +1049,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** e2e_product.py looks for the installer rather than trusting the catalog flag, because a flag that nothing maintains is a wish
 - **Files:** e2e_product.py
 - **Check for recurrence:** python e2e_product.py: there is an installer to hand over
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B132 - the itch.io store answers with a 200 and an empty shop
 
@@ -1057,7 +1057,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** the link journey now reads the store page and looks for the product by name, so an empty shop fails rather than passing on its status code
 - **Files:** e2e_links.py
 - **Check for recurrence:** python e2e_links.py: the itch.io store actually lists the product
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B133 - a real link was reported broken because the body was truncated
 
@@ -1065,7 +1065,47 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** a partial read is accepted when a status code came back, because a truncated body is a fetch problem and not a site being down. Only the status is trusted for these large pages
 - **Files:** e2e_links.py
 - **Check for recurrence:** python e2e_links.py, and the GitHub line now passes
-- **Status:** UNTESTED
+- **Status:** PROVEN
+
+## B134 - the empty site/licenses folder left over from PayPal was about to be published, and the exposure check had started failing because of it
+
+- **Cause:** paypal.py called LICENSE_DIR.mkdir() at module scope, so simply importing it created site/licenses. paypal_check.py imports it at module scope too. The folder is gitignored, so it never appeared in a diff, but GitHub Pages serves the working tree and check_exposure.py refuses the whole site when tha
+- **Fix:** the mkdir moved into save_key, where something is actually written. Reading and importing no longer touch the published site
+- **Files:** paypal.py
+- **Check for recurrence:** scan_selftest.py imports every module in a fresh interpreter and fails if anything new appears under site/
+- **Status:** PROVEN
+
+## B135 - a corrupt token counter read as zero spent, so every call looked affordable and the pipeline spent the whole limit before it noticed
+
+- **Cause:** load() caught the parse error and returned {}, and spent() reads an empty window as zero. In a counter zero is the answer that allows spending, so the one state that should stop a run was the state that permitted it. The same file also swallowed its own write errors in a bare except
+- **Fix:** an unreadable or non-dict state is reported on stderr and read as unknown, and spent() returns a figure above any limit so affordable() is false. The write goes to a temporary file and is swapped in, so a job that dies halfway leaves the last good total
+- **Files:** tokenmeter.py, budget.py, stage_app.py
+- **Check for recurrence:** audit_selftest.py writes a truncated, a list and a number to the state and checks each is reported unknown, is not read as zero, and leaves nothing affordable
+- **Status:** PROVEN
+
+## B136 - the monthly budget approved jobs on a month that had already spent every hour, and its own docstring said the hours were committed and could not quietly reset
+
+- **Cause:** the identical fail-open shape as the token counter: a parse error returned an empty budget, which read as zero hours used. And commit 380e29e had deliberately untracked budget.json for good security reasons, so the docstring was asserting a protection that no longer existed
+- **Fix:** check() refuses outright when the recorded hours cannot be read, the write is atomic, and the docstring describes what is actually true: untracked on purpose, protected by refusing rather than by git
+- **Files:** budget.py
+- **Check for recurrence:** audit_selftest.py checks a readable budget approves and that truncated, list and numeric budgets all refuse, and that the docstring no longer claims the state is committed
+- **Status:** PROVEN
+
+## B137 - a release could die on a PermissionError traceback and still have printed that it saved
+
+- **Cause:** save() logged the success line before writing, and neither it nor publish_public() caught the write error, so an unattended job exited on a traceback and main() returned 0 either way
+- **Fix:** both report whether they wrote, neither claims a save it cannot prove, and main() exits non-zero when either write failed
+- **Files:** update_state.py
+- **Check for recurrence:** audit_selftest.py makes the state file read-only and checks there is no traceback, a non-zero exit, and no claim of a save
+- **Status:** PROVEN
+
+## B138 - every runner started its token allowance from the last runner's usage
+
+- **Cause:** the Friday job's blanket git add committed data/token_usage.json. It is live rate-limit state for whichever machine is running, so each later run on another runner read a total it had not earned
+- **Fix:** the file is ignored along with the temporary files the atomic writes leave behind, so a blanket add cannot sweep up live state again
+- **Files:** .gitignore
+- **Check for recurrence:** checked by hand: a blanket git add -A in a copy of the tree leaves no token_usage.json staged, verified by cleanroom_selftest.py
+- **Status:** PROVEN
 
 ## How to use this
 
