@@ -323,41 +323,64 @@ FOUND = [
      ""),
 
     # ---- external blockers: confirmed, not fixable from here
-    ("the itch.io session cookie is expired, so nothing can be uploaded",
-     "HIGH", "itch.io publishing", ["itch_publish.py"], "BLOCKED",
-     "itch.io sits behind a Cloudflare Turnstile bot challenge. A headless "
-     "browser is served a 'Just a moment...' interstitial with a single "
-     "hidden cf-turnstile-response input instead of the login form, so the "
-     "permanent-credentials login cannot run at all. Getting past a bot check "
-     "is evading an anti-abuse control, which this will not do, so the "
-     "expiring session cookie remains the only way in and a person must supply "
-     "it.", "Run 38592104107: 'the login form was not what was expected' "
-     "followed by 'the page is titled 'Just a moment...' and has 1 input(s): "
-     "cf-turnstile-response'. The page it wanted to fill was never a form.",
-     "gh run view 38592104107 --log",
-     "The turnstile case is detected and named for what it is, with the "
-     "honest consequence, rather than being reported as a form that could not "
-     "be filled. Everything up to it is verified working: the installer is "
-     "built in CI, uploaded as an artifact, and the publish attempt reaches "
-     "itch.io.",
+    ("no itch.io project exists to upload to",
+     "HIGH", "itch.io publishing", ["itch_publish.py", "itch_doctor.py"],
+     "BLOCKED",
+     "Uploading needs a project, and itch.io has no endpoint for creating one: "
+     "every listing path answers 'invalid api endpoint', and the web login "
+     "that would create it is behind a Cloudflare Turnstile bot challenge. "
+     "Getting past a bot check is evading an anti-abuse control, which this "
+     "will not do. The API key is confirmed working, so this is the last "
+     "thing standing between the pipeline and a live store.",
+     "Run 38630319521: 'The API key works', and butler reached "
+     "'/wharf/builds: invalid game' for a project name that does not exist. "
+     "Runs 38592104107 and later: the login page is a 'Just a moment...' "
+     "interstitial with one cf-turnstile-response input, not a form.",
+     "gh run view 38630319521 --log",
+     "The person who owns the account creates one empty project by hand at "
+     "https://itch.io/settings/mine/new/game, then runs "
+     "python set_itch_url.py <slug> https://slingshot-tools.itch.io/<project>. "
+     "Everything after that is hands-off forever, because the key uploads "
+     "with no session.",
      "itchpublish_selftest.py",
-     "itchpublish_selftest.py: FAILURES: none. The publishing path is proven "
-     "as far as the bot check and no further.",
-     "Needs a session cookie pasted once by the account holder. The permanent "
-     "login is kept in the code because a Turnstile policy change, or a "
-     "non-headless runner, would let it work without anyone doing anything."),
+     "The doctor states this outcome explicitly rather than leaving it "
+     "implied: the key is accepted, and only the missing project stands in "
+     "the way.",
+     "If itch.io ever exposes a create endpoint this closes on its own; until "
+     "then it needs a human once, and deliberately not on every run."),
+
+    ("the itch.io session cookie is expired",
+     "MEDIUM", "itch.io publishing", ["itch_publish.py"], "VERIFIED_FIXED",
+     "This was believed to block all uploading. It does not. butler "
+     "authenticates with the API key, which is confirmed working, so no "
+     "session is needed for a release at all and the expired cookie is "
+     "irrelevant to the paid path. It is kept only as the fallback for the "
+     "one-time project creation that the key cannot do.",
+     "Run 38630319521: butler reached the itch.io builds endpoint with the "
+     "key and was refused only because the project does not exist, while the "
+     "cookie check still reported REFUSED.",
+     "gh run view 38630319521 --log",
+     "The upload path no longer depends on the cookie, so its expiry blocks "
+     "nothing that runs on a schedule.",
+     "itchpublish_selftest.py",
+     "The doctor distinguishes the two: the key is accepted, the session is "
+     "not needed.",
+     "The cookie's expiry is expected and is no longer treated as a defect "
+     "in the release path."),
 
     ("no product has ever been uploaded to itch.io",
      "CRITICAL", "itch.io publishing", ["site/apps.json"], "BLOCKED",
-     "Every path to a first upload requires a valid session cookie, which is "
-     "blocked above. Until one product is uploaded there is nothing to sell, "
-     "and the customer purchase journey cannot complete.",
+     "Every path to a first upload needs a project, and the project cannot be "
+     "created from here. Until one product is uploaded there is nothing to "
+     "sell, and the customer purchase journey cannot complete. The cause is "
+     "the missing project above, not a credential problem: the key is "
+     "confirmed working.",
      "https://slingshot-tools.itch.io/ was fetched during this audit and "
      "lists no products. site/apps.json marks every paid tier "
      "published=false with an empty itch_url, which is the truth and is what "
      "the fixes made it say.",
      "webfetch https://slingshot-tools.itch.io/",
-     "none available: dependent on the credential above",
+     "none available: dependent on the project above",
      "itchurl_selftest.py asserts the catalog never claims to be on sale",
      "itchurl_selftest.py: FAILURES: none. The catalog is honest: 6 free "
      "editions published, 6 paid tiers kept private, no itch_url.",
@@ -453,6 +476,96 @@ FOUND = [
      "checked directly over five trim and pad cases",
      "5->8, 8->3, 880->918, 918->880 and 10->10 all reach the exact count, and "
      "the padded tail is the real final frame.",
+     ""),
+
+    # ---- butler could never have uploaded, and said so in a reassuring way
+    ("butler was reported missing while sitting in the repository",
+     "HIGH", "itch.io publishing", ["itch_publish.py"], "VERIFIED_FIXED",
+     "butler() looked in ~/.butler and on PATH only. butler.exe is committed "
+     "in ./butler, and the workflow extracts the downloaded copy over that "
+     "same folder, so the one tool the store depends on was being reported "
+     "absent while present in the working directory. upload() logs 'butler is "
+     "not installed' and returns False, which reads like a missing "
+     "dependency rather than a wrong search path.",
+     "Run 38624142147 logged 'butler is not on this machine, so the key cannot "
+     "be tested' while actions/checkout had just restored butler/butler.exe.",
+     "place a file at butler/butler.exe and call itch_publish.butler()",
+     "butler() now checks ~/.butler, ./butler, the repository root and "
+     "./bin, each with the platform's executable name, before falling back to "
+     "PATH.",
+     "itchpublish_selftest.py, plus a direct check that a file at "
+     "butler/butler.exe is found",
+     "itchpublish_selftest.py: FAILURES: none. The direct check returned "
+     "<repo>\\butler\\butler.exe.",
+     ""),
+
+    ("the API key was passed to butler as a flag that does not exist",
+     "HIGH", "itch.io publishing", ["itch_publish.py"], "VERIFIED_FIXED",
+     "upload() passed --api_key. butler v15 has no such flag under that "
+     "spelling or the hyphenated one, and prints 'unknown long flag' then "
+     "exits 1 before making any network request. The key was therefore never "
+     "presented to itch.io and no upload could ever have authenticated, "
+     "whatever the key's real value was.",
+     "'butler.exe : butler: error: unknown long flag' reproduced locally "
+     "against the committed butler v15.32.0 for both --api_key and --api-key.",
+     "& butler\\butler.exe push src tgt --api_key dummy",
+     "The key is handed over in BUTLER_API_KEY, which is what butler's own "
+     "CI notice recommends, so it also stays out of the process list that "
+     "every other process on the runner can read.",
+     "itchpublish_selftest.py",
+     "itchpublish_selftest.py: FAILURES: none. The flag was confirmed absent "
+     "and the environment route confirmed accepted by butler.",
+     ""),
+
+    ("the upload target named a channel itch.io does not have",
+     "HIGH", "itch.io publishing", ["itch_publish.py"], "VERIFIED_FIXED",
+     "ITCH_CHANNEL defaulted to the bare word 'windows'. butler requires the "
+     "target as user/slug:channel and rejects the name outright with "
+     "'invalid spec ... missing channel', before any request, so every push "
+     "died on the local validation of its own arguments.",
+     "Locally, butler answered 'invalid spec: slingshot-tools/probe, missing "
+     "channel (examples: ...:windows-32-beta, ...:linux-64)'.",
+     "& butler\\butler.exe push stub.zip user/project",
+     "The default is windows-64, itch.io's own Windows channel, and it stays "
+     "overridable through ITCH_CHANNEL.",
+     "itchpublish_selftest.py",
+     "itchpublish_selftest.py: FAILURES: none.",
+     ""),
+
+    ("the doctor's reading of butler inverted the answer it was measuring",
+     "HIGH", "itch.io publishing", ["itch_doctor.py"], "VERIFIED_FIXED",
+     "The classifier called the result REFUSED whenever the text contained "
+     "'invalid'. butler's answer for a perfectly good key and an unknown "
+     "project is 'itch.io API error (400): /wharf/builds: invalid game'. That "
+     "is the key working: the request reached the builds endpoint and only "
+     "the project name was wrong. The rule reported a valid key as refused, "
+     "which would have sent this looking for a bad secret that was not bad.",
+     "Run 38628290009 logged 'itch.io API error (400): /wharf/builds: invalid "
+     "game' followed by '-> the key is REFUSED by itch.io'.",
+     "read the classifier's condition and compare it with that error string",
+     "Refusal is now 401, 403 or an explicit auth complaint. A 400 "
+     "'invalid game', a 404 or 'not found' is read as the key being accepted "
+     "and the project being absent, which is the distinction being measured.",
+     "itchpublish_selftest.py",
+     "Run 38630319521 reported 'The API key works. Upload is therefore fully "
+     "automated and needs no session at all.'",
+     ""),
+
+    ("the doctor pushed its probe with the arguments the wrong way round",
+     "MEDIUM", "itch.io publishing", ["itch_doctor.py"], "VERIFIED_FIXED",
+     "butler reads 'push <src> <target>'. The probe passed the project name "
+     "as the source and the stub file as the target, so butler tried to walk "
+     "a project name as a directory and failed with 'open "
+     "slingshot-tools/...: The system cannot find the path specified' before "
+     "contacting itch.io. The probe could not have answered the question it "
+     "exists to answer.",
+     "The identical failure reproduced locally against the committed butler "
+     "before the order was corrected.",
+     "& butler\\butler.exe push user/project stub.zip",
+     "The stub is the source and user/project:windows-64 is the target.",
+     "itchpublish_selftest.py",
+     "Run 38630319521 reached the builds endpoint and returned the 400, which "
+     "is only possible once the argument order is right.",
      ""),
 ]
 
