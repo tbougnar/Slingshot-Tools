@@ -149,10 +149,13 @@ def main() -> int:
         stub = Path(tempfile.gettempdir()) / "slingshot-doctor-stub.zip"
         try:
             stub.write_bytes(b"PK\x05\x06" + b"\x00" * 18)
+            ident = ip._identity_file(key)
             r = subprocess.run(
-                [butler, "push", f"{user}/doctor-probe-does-not-exist",
-                 str(stub), "--api-key", key, "--channel", "windows"],
+                [butler, "push", str(stub),
+                 f"{user}/doctor-probe-does-not-exist:windows-64",
+                 f"--identity={ident}"],
                 capture_output=True, text=True, timeout=240)
+            Path(ident).unlink(missing_ok=True)
             said = ((r.stdout or "") + (r.stderr or "")).strip()
             _out(f"   butler push to a project that does not exist exited "
                  f"{r.returncode}")

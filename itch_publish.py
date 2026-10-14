@@ -41,7 +41,10 @@ KEY = os.environ.get("ITCH_API_KEY", "").strip()
 USER = (os.environ.get("ITCH_USER") or "").strip()
 
 # the channel butler pushes the installer to
-CHANNEL = os.environ.get("ITCH_CHANNEL", "windows").strip()
+# butler requires the target as user/slug:channel and refuses anything else
+# with "missing channel". itch.io's own Windows channel is windows-64, so the
+# bare word "windows" was rejected before any request was made.
+CHANNEL = os.environ.get("ITCH_CHANNEL", "windows-64").strip()
 
 # only https itch.io pages count as a project link
 OK_URL = "https://"
@@ -489,6 +492,25 @@ def butler() -> str:
         return ""
 
 
+def _identity_file(secret: str) -> str:
+    """Write the API key where butler expects it and return the path.
+
+    butler v15 does not take a key on the command line at all: -i/--identity
+    is the path of a file holding the token. Passing the key itself, under
+    either --api-key or --api_key, is refused as an unknown flag before butler
+    reaches the network, so uploads could never have authenticated.
+    """
+    import tempfile
+    fd, name = tempfile.mkstemp(prefix="butler-identity-", suffix=".txt")
+    with os.fdopen(fd, "w", encoding="utf-8") as fh:
+        fh.write(secret)
+    try:
+        os.chmod(name, 0o600)
+    except OSError:
+        pass
+    return name
+
+
 def upload(installer: Path, slug: str, version: str) -> bool:
     """Push the installer with butler, itch.io's own uploader.
 
@@ -505,14 +527,22 @@ def upload(installer: Path, slug: str, version: str) -> bool:
     cmd = [exe, "push", str(installer), target]
     if version:
         cmd += ["--userversion", version]
+    ident = None
     if KEY:
-        cmd += ["--api-key", KEY]
+        ident = _identity_file(KEY)
+        cmd += [f"--identity={ident}"]
     log(f"butler: pushing to {target}")
     try:
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
     except (OSError, subprocess.SubprocessError) as e:
         log(f"butler could not run: {e}")
         return False
+    finally:
+        if ident:
+            try:
+                os.unlink(ident)
+            except OSError:
+                pass
 
     out = ((r.stdout or "") + (r.stderr or "")).strip()
     for line in out.splitlines()[-12:]:
