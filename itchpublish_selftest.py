@@ -247,6 +247,23 @@ check("and pages.yml commits nothing back, so it cannot loop either",
       not any("git push" in str(s.get("run", ""))
               for s in _pg["jobs"]["deploy"]["steps"]),
       "it pushes, so removing [skip ci] would loop")
+check("and the release asks for the deploy, because a push cannot",
+      all("gh workflow run pages.yml" in str(s.get("run", ""))
+          for job in ("verify", "installer")
+          for s in _wf["jobs"][job]["steps"]
+          if s.get("name") == "Publish the site"),
+      "a push made with GITHUB_TOKEN does not trigger workflow runs, so the "
+      "site never deployed from an automated release")
+check("in both jobs, since either can make the last commit of a release",
+      sum(1 for job in ("verify", "installer")
+          for s in _wf["jobs"][job]["steps"]
+          if s.get("name") == "Publish the site") == 2)
+check("and a failure to trigger it fails the release",
+      all("exit 1" in str(s.get("run", ""))
+          for job in ("verify", "installer")
+          for s in _wf["jobs"][job]["steps"]
+          if s.get("name") == "Publish the site"),
+      "an unpublished app would be reported as a successful release")
 
 print()
 print("FAILURES:", fails if fails else "none")

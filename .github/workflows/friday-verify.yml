@@ -101,6 +101,21 @@ jobs:
 
       # paid/ is gitignored on purpose, so the paid build can never be public.
       # Pass it to the Windows job as a private artifact instead of through git.
+      - name: Publish the site
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git fetch origin main --quiet
+          if gh workflow run pages.yml --ref main; then
+            echo "the site deploy has been requested"
+          else
+            echo "::error::could not trigger the site deploy; the new app"
+            echo "::error::is committed but not published"
+            exit 1
+          fi
+
       - name: Upload the paid build for the Windows installer
         if: steps.fresh.outputs.fresh == 'yes'
         uses: actions/upload-artifact@v4
@@ -329,6 +344,25 @@ jobs:
       # destination it attempted silently failed, because a green run is how
       # "nothing is on sale and nobody noticed" happens. Set ALLOW_FREE_ONLY
       # to accept the partial release deliberately.
+      # A push made with GITHUB_TOKEN does not trigger workflow runs, so
+      # the site never deployed from an automated release no matter what
+      # the commit message said. workflow_dispatch does work with the same
+      # token, so the release asks for the deploy instead of assuming it.
+      - name: Publish the site
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git fetch origin main --quiet
+          if gh workflow run pages.yml --ref main; then
+            echo "the site deploy has been requested"
+          else
+            echo "::error::could not trigger the site deploy; the new app"
+            echo "::error::is committed but not published"
+            exit 1
+          fi
+
       - name: Say plainly whether the paid edition reached the store
         if: always()
         shell: bash
