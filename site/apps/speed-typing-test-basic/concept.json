@@ -1,15 +1,9 @@
 {
   "slug": "speed-typing-test-basic",
+  "brand": "",
   "title": "Typing speed test",
   "tag": "speed",
-  "blurb": "typing speed test with WPM and accuracy",
-  "tags": [
-    "typing",
-    "speed",
-    "test",
-    "with"
-  ],
-  "brand": "",
+  "blurb": "",
   "tier": "basic",
   "base_slug": "speed-typing-test"
 }

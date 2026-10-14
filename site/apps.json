@@ -1,5 +1,47 @@
 [
   {
+    "slug": "speed-typing-test",
+    "base_slug": "speed-typing-test",
+    "title": "Typing speed test",
+    "tier": "full",
+    "tag": "speed",
+    "blurb": "A small, focused speed tool. Typing speed test does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "speed",
+      "typing",
+      "test"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/speed-typing-test-basic/",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-14"
+  },
+  {
+    "slug": "speed-typing-test-basic",
+    "base_slug": "speed-typing-test",
+    "title": "Typing speed test (Basic)",
+    "tier": "basic",
+    "tag": "speed",
+    "blurb": "A small, focused speed tool. Typing speed test does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "speed",
+      "typing",
+      "test"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/speed-typing-test-basic/",
+    "download": "",
+    "price": 0.0,
+    "free": true,
+    "differences": [],
+    "published": true,
+    "badge": "New",
+    "date": "2026-10-14"
+  },
+  {
     "slug": "split-bill-app",
     "base_slug": "split-bill-app",
     "title": "Shared shopping list",
