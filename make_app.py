@@ -158,6 +158,40 @@ def groq(system, user, max_tokens=4000, temperature=0.8, tries=3):
                 time.sleep(1.5 * (attempt + 1))
     raise RuntimeError(f"every model failed: {last}")
 
+def best_variant(html: str) -> tuple[str, bool]:
+    """Return the first escaping variant whose scripts actually parse.
+
+    The model escapes single quotes that are not inside a string, so
+    b.split(\'\') arrives with a backslash that JavaScript does not allow there.
+    Stripping every \\' is not the answer either, because an escaped quote
+    inside a string is valid and needs its backslash. Which one it is cannot be
+    told apart without parsing.
+
+    So it is settled by evidence rather than by a rule: each variant is tried
+    and the first one node accepts is used. A variant that is not an improvement
+    is never taken, so this cannot turn a working app into a broken one.
+    """
+    if not js_syntax_errors(html):
+        return html, True
+    variants = [
+        ("\\'", "'"),
+        ("\\/", "/"),
+    ]
+    for find, want in variants:
+        if find not in html:
+            continue
+        candidate = html.replace(find, want)
+        if not js_syntax_errors(candidate):
+            return candidate, True
+    # one more: both at once, for a reply that escaped either kind
+    both = html
+    for find, want in variants:
+        both = both.replace(find, want)
+    if both != html and not js_syntax_errors(both):
+        return both, True
+    return html, False
+
+
 def _unescape(text: str) -> str:
     """Undo the JSON escaping on a model reply, without eating real code.
 

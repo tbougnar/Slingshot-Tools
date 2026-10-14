@@ -95,7 +95,15 @@ def main() -> int:
         # has been dying on, even though a working raw path already existed.
         html, mode, _ = make_app.build_html_raw(concept, lessons, attempt=attempt)
         brand = ""
-        diffs, free_blurb, paid_blurb = [], "", ""
+        diffs, free_blurb, paid_blurb = "", "", ""
+        # The model escapes single quotes that are not inside a string, which
+        # is not valid javascript, and whether one is an artefact or a real
+        # escape cannot be told apart without parsing. So the variants are
+        # tried and the first one that node accepts is used.
+        html, parsed = make_app.best_variant(html)
+        if not parsed:
+            make_app.log(f"attempt {attempt}: no escaping variant of the "
+                         f"script parses")
         issues = make_app.html_looks_fine(html)
         for note in getattr(make_app.html_looks_fine, "notes", []):
             make_app.log(f"note: {note}")
