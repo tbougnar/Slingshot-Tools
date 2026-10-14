@@ -55,6 +55,25 @@ jobs:
       - name: Refresh the fixbook the AI reads
         run: python write_fixbook.py
 
+      - name: Say whether there is anything new to publish
+        id: fresh
+        shell: bash
+        run: |
+          # git ls-tree, not a file test: verify_app deletes
+          # data/candidate.json when it finishes, so this step runs after the
+          # file is already gone and a test would always say no.
+          if git ls-files --error-unmatch data/candidate.json >/dev/null 2>&1; then
+            echo "fresh=yes" >> "$GITHUB_OUTPUT"
+            echo "there is a new candidate to build and publish"
+          else
+            echo "fresh=no" >> "$GITHUB_OUTPUT"
+            echo "::notice::no new candidate this week; nothing will be" \
+                 "built or published and the previous release stays live"
+          fi
+
+      # Only when there is a paid build to hand over. With no candidate the
+      # verifier writes nothing to paid/, and "No files were found" failed the
+      # job on every week where generation produced nothing.
       - name: Verify in a real browser, repair, and publish only if clean
         run: python verify_app.py
 
@@ -82,25 +101,6 @@ jobs:
 
       # paid/ is gitignored on purpose, so the paid build can never be public.
       # Pass it to the Windows job as a private artifact instead of through git.
-      - name: Say whether there is anything new to publish
-        id: fresh
-        shell: bash
-        run: |
-          # git ls-tree, not a file test: verify_app deletes
-          # data/candidate.json when it finishes, so this step runs after the
-          # file is already gone and a test would always say no.
-          if git ls-files --error-unmatch data/candidate.json >/dev/null 2>&1; then
-            echo "fresh=yes" >> "$GITHUB_OUTPUT"
-            echo "there is a new candidate to build and publish"
-          else
-            echo "fresh=no" >> "$GITHUB_OUTPUT"
-            echo "::notice::no new candidate this week; nothing will be" \
-                 "built or published and the previous release stays live"
-          fi
-
-      # Only when there is a paid build to hand over. With no candidate the
-      # verifier writes nothing to paid/, and "No files were found" failed the
-      # job on every week where generation produced nothing.
       - name: Upload the paid build for the Windows installer
         if: steps.fresh.outputs.fresh == 'yes'
         uses: actions/upload-artifact@v4

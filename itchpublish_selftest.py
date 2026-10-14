@@ -185,6 +185,13 @@ check("and the check is not defeated by the verifier deleting the file",
       "git ls-files" in _frun or "git ls-tree" in _frun,
       "verify_app unlinks data/candidate.json before this step runs, so a "
       "file test always says no and the installer never builds anything")
+_fi = next(i for i, s in enumerate(_wf["jobs"]["verify"]["steps"])
+           if s.get("id") == "fresh")
+_vi = next(i for i, s in enumerate(_wf["jobs"]["verify"]["steps"])
+           if "Verify in a real browser" in str(s.get("name")))
+check("and it runs before the verifier, which deletes the candidate",
+      _fi < _vi,
+      "the check runs after the file is gone, so it always says no")
 check("the paid build is only uploaded when there is one",
       next((s.get("if") for s in _wf["jobs"]["verify"]["steps"]
             if "Upload the paid build" in str(s.get("name"))), None)
