@@ -1,0 +1,15 @@
+{
+  "slug": "text-diff-basic",
+  "title": "Text diff tool showing what changed line by line",
+  "tag": "text",
+  "blurb": "text diff tool showing what changed line by line",
+  "tags": [
+    "text",
+    "diff",
+    "tool",
+    "showing"
+  ],
+  "brand": "",
+  "tier": "basic",
+  "base_slug": "text-diff"
+}
