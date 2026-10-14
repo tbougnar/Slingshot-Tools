@@ -467,11 +467,21 @@ def create_project(title: str, slug: str, price: float,
 # ------------------------------------------------------------------ butler
 
 def butler() -> str:
-    """Where butler is, or an empty string."""
+    """Where butler is, or an empty string.
+
+    The workflow downloads it with 7z into ./butler and appends that folder to
+    GITHUB_PATH, which only reaches later steps and only when the folder
+    really holds the executable. Checking the places it can actually land is
+    what stops upload() from reporting "not installed" while butler is sitting
+    in the working directory.
+    """
     exe = "butler.exe" if os.name == "nt" else "butler"
-    local = Path.home() / ".butler" / exe
-    if local.exists():
-        return str(local)
+    for cand in (Path.home() / ".butler" / exe,
+                 ROOT / "butler" / exe,
+                 ROOT / exe,
+                 ROOT / "bin" / exe):
+        if cand.exists():
+            return str(cand)
     try:
         subprocess.run([exe, "--version"], capture_output=True, timeout=30)
         return exe
@@ -496,7 +506,7 @@ def upload(installer: Path, slug: str, version: str) -> bool:
     if version:
         cmd += ["--userversion", version]
     if KEY:
-        cmd += ["--api_key", KEY]
+        cmd += ["--api-key", KEY]
     log(f"butler: pushing to {target}")
     try:
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
