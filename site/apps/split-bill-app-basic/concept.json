@@ -1,15 +1,9 @@
 {
   "slug": "split-bill-app-basic",
+  "brand": "",
   "title": "Shared shopping list",
   "tag": "split",
-  "blurb": "shared shopping list with running totals",
-  "tags": [
-    "shared",
-    "shopping",
-    "list",
-    "with"
-  ],
-  "brand": "",
+  "blurb": "",
   "tier": "basic",
   "base_slug": "split-bill-app"
 }
