@@ -1,5 +1,47 @@
 [
   {
+    "slug": "json-formatter",
+    "base_slug": "json-formatter",
+    "title": "JSON viewer and formatter",
+    "tier": "full",
+    "tag": "json",
+    "blurb": "A small, focused json tool. JSON viewer and formatter does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "json",
+      "viewer",
+      "formatter"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/json-formatter-basic/",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-14"
+  },
+  {
+    "slug": "json-formatter-basic",
+    "base_slug": "json-formatter",
+    "title": "JSON viewer and formatter (Basic)",
+    "tier": "basic",
+    "tag": "json",
+    "blurb": "A small, focused json tool. JSON viewer and formatter does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "json",
+      "viewer",
+      "formatter"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/json-formatter-basic/",
+    "download": "",
+    "price": 0.0,
+    "free": true,
+    "differences": [],
+    "published": true,
+    "badge": "New",
+    "date": "2026-10-14"
+  },
+  {
     "slug": "password-strength",
     "base_slug": "password-strength",
     "title": "Password strength auditor",

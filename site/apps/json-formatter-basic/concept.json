@@ -1,15 +1,9 @@
 {
   "slug": "json-formatter-basic",
+  "brand": "",
   "title": "JSON viewer and formatter",
   "tag": "json",
-  "blurb": "JSON viewer and formatter with error highlighting",
-  "tags": [
-    "JSON",
-    "viewer",
-    "and",
-    "formatter"
-  ],
-  "brand": "",
+  "blurb": "",
   "tier": "basic",
   "base_slug": "json-formatter"
 }
