@@ -72,19 +72,42 @@ def main() -> int:
         return 1
 
     _out("2. the API key is accepted and can read the account")
-    status, body = _get(f"/profile/{user}/games", key)
+    # Several shapes have been tried. Whichever answers 200 is the real one,
+    # because "invalid api endpoint" means the path is wrong, not that the key
+    # is refused, and a wrong path here means the pipeline can never find a
+    # project that already exists.
+    candidates = [
+        f"/profile/{user}/games",
+        f"/profile/{user}/games?limit=100",
+        f"/users/{user}/games",
+        f"/profile/{user}",
+        f"/profile/{user}/stats/sales",
+        "/profile/whoami",
+    ]
+    works = []
+    for path in candidates:
+        code, body = _get(path, key)
+        n = ""
+        if code == 200:
+            try:
+                got = json.loads(body)
+                n = f" ({len(got)} item(s))" if isinstance(got, list) else ""
+            except json.JSONDecodeError:
+                n = " (not json)"
+            works.append(path)
+        _out(f"   HTTP {code:<4} GET {path}{n}")
     projects = []
-    if status == 200:
+    if works:
+        code, body = _get(works[0], key)
         try:
             projects = json.loads(body) or []
         except json.JSONDecodeError:
             projects = []
-        _out(f"   yes  the key works, {len(projects)} project(s) on the "
-              f"account")
+        _out(f"   the working path is {works[0]}: {len(projects)} project(s)")
         for g in projects[:10]:
             _out(f"        {g.get('url')}")
     else:
-        _out(f"   NO  HTTP {status}: {body[:160]}")
+        _out("   no listing path answered 200, so the account cannot be read")
     _out()
 
     _out("3. can a project be created through the API")
