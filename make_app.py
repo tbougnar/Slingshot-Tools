@@ -745,7 +745,19 @@ def js_syntax_errors(html: str) -> list[str]:
                 err = (r.stderr or b"").decode("utf-8", "replace")
                 first = next((ln.strip() for ln in err.splitlines()
                               if "Error" in ln), "parse error")
-                problems.append(f"script {i + 1}: {first[:90]}")
+                # The line node choked on, and the number it choked on it. A
+                # message that only says "SyntaxError" is not actionable: five
+                # consecutive runs were refused with one and the fix had to be
+                # guessed at rather than looked at.
+                detail = ""
+                m = re.search(r"block:\d+\s+(\d+)", err)
+                js_lines = js.splitlines()
+                if m:
+                    n = int(m.group(1))
+                    lo, hi = max(0, n - 2), min(len(js_lines), n + 1)
+                    detail = " | " + " / ".join(
+                        x.strip()[:90] for x in js_lines[lo:hi] if x.strip())
+                problems.append(f"script {i + 1}: {first[:80]}{detail}")
         return problems
     # no node: catch the faults this pipeline has actually hit, which all need
     # no interpreter. A double-escaped reply leaves bare quote and brace
