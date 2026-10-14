@@ -1,0 +1,11 @@
+{
+ "slug": "permutation-tool",
+ "brand": "",
+ "title": "String permutation and combination generator",
+ "tag": "permutation",
+ "differences": "",
+ "free_blurb": "",
+ "paid_blurb": "",
+ "candidate": "site/apps/permutation-tool-basic/app/index.html",
+ "paid_dir": "paid/permutation-tool"
+}
