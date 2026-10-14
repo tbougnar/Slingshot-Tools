@@ -118,6 +118,10 @@ data/shorts_thumb.json
 data/qa_backups/
 site/**/*.bak
 
+# The script the model wrote that would not parse. Kept so the self-heal job
+# can see it; it is one run's output, not part of the product.
+data/rejected/
+
 # Which product the installer job should build. It is written by the verify
 # job in the same run and is superseded by the uploaded artifact, so carrying
 # it through git only risks it being one release stale. Committing it is what

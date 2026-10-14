@@ -77,6 +77,8 @@ check("two paid builds exit non-zero rather than picking one",
 
 print("\nA SINGLE BUILD IS TAKEN FROM WHAT THE BUILD SAYS\n")
 import subprocess
+
+import yaml
 out = subprocess.run([sys.executable, str(ROOT / "itch_publish.py")],
                      capture_output=True, text=True, cwd=str(ROOT))
 check("the module still runs and reports its own blocker",
@@ -160,6 +162,40 @@ else:
 check("it no longer asks for the cookie",
       "set a new one: gh secret set ITCH_SESSION_COOKIE" not in _out,
       "it still asks for the expiring credential")
+
+print("\nA WEEK WITH NO NEW APP MUST NOT REPUBLISH THE LAST ONE\n")
+# The generator refuses to stage an app whose script will not parse, so a week
+# where the model had a bad run produces no candidate. The installer job would
+# then upload whatever paid build happened to be in paid/ and publish last
+# week's product as though it were new.
+_wf = yaml.safe_load((ROOT / ".github" / "workflows" / "friday-verify.yml")
+                    .read_text(encoding="utf-8"))
+check("the verify job reports whether there is anything new",
+      any(s.get("id") == "fresh" for s in _wf["jobs"]["verify"]["steps"]))
+check("and exposes it as an output",
+      _wf["jobs"]["verify"].get("outputs", {}).get("fresh"),
+      "the installer job cannot tell")
+check("the installer job is gated on it",
+      _wf["jobs"]["installer"].get("if") == "needs.verify.outputs.fresh == 'yes'",
+      str(_wf["jobs"]["installer"].get("if")))
+check("so the whole job is skipped, not just one step of it",
+      _wf["jobs"]["installer"].get("if") is not None,
+      "gating steps individually is a condition a later step forgets")
+
+_vs = (ROOT / "verify_app.py").read_text(encoding="utf-8")
+if "no candidate was produced" in _vs:
+    _seg = _vs.split("no candidate was produced")[1].split("stage = json.loads")[0]
+else:
+    _seg = ""
+check("verify_app treats no candidate as nothing to do, not a failure",
+      "return 0" in _seg and "return 1" not in _seg,
+      f"it still fails the job on a legitimate empty week: {_seg[-120:]!r}")
+_sa = (ROOT / "stage_app.py").read_text(encoding="utf-8")
+check("stage_app does not fail the release when it produced nothing",
+      "not_verified(" in _sa,
+      "a bad model run still stops the whole automation")
+check("and it keeps the offending script for the self-heal job",
+      "data" in _sa and "rejected" in _sa)
 
 print()
 print("FAILURES:", fails if fails else "none")

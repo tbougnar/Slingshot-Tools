@@ -17,6 +17,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import make_app
 import auditlog
 
+# How many times to ask for an app before giving up on the week. The gate
+# refuses anything whose script will not parse, and a model has a bad run
+# sometimes, so one refusal is not enough evidence to stop. Bounded because
+# every attempt spends allowance the budget guard is watching.
+ATTEMPTS = 5
+
 
 def _rel(p: Path) -> str:
     """A path relative to the repo, or empty if it lives outside it.
@@ -83,7 +89,7 @@ def main() -> int:
     concept = make_app.pick_concept(money)
     make_app.log(f"concept: {concept['title']} ({concept['slug']})")
 
-    for attempt in range(1, 4):
+    for attempt in range(1, ATTEMPTS + 1):
         # Ask for the file itself. The JSON path asks a model to wrap a large
         # document in an object, and that parse is the single thing every run
         # has been dying on, even though a working raw path already existed.
@@ -172,8 +178,30 @@ def main() -> int:
         make_app.log(f"candidate staged for verification: {out}")
         return 0
 
-    make_app.log("could not produce a candidate this run")
-    return 1
+    make_app.log("no new product was produced this run")
+    # Not a failure of the release. This job generates one app a week; a week
+    # where the model produced nothing usable should leave the previous week's
+    # tool live and let the rest of the automation carry on, rather than
+    # stopping the site deploy and every channel refresh behind it. The truth
+    # is recorded rather than swallowed: the audit log gets a NOT_VERIFIED
+    # event, and the rejected script is kept so the self-heal job can see what
+    # the model actually wrote.
+    _rejected = make_app.DATA / "rejected"
+    try:
+        _rejected.mkdir(parents=True, exist_ok=True)
+        keep = _rejected / f"{concept['slug']}.js"
+        if not keep.exists():
+            keep.write_text(html or "", encoding="utf-8", errors="replace")
+            make_app.log(f"  the script that would not parse is at "
+                         f"{keep.relative_to(make_app.ROOT)}")
+    except OSError as e:
+        make_app.log(f"  could not keep the rejected script: {str(e)[:60]}")
+    auditlog.not_verified(
+        "generate", job=concept["slug"],
+        reason="every attempt failed the staging gate, so no candidate was "
+               "produced; the previous release stays live",
+        evidence={"attempts": ATTEMPTS, "last_issues": issues})
+    return 0
 
 
 if __name__ == "__main__":

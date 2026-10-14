@@ -18,6 +18,8 @@ concurrency:
 
 jobs:
   verify:
+    outputs:
+      fresh: ${{ steps.fresh.outputs.fresh }}
     # only after a generate that actually produced a candidate
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
@@ -80,6 +82,19 @@ jobs:
 
       # paid/ is gitignored on purpose, so the paid build can never be public.
       # Pass it to the Windows job as a private artifact instead of through git.
+      - name: Say whether there is anything new to publish
+        id: fresh
+        shell: bash
+        run: |
+          if [ -f data/candidate.json ]; then
+            echo "fresh=yes" >> "$GITHUB_OUTPUT"
+            echo "there is a new candidate to build and publish"
+          else
+            echo "fresh=no" >> "$GITHUB_OUTPUT"
+            echo "::notice::no new candidate this week; nothing will be" \
+                 "built or published and the previous release stays live"
+          fi
+
       - name: Upload the paid build for the Windows installer
         uses: actions/upload-artifact@v4
         with:
@@ -90,6 +105,10 @@ jobs:
   # Only the Windows installer needs Windows, so it gets its own job.
   installer:
     needs: verify
+    # Nothing to publish on a week when the generator produced no app.
+    # The whole job is skipped rather than gating nineteen steps one by
+    # one, which is the kind of condition a later step silently forgets.
+    if: needs.verify.outputs.fresh == 'yes'
     runs-on: windows-latest
     timeout-minutes: 45
     env:

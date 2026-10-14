@@ -31,8 +31,22 @@ def main() -> int:
             if stage_file.exists():
                 break
         if not stage_file.exists():
-            print("[verify] still no candidate - the generator must run first")
-            return 1
+            # Nothing to verify is a legitimate week, not a failure. The
+            # generator refuses to stage anything whose script will not parse,
+            # so a week where the model had a bad run leaves no candidate and
+            # the previous release simply stays live. Returning 1 here stopped
+            # the whole job behind a condition that was working correctly.
+            print("[verify] no candidate was produced this week, so there is "
+                  "nothing to verify. The previous release stays live.")
+            try:
+                import auditlog
+                auditlog.not_verified(
+                    "verify",
+                    reason="no candidate was staged, so nothing was verified "
+                           "and nothing was published")
+            except ImportError:
+                pass
+            return 0
     stage = json.loads(stage_file.read_text(encoding="utf-8"))
 
     # stored relative so it resolves on whichever machine runs this
