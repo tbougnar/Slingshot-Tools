@@ -1,0 +1,15 @@
+{
+  "slug": "ip-info-basic",
+  "title": "Offline IP and subnet helper",
+  "tag": "ip",
+  "blurb": "offline IP and subnet helper with CIDR math",
+  "tags": [
+    "offline",
+    "IP",
+    "and",
+    "subnet"
+  ],
+  "brand": "",
+  "tier": "basic",
+  "base_slug": "ip-info"
+}
