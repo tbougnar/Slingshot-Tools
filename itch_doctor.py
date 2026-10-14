@@ -23,6 +23,7 @@ ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 
 import auditlog
+import itch_publish as ip
 
 API = "https://api.itch.io"
 TIMEOUT = 30
@@ -136,41 +137,53 @@ def main() -> int:
         _out("   no listing path answered 200, so the account cannot be read")
     _out()
 
-    _out("3. can a project be created through the API")
-    # An empty body cannot create anything: it asks the endpoint to validate a
-    # project with no name and no slug, which it refuses. 404 or 405 means
-    # there is no such endpoint and a browser is genuinely required. Anything
-    # else means the endpoint exists.
-    req = urllib.request.Request(
-        f"{API}/profile/{user}/games", data=b"{}", method="POST",
-        headers={"Authorization": f"Bearer {key}",
-                 "Content-Type": "application/json"})
-    try:
-        with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
-            code, detail = r.status, r.read(200).decode("utf-8", "replace")
-    except urllib.error.HTTPError as e:
-        code, detail = e.code, e.read(200).decode("utf-8", "replace")
-    except Exception as e:  # noqa: BLE001
-        code, detail = 0, str(e)[:120]
-    _out(f"   POST /profile/{user}/games with an empty body -> HTTP {code}")
-    if code in (400, 401, 403, 422):
-        _out("   the endpoint exists, so a project can be created with the key")
-        _out("   and no browser session is needed, ever")
-        can_create = True
-    elif code in (404, 405, 501):
-        _out("   there is no create endpoint, as this repository assumed")
-        _out("   a project has to be created through a browser, once")
-        can_create = False
+    _out("3. butler, which is itch.io's own client and the authority")
+    # butler is the tool that actually uploads, and the only thing here that
+    # speaks itch.io's real protocol. If it accepts the key, the 404s above are
+    # this repository's paths being wrong rather than a credential problem.
+    import subprocess
+    import tempfile
+
+    butler = ip.butler()
+    if butler:
+        stub = Path(tempfile.gettempdir()) / "slingshot-doctor-stub.zip"
+        try:
+            stub.write_bytes(b"PK\x05\x06" + b"\x00" * 18)
+            r = subprocess.run(
+                [butler, "push", f"{user}/doctor-probe-does-not-exist",
+                 str(stub), "--api-key", key, "--channel", "windows"],
+                capture_output=True, text=True, timeout=240)
+            said = ((r.stdout or "") + (r.stderr or "")).strip()
+            _out(f"   butler push to a project that does not exist exited "
+                 f"{r.returncode}")
+            for ln in said.splitlines()[-6:]:
+                _out(f"     {ln}")
+            low = said.lower()
+            if "unauthor" in low or "forbidden" in low \
+                    or "api key" in low or "invalid" in low:
+                _out("   -> the key is REFUSED by itch.io")
+                key_ok = False
+            elif "not found" in low or "does not exist" in low \
+                    or "no such" in low:
+                _out("   -> the key is ACCEPTED. The project name is simply"
+                     " not one that exists, which is the answer we wanted.")
+                key_ok = True
+            else:
+                _out("   -> butler's answer was not one of the expected"
+                     " shapes; read it above")
+                key_ok = None
+            _out("   nothing was uploaded: the project does not exist")
+        finally:
+            stub.unlink(missing_ok=True)
     else:
-        _out(f"   unexpected: {detail[:140]}")
-        can_create = None
+        key_ok = None
+        _out("   butler is not on this machine, so the key cannot be tested")
     _out()
 
     _out("4. the session cookie, if there is one")
     if not cookie:
         _out("   no cookie is stored, so nothing to check")
     else:
-        import itch_publish as ip
         tok = ip.session_cookie()
         if not tok:
             _out("   the cookie is set but not in a form that can be read")
@@ -190,28 +203,37 @@ def main() -> int:
     _out("=" * 68)
     _out("WHAT THIS MEANS")
     _out("=" * 68)
-    if can_create:
+    if key_ok is True:
         _out()
-        _out("Projects can be created with the API key, so the whole path is")
-        _out("automated and no session is ever needed. The publish step should")
-        _out("use that instead of a browser.")
-    elif can_create is False:
+        _out("The API key works. Upload is therefore fully automated and needs")
+        _out("no session at all. The only thing that cannot be automated is")
+        _out("creating the very first project, because itch.io has no endpoint")
+        _out("for that and its web login is behind a bot challenge.")
         _out()
-        _out("A project has to be created through a browser exactly once, the")
-        _out("first time there is a product to sell. After that the pipeline")
-        _out("finds the project through the API and uploads with the key, so")
-        _out("no session is needed again for as long as the project exists.")
+        _out("Do this once, by hand, in your own browser:")
+        _out("  create an empty project at")
+        _out("    https://itch.io/settings/mine/new/game")
+        _out("  then point the catalog at it:")
+        _out("    python set_itch_url.py <slug> https://slingshot-tools.itch.io/<project>")
         _out()
-        _out("To do it once: create an empty project at")
-        _out("  https://itch.io/settings/mine/new/game")
-        _out("called, for example, 'Slingshot Tools', and then run")
-        _out("  python set_itch_url.py <slug> https://youraccount.itch.io/<project>")
-        _out("Every release after that is hands-off.")
+        _out("After that every release is hands-off, forever, because the")
+        _out("pipeline finds the project through the key and uploads with it.")
+    elif key_ok is False:
+        _out()
+        _out("The API key is refused by itch.io, so nothing can be uploaded")
+        _out("at all. Generate a new one at")
+        _out("  https://itch.io/settings/mine/api-keys")
+        _out("and set it with")
+        _out("  gh secret set ITCH_API_KEY --repo tbougnar/Slingshot-Tools")
+    else:
+        _out()
+        _out("The key could not be tested here. Read the butler output above.")
     auditlog.not_verified(
         "itch-doctor",
         reason="the itch.io capability report above",
         evidence={"key": bool(key), "user": bool(user),
-                  "projects": len(projects), "api_can_create": can_create,
+                  "projects": len(projects),
+                  "key_accepted_by_butler": key_ok,
                   "cookie_present": bool(cookie)})
     return 0
 
