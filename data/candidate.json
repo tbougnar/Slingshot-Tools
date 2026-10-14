@@ -1,0 +1,11 @@
+{
+ "slug": "coin-toss",
+ "brand": "",
+ "title": "Coin flip and dice roller",
+ "tag": "coin",
+ "differences": "",
+ "free_blurb": "",
+ "paid_blurb": "",
+ "candidate": "site/apps/coin-toss-basic/app/index.html",
+ "paid_dir": "paid/coin-toss"
+}

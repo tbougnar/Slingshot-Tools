@@ -1,0 +1,15 @@
+{
+  "slug": "coin-toss-basic",
+  "title": "Coin flip and dice roller",
+  "tag": "coin",
+  "blurb": "coin flip and dice roller for quick decisions",
+  "tags": [
+    "coin",
+    "flip",
+    "and",
+    "dice"
+  ],
+  "brand": "",
+  "tier": "basic",
+  "base_slug": "coin-toss"
+}
