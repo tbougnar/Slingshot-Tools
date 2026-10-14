@@ -1,5 +1,47 @@
 [
   {
+    "slug": "ip-info",
+    "base_slug": "ip-info",
+    "title": "Offline IP and subnet helper",
+    "tier": "full",
+    "tag": "ip",
+    "blurb": "A small, focused ip tool. Offline IP and subnet helper does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "ip",
+      "subnet",
+      "helper"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/ip-info-basic/",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-14"
+  },
+  {
+    "slug": "ip-info-basic",
+    "base_slug": "ip-info",
+    "title": "Offline IP and subnet helper (Basic)",
+    "tier": "basic",
+    "tag": "ip",
+    "blurb": "A small, focused ip tool. Offline IP and subnet helper does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "ip",
+      "subnet",
+      "helper"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/ip-info-basic/",
+    "download": "",
+    "price": 0.0,
+    "free": true,
+    "differences": [],
+    "published": true,
+    "badge": "New",
+    "date": "2026-10-14"
+  },
+  {
     "slug": "breathing-exercise",
     "base_slug": "breathing-exercise",
     "title": "Breathing exercise guide",
