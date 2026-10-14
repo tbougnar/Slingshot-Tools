@@ -1,5 +1,49 @@
 [
   {
+    "slug": "lorem-generator",
+    "base_slug": "lorem-generator",
+    "title": "Placeholder text generator",
+    "tier": "full",
+    "tag": "lorem",
+    "blurb": "A small, focused lorem tool. Placeholder text generator does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "lorem",
+      "placeholder",
+      "text",
+      "generator"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/lorem-generator-basic/",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-14"
+  },
+  {
+    "slug": "lorem-generator-basic",
+    "base_slug": "lorem-generator",
+    "title": "Placeholder text generator (Basic)",
+    "tier": "basic",
+    "tag": "lorem",
+    "blurb": "A small, focused lorem tool. Placeholder text generator does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "lorem",
+      "placeholder",
+      "text",
+      "generator"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/lorem-generator-basic/",
+    "download": "",
+    "price": 0.0,
+    "free": true,
+    "differences": [],
+    "published": true,
+    "badge": "New",
+    "date": "2026-10-14"
+  },
+  {
     "slug": "pomodoro-timer",
     "base_slug": "pomodoro-timer",
     "title": "Focus timer",

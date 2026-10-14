@@ -1,15 +1,9 @@
 {
   "slug": "lorem-generator-basic",
+  "brand": "",
   "title": "Placeholder text generator",
   "tag": "lorem",
-  "blurb": "placeholder text generator with the right length",
-  "tags": [
-    "placeholder",
-    "text",
-    "generator",
-    "with"
-  ],
-  "brand": "",
+  "blurb": "",
   "tier": "basic",
   "base_slug": "lorem-generator"
 }
