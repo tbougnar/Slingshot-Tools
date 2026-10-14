@@ -1,5 +1,47 @@
 [
   {
+    "slug": "bmi-calculator",
+    "base_slug": "bmi-calculator",
+    "title": "Fitness calculator",
+    "tier": "full",
+    "tag": "bmi",
+    "blurb": "A small, focused bmi tool. Fitness calculator does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "bmi",
+      "fitness",
+      "calculator"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/bmi-calculator-basic/",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-14"
+  },
+  {
+    "slug": "bmi-calculator-basic",
+    "base_slug": "bmi-calculator",
+    "title": "Fitness calculator (Basic)",
+    "tier": "basic",
+    "tag": "bmi",
+    "blurb": "A small, focused bmi tool. Fitness calculator does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "bmi",
+      "fitness",
+      "calculator"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/bmi-calculator-basic/",
+    "download": "",
+    "price": 0.0,
+    "free": true,
+    "differences": [],
+    "published": true,
+    "badge": "New",
+    "date": "2026-10-14"
+  },
+  {
     "slug": "ip-info",
     "base_slug": "ip-info",
     "title": "Offline IP and subnet helper",
