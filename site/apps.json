@@ -1,5 +1,47 @@
 [
   {
+    "slug": "pomodoro-timer",
+    "base_slug": "pomodoro-timer",
+    "title": "Focus timer",
+    "tier": "full",
+    "tag": "pomodoro",
+    "blurb": "A small, focused pomodoro tool. Focus timer does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "pomodoro",
+      "focus",
+      "timer"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/pomodoro-timer-basic/",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-14"
+  },
+  {
+    "slug": "pomodoro-timer-basic",
+    "base_slug": "pomodoro-timer",
+    "title": "Focus timer (Basic)",
+    "tier": "basic",
+    "tag": "pomodoro",
+    "blurb": "A small, focused pomodoro tool. Focus timer does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "pomodoro",
+      "focus",
+      "timer"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/pomodoro-timer-basic/",
+    "download": "",
+    "price": 0.0,
+    "free": true,
+    "differences": [],
+    "published": true,
+    "badge": "New",
+    "date": "2026-10-14"
+  },
+  {
     "slug": "text-diff",
     "base_slug": "text-diff",
     "title": "Text diff tool showing what changed line by line",

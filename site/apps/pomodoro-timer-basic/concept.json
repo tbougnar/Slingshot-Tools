@@ -1,15 +1,9 @@
 {
   "slug": "pomodoro-timer-basic",
+  "brand": "",
   "title": "Focus timer",
   "tag": "pomodoro",
-  "blurb": "focus timer with session log and break reminders",
-  "tags": [
-    "focus",
-    "timer",
-    "with",
-    "session"
-  ],
-  "brand": "",
+  "blurb": "",
   "tier": "basic",
   "base_slug": "pomodoro-timer"
 }
