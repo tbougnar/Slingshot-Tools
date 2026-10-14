@@ -1,0 +1,11 @@
+{
+ "slug": "qr-generator",
+ "brand": "",
+ "title": "QR code generator",
+ "tag": "qr",
+ "differences": "",
+ "free_blurb": "",
+ "paid_blurb": "",
+ "candidate": "site/apps/qr-generator-basic/app/index.html",
+ "paid_dir": "paid/qr-generator"
+}
