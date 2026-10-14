@@ -172,19 +172,47 @@ def mint_session() -> str:
             page = ctx.new_page()
             page.goto("https://itch.io/login", wait_until="domcontentloaded",
                       timeout=TIMEOUT * 1000)
+            # itch.io renders its login form after load, so waiting only for
+            # the document got there before the inputs existed and every named
+            # selector missed. Wait for an input to appear instead.
+            try:
+                page.wait_for_selector("input", timeout=TIMEOUT * 1000)
+            except Exception:  # noqa: BLE001
+                pass
+            try:
+                page.wait_for_timeout(1500)
+            except Exception:  # noqa: BLE001
+                pass
 
-            # itch.io may present the form immediately or behind a toggle, so
-            # each field is tried by a few of the names it has used.
             filled_user = _fill_first(page, ("input[name='user']",
                                              "input[name='username']",
+                                             "input[name='login']",
+                                             "input[id='user']",
                                              "#user", "input[type='email']"),
                                       user)
             filled_pass = _fill_first(page, ("input[name='password']",
-                                             "input[type='password']"),
+                                             "input[type='password']",
+                                             "#password"),
                                       password)
             if not (filled_user and filled_pass):
+                # Last resort that does not depend on any of itch.io's naming:
+                # the password box is the one of type password, and the user
+                # box is whichever other input comes first. Any login form on
+                # the page has that shape.
+                filled_user, filled_pass = _fill_by_shape(page, user, password)
+            if not (filled_user and filled_pass):
                 log(f"the login form was not what was expected "
-                    f"(user field: {filled_user}, password field: {filled_pass})")
+                    f"(user field: {filled_user}, password field: "
+                    f"{filled_pass})")
+                try:
+                    log(f"  the page is titled {page.title()!r} and has "
+                        f"{len(page.query_selector_all('input'))} input(s): "
+                        + ", ".join(
+                            (el.get_attribute("name") or el.get_attribute("id")
+                             or el.get_attribute("type") or "?")
+                            for el in page.query_selector_all("input")[:8]))
+                except Exception:  # noqa: BLE001
+                    pass
                 browser.close()
                 return ""
 
@@ -213,6 +241,48 @@ def mint_session() -> str:
     except Exception as e:  # noqa: BLE001
         log(f"could not log in: {str(e)[:110]}")
         return ""
+
+
+def _fill_by_shape(page, user: str, password: str) -> tuple[bool, bool]:
+    """Fill a login form by its shape rather than by any field name.
+
+    The password box is the input of type password, and the user box is the
+    first other input on the page. Every login form has that arrangement, so
+    this keeps working if itch.io renames a field, and it is what caught the
+    fact that none of the named selectors matched.
+    """
+    try:
+        inputs = page.query_selector_all("input")
+    except Exception:  # noqa: BLE001
+        return False, False
+    pass_done = False
+    user_done = False
+    for el in inputs:
+        try:
+            kind = (el.get_attribute("type") or "text").lower()
+        except Exception:  # noqa: BLE001
+            continue
+        if kind == "password" and not pass_done:
+            try:
+                el.fill(password)
+                pass_done = True
+            except Exception:  # noqa: BLE001
+                pass
+        elif kind in ("text", "email", "") and not user_done:
+            # a hidden field or a submit button is not the user box
+            try:
+                if el.is_hidden():
+                    continue
+            except Exception:  # noqa: BLE001
+                pass
+            try:
+                el.fill(user)
+                user_done = True
+            except Exception:  # noqa: BLE001
+                pass
+        if pass_done and user_done:
+            break
+    return user_done, pass_done
 
 
 def _fill_first(page, selectors: tuple[str, ...], value: str) -> bool:
