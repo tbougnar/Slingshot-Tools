@@ -1,0 +1,11 @@
+{
+ "slug": "lorem-generator",
+ "brand": "",
+ "title": "Placeholder text generator",
+ "tag": "lorem",
+ "differences": "",
+ "free_blurb": "",
+ "paid_blurb": "",
+ "candidate": "site/apps/lorem-generator-basic/app/index.html",
+ "paid_dir": "paid/lorem-generator"
+}
