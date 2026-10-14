@@ -750,13 +750,22 @@ def js_syntax_errors(html: str) -> list[str]:
                 # consecutive runs were refused with one and the fix had to be
                 # guessed at rather than looked at.
                 detail = ""
-                m = re.search(r"block:\d+\s+(\d+)", err)
+                # node --check reads from stdin, so it reports the position as
+                # "[stdin]:LINE" rather than the "block:N" it uses for a file.
+                # Both are accepted, and the caret line in the output points at
+                # the line too, so the first number after a colon wins.
+                m = (re.search(r"\[stdin\]:(\d+)", err)
+                     or re.search(r"block:(\d+)", err)
+                     or re.search(r"^:(\d+)", err, re.M)
+                     or re.search(r"[\w./\\-]+\.(?:js|cjs|mjs):(\d+)", err))
                 js_lines = js.splitlines()
-                if m:
+                if m and js_lines:
                     n = int(m.group(1))
                     lo, hi = max(0, n - 2), min(len(js_lines), n + 1)
-                    detail = " | " + " / ".join(
-                        x.strip()[:90] for x in js_lines[lo:hi] if x.strip())
+                    shown = " / ".join(x.strip()[:80] for x in js_lines[lo:hi]
+                                       if x.strip())
+                    if shown:
+                        detail = f" | line {n}: {shown}"
                 problems.append(f"script {i + 1}: {first[:80]}{detail}")
         return problems
     # no node: catch the faults this pipeline has actually hit, which all need
