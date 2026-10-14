@@ -113,7 +113,15 @@ jobs:
       - name: Install build tools
         run: |
           choco install nsis -y --no-progress
-          python -m pip install --quiet pillow requests pyinstaller pywebview
+          # playwright and its browser are needed here, not only in the verify
+          # job. itch_publish logs in through a browser when the stored session
+          # cookie is refused, and without this it stopped with "playwright is
+          # not installed, so a new session cannot be made" before it ever
+          # tried. The session cookie is the only credential here that
+          # expires, so this path is the one that has to keep working.
+          python -m pip install --quiet pillow requests pyinstaller pywebview playwright
+          python -m playwright install chromium
+          python -c "from playwright.sync_api import sync_playwright; print('playwright import ok')"
           # same PATH problem as the generate job: choco reports success, and
           # the next line says makensis is not recognised
           $makensis = "$env:ProgramFiles\NSIS\makensis.exe"
