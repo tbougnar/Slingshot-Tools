@@ -44,6 +44,17 @@ def _get(path: str, key: str) -> tuple[int, str]:
         return 0, str(e)[:300]
 
 
+def _raw(url: str) -> tuple[int, str]:
+    """A plain GET with no credentials, to tell a wrong path from a refused key."""
+    try:
+        with urllib.request.urlopen(url, timeout=TIMEOUT) as r:
+            return r.status, r.read(600).decode("utf-8", "replace")
+    except urllib.error.HTTPError as e:
+        return e.code, e.read(600).decode("utf-8", "replace")
+    except Exception as e:  # noqa: BLE001
+        return 0, str(e)[:300]
+
+
 def main() -> int:
     key = os.environ.get("ITCH_API_KEY", "").strip()
     user = os.environ.get("ITCH_USER", "").strip()
@@ -71,7 +82,22 @@ def main() -> int:
         _out("   the API cannot be checked without a key and an account name")
         return 1
 
-    _out("2. the API key is accepted and can read the account")
+    _out("2. is the API host even answering, and is the key accepted")
+    # 404 with "invalid api endpoint" from every path, including ones that must
+    # exist, is not a path problem. Asking without a key separates the two: a
+    # real endpoint answers 401 when unauthenticated and 404 when the path is
+    # invented, so one unauthenticated request says which this is.
+    code, body = _raw(f"{API}/profile/whoami")
+    _out(f"   no key   GET /profile/whoami -> HTTP {code}  {body[:80]}")
+    code_k, body_k = _get("/profile/whoami", key)
+    _out(f"   with key GET /profile/whoami -> HTTP {code_k}  {body_k[:80]}")
+    if code == 404:
+        _out("   the host answers 404 to an unauthenticated request, so the")
+        _out("   path is wrong, not the key")
+    elif code in (401, 403):
+        _out(f"   the endpoint exists (it refuses without a key), so the key is "
+             f"the problem: it answered {code_k}")
+    _out()
     # Several shapes have been tried. Whichever answers 200 is the real one,
     # because "invalid api endpoint" means the path is wrong, not that the key
     # is refused, and a wrong path here means the pipeline can never find a
