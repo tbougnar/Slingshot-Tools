@@ -1,5 +1,49 @@
 [
   {
+    "slug": "coin-toss",
+    "base_slug": "coin-toss",
+    "title": "Coin flip and dice roller",
+    "tier": "full",
+    "tag": "coin",
+    "blurb": "A small, focused coin tool. Coin flip and dice roller does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "coin",
+      "flip",
+      "dice",
+      "roller"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/coin-toss-basic/",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-14"
+  },
+  {
+    "slug": "coin-toss-basic",
+    "base_slug": "coin-toss",
+    "title": "Coin flip and dice roller (Basic)",
+    "tier": "basic",
+    "tag": "coin",
+    "blurb": "A small, focused coin tool. Coin flip and dice roller does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "coin",
+      "flip",
+      "dice",
+      "roller"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/coin-toss-basic/",
+    "download": "",
+    "price": 0.0,
+    "free": true,
+    "differences": [],
+    "published": true,
+    "badge": "New",
+    "date": "2026-10-14"
+  },
+  {
     "slug": "regex-tester",
     "base_slug": "regex-tester",
     "title": "Regex tester",
