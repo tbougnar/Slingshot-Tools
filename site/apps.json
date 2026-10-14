@@ -1,5 +1,45 @@
 [
   {
+    "slug": "regex-tester",
+    "base_slug": "regex-tester",
+    "title": "Regex tester",
+    "tier": "full",
+    "tag": "regex",
+    "blurb": "A small, focused regex tool. Regex tester does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "regex",
+      "tester"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/regex-tester-basic/",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-14"
+  },
+  {
+    "slug": "regex-tester-basic",
+    "base_slug": "regex-tester",
+    "title": "Regex tester (Basic)",
+    "tier": "basic",
+    "tag": "regex",
+    "blurb": "A small, focused regex tool. Regex tester does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "regex",
+      "tester"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/regex-tester-basic/",
+    "download": "",
+    "price": 0.0,
+    "free": true,
+    "differences": [],
+    "published": true,
+    "badge": "New",
+    "date": "2026-10-14"
+  },
+  {
     "slug": "lorem-generator",
     "base_slug": "lorem-generator",
     "title": "Placeholder text generator",
