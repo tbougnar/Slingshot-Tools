@@ -1,15 +1,9 @@
 {
   "slug": "text-stats-basic",
+  "brand": "",
   "title": "Word, character and reading time counter",
   "tag": "text",
-  "blurb": "word, character and reading time counter",
-  "tags": [
-    "word",
-    "character",
-    "and",
-    "reading"
-  ],
-  "brand": "",
+  "blurb": "",
   "tier": "basic",
   "base_slug": "text-stats"
 }

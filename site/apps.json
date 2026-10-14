@@ -1,5 +1,49 @@
 [
   {
+    "slug": "text-stats",
+    "base_slug": "text-stats",
+    "title": "Word, character and reading time counter",
+    "tier": "full",
+    "tag": "text",
+    "blurb": "A small, focused text tool. Word, character and reading time counter does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "text",
+      "word",
+      "character",
+      "reading"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/text-stats-basic/",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-14"
+  },
+  {
+    "slug": "text-stats-basic",
+    "base_slug": "text-stats",
+    "title": "Word, character and reading time counter (Basic)",
+    "tier": "basic",
+    "tag": "text",
+    "blurb": "A small, focused text tool. Word, character and reading time counter does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "text",
+      "word",
+      "character",
+      "reading"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/text-stats-basic/",
+    "download": "",
+    "price": 0.0,
+    "free": true,
+    "differences": [],
+    "published": true,
+    "badge": "New",
+    "date": "2026-10-14"
+  },
+  {
     "slug": "random-team",
     "base_slug": "random-team",
     "title": "Random team and shuffle picker",
