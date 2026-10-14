@@ -264,6 +264,10 @@ check("and a failure to trigger it fails the release",
           for s in _wf["jobs"][job]["steps"]
           if s.get("name") == "Publish the site"),
       "an unpublished app would be reported as a successful release")
+check("and the token is allowed to ask, which it is not by default",
+      (_wf.get("permissions") or {}).get("actions") == "write",
+      "workflow_dispatch is refused with 'Resource not accessible by "
+      "integration' without actions: write")
 
 print()
 print("FAILURES:", fails if fails else "none")

@@ -11,6 +11,10 @@ on:
 
 permissions:
   contents: write
+  # needed so the release can ask for the site deploy: a push with
+  # GITHUB_TOKEN does not trigger workflow runs, and workflow_dispatch is
+  # refused with "Resource not accessible by integration" without this
+  actions: write
 
 concurrency:
   group: slingshot-verify
