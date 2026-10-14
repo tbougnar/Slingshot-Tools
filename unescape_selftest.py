@@ -67,6 +67,21 @@ for label, raw in (("digit class", r"const RE=/\\d+/;"),
     check(f"{label} still contains a backslash", "\\" in got, f"got {got!r}")
     check(f"{label} parses as javascript", not errs, "; ".join(errs[:1]))
 
+print("\nTHE PAYLOAD THE GENERATOR WAS ACTUALLY REFUSING\n")
+# Run 38572964326, attempt 2, verbatim in shape: a twice-escaped body with the
+# closing quote and some prose after it. One layer of escaping survived and
+# every handler in the app was dead, because the script could not parse.
+real = (r'const TIER=\\"full\\";const LIMITS={maxItems:0,export:true,'
+        r'themes:\\"all\\",bulk:true};localStorage.getItem("k");')
+for label, payload in (("bare", real),
+                       ("with trailing junk", real + '"}  and here is prose.')):
+    out = make_app._unescape(payload)
+    check(f"no escape survives ({label})", '\\"' not in out,
+          f"got {out[:60]!r}")
+    check(f"and the code parses ({label})",
+          not make_app.js_syntax_errors(out),
+          "; ".join(make_app.js_syntax_errors(out)[:1]))
+
 print("\nESCAPED TEMPLATE MARKERS ARE LEFT ALONE\n")
 # \` inside a JavaScript template literal is a valid escape that means
 # backtick, and \${ means a literal ${. Decoding them would change what the

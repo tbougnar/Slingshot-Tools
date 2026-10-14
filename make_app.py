@@ -173,27 +173,42 @@ def _unescape(text: str) -> str:
     repeated only while such a marker survives, and at most twice.
     """
     out = text
-    decoded = _one_json_decode(out)
+
+    # Peel off the closing quote and anything a model added after the string,
+    # so a well-formed body can be decoded properly. The generator captures the
+    # text after `"html":"` to the end of the reply, so a trailing `"}` plus
+    # prose is normal and is what stopped json.loads being usable here.
+    candidate = out.rstrip()
+    for _ in range(2):
+        trimmed = candidate
+        if trimmed.endswith('"'):
+            trimmed = trimmed[:-1]
+        trimmed = trimmed.rstrip()
+        if trimmed == candidate:
+            break
+        candidate = trimmed
+
+    decoded = _one_json_decode(candidate)
     if decoded is not None:
-        # Exactly one decode, and it is the whole answer. A reply that decoded
-        # cleanly had correct escapes: decoding twice turns /\\\\/, a regex
-        # matching a literal backslash, into /\//, which is not a regular
-        # expression at all.
         return decoded
 
-    # It did not decode, so the payload is not a well-formed JSON string. That
-    # is what a reply escaped twice looks like: \\" inside it makes the quote
-    # that follows a string terminator, so the value cannot parse. Undo one
-    # layer of quoting and try again, which is enough because the generator
-    # never escapes three times.
-    for a, b in (('\\"', '"'), ("\\'", "'"), ("\\\\", "\\")):
-        out = out.replace(a, b)
-    decoded = _one_json_decode(out)
-    if decoded is not None:
-        return decoded
+    # Not a clean JSON string, which is what a twice-escaped reply looks like.
+    # Undo one layer of quoting and try again: after this, \\" has become \" and
+    # that decodes to a real quote. Run 38572964326 is why this matters; the
+    # app reached the gate with \\"full\\" still in it and every handler dead.
+    for _ in range(3):
+        before = out
+        out = out.replace('\\"', '"').replace("\\'", "'")
+        decoded = _one_json_decode(out.rstrip())
+        if decoded is not None:
+            return decoded
+        if out == before:
+            break
+        # also collapse the pairs that the first pass exposes, so a third
+        # layer is handled rather than silently left
+        out = out.replace("\\\\", "\\")
 
-    # still not JSON: unescape only the sequences that cannot shorten a
-    # legitimate escape, so the result is the best guess available
+    # still not JSON: unescape only what cannot shorten a legitimate escape
     for a, b in (("\\/", "/"), ("\\b", "\b"), ("\\f", "\f"),
                  ("\\r", "\r"), ("\\n", "\n"), ("\\t", "\t")):
         out = out.replace(a, b)
