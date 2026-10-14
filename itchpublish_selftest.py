@@ -178,6 +178,13 @@ check("and exposes it as an output",
 check("the installer job is gated on it",
       _wf["jobs"]["installer"].get("if") == "needs.verify.outputs.fresh == 'yes'",
       str(_wf["jobs"]["installer"].get("if")))
+_fresh = next((s for s in _wf["jobs"]["verify"]["steps"]
+               if s.get("id") == "fresh"), {})
+_frun = str(_fresh.get("run", ""))
+check("and the check is not defeated by the verifier deleting the file",
+      "git ls-files" in _frun or "git ls-tree" in _frun,
+      "verify_app unlinks data/candidate.json before this step runs, so a "
+      "file test always says no and the installer never builds anything")
 check("so the whole job is skipped, not just one step of it",
       _wf["jobs"]["installer"].get("if") is not None,
       "gating steps individually is a condition a later step forgets")

@@ -86,7 +86,10 @@ jobs:
         id: fresh
         shell: bash
         run: |
-          if [ -f data/candidate.json ]; then
+          # git ls-tree, not a file test: verify_app deletes
+          # data/candidate.json when it finishes, so this step runs after the
+          # file is already gone and a test would always say no.
+          if git ls-files --error-unmatch data/candidate.json >/dev/null 2>&1; then
             echo "fresh=yes" >> "$GITHUB_OUTPUT"
             echo "there is a new candidate to build and publish"
           else
