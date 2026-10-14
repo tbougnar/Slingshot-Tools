@@ -589,5 +589,23 @@
   "verification": "Run 38630319521 reached the builds endpoint and returned the 400, which is only possible once the argument order is right.",
   "uncertainty": "",
   "opened": "2026-10-14T20:22:26+00:00"
+ },
+ {
+  "id": "BUG-033",
+  "symptom": "publish asked the browser for a session that the API key does not need",
+  "severity": "CRITICAL",
+  "component": "itch.io publishing",
+  "files": [
+   "itch_publish.py"
+  ],
+  "status": "VERIFIED_FIXED",
+  "root_cause": "Step 1 of publish() asked find_game() whether the project already existed. find_game() reads the itch.io listing API, and every path on that API answers 'invalid api endpoint', so it always returned nothing. That sent every release down the browser-creation path, which needs a session, which the bot challenge refuses. The run therefore died asking for a cookie while holding a working API key, and never once attempted the upload the key was obtained for.",
+  "evidence": "Run 38636758615: '[itch] no usable itch.io session could be established' and 'set ITCH_LOGIN and ITCH_PASSWORD once', while the doctor in the same run reported 'The API key works'.",
+  "repro": "call publish() for a slug whose project exists, with no KEY and no session available",
+  "fix": "Existence is decided from what can be trusted: the catalogue entry's itch_url when its public page answers, and only then the API. A live catalogue entry goes straight to the upload, so no session is looked for. Only a genuinely absent project now needs the browser, and that message names the one-time manual step instead of asking for a credential that would not have helped.",
+  "regression_test": "itchpublish_selftest.py asserts working_session() is never called when the catalogue points at a live page",
+  "verification": "itchpublish_selftest.py: FAILURES: none. The test fails if the catalogue lookup is removed.",
+  "uncertainty": "The API listing endpoint remains unreadable, so find_game() is kept as a fallback but is no longer the only way existence is decided.",
+  "opened": "2026-10-14T21:08:40+00:00"
  }
 ]

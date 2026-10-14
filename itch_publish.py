@@ -648,26 +648,41 @@ def publish(slug: str, title: str, price: float, version: str = "") -> bool:
     log(f"=== {title} (${price:.2f}) ===")
 
     # 1. does it already exist?
+    # itch.io has no listing endpoint this pipeline can read: every path on
+    # the API answers 'invalid api endpoint', so find_game() always came back
+    # empty and every release fell through to browser project creation, which
+    # the bot challenge stops. What can be trusted is the catalogue, which
+    # records where the project lives once set_itch_url.py has run, and the
+    # public page, which answers if and only if the project exists.
     url = ""
-    if KEY:
+    for a in load_catalog():
+        if (a.get("base_slug") or a.get("slug")) == slug:
+            candidate = (a.get("itch_url") or "").strip()
+            if candidate and page_is_live(candidate):
+                url = candidate
+                log(f"1. the catalogue already points at a live project: {url}")
+                break
+    if not url and KEY:
         found = find_game(slug)
         if found:
             url = (found.get("url") or "").replace("http://", "https://")
             log(f"1. the project already exists: {url}")
     if not url:
         log("1. no project yet, so one has to be created")
-        # A stored cookie is used when it works and a fresh one is minted when
-        # it does not. Before this, an expired cookie stopped every run and
-        # the only remedy was for a person to paste a new one into the
-        # repository secrets, which is why this kept coming back.
+        # Creating a project is the one thing the API key cannot do, because
+        # itch.io has no endpoint for it. It needs a browser session, and the
+        # login that would provide one is behind a bot challenge.
         cookie = working_session()
         if not cookie:
-            log("   no usable itch.io session could be established")
-            log("   set ITCH_LOGIN and ITCH_PASSWORD once and this logs "
-                "itself in from then on:")
-            log("   gh secret set ITCH_LOGIN --repo tbougnar/Slingshot-Tools")
-            log("   gh secret set ITCH_PASSWORD --repo tbougnar/Slingshot-Tools")
-            log("   the old ITCH_SESSION_COOKIE secret can then be deleted")
+            log("   no project exists and one cannot be created from here")
+            log("   itch.io has no API for creating a project, and its web")
+            log("   login is behind a bot challenge that this will not work")
+            log("   around. Create one empty project once, by hand:")
+            log("     https://itch.io/settings/mine/new/game")
+            log("   then record where it lives:")
+            log("     python set_itch_url.py <slug> "
+                "https://slingshot-tools.itch.io/<project>")
+            log("   after that every release uploads with the API key alone")
             return False
         url = create_project(title, slug, price, (PAID / slug / "icon.png"),
                              session=cookie)

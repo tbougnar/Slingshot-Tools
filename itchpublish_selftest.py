@@ -269,6 +269,68 @@ check("and the token is allowed to ask, which it is not by default",
       "workflow_dispatch is refused with 'Resource not accessible by "
       "integration' without actions: write")
 
+print("\nTHE API KEY IS ENOUGH, SO NO SESSION IS LOOKED FOR\n")
+# Run 38636758615: publish() asked find_game() whether the project existed,
+# every API path answers 'invalid api endpoint', so it always said no and went
+# to the browser for a session, which the bot challenge refuses. The key can
+# upload on its own, so a project that the catalogue already points at must go
+# straight to the upload without asking for a session at all.
+_real = (ip.load_catalog, ip.page_is_live, ip.working_session,
+         ip.find_installer, ip.upload, ip.log, ip.save_catalog,
+         ip.CATALOG, ip.record, ip.remember, ip.STATE)
+_tried_session = []
+_touched_catalog = []
+_state_before = (ROOT / "data" / "itch.json").read_text(
+    encoding="utf-8") if (ROOT / "data" / "itch.json").exists() else ""
+_catalog_before = (ROOT / "site" / "apps.json").read_text(encoding="utf-8")
+
+
+def _no_session():
+    _tried_session.append(1)
+    return ""
+
+
+def _no_write(apps):
+    _touched_catalog.append(apps)
+
+
+try:
+    ip.load_catalog = lambda: [
+        {"base_slug": "thing", "itch_url": "https://slingshot-tools.itch.io/thing"}]
+    ip.page_is_live = lambda url: url.endswith("/thing")
+    ip.working_session = _no_session
+    ip.find_installer = lambda slug: pathlib.Path(__file__)
+    ip.upload = lambda installer, slug, version: True
+    ip.log = lambda *a, **k: None
+    # publish() reaches record() once the upload succeeds, and record() writes
+    # whatever load_catalog returned. Patching the reader without also
+    # intercepting the writer replaced the real 48-entry catalogue with this
+    # test's one entry when this was first written. A test must not be able to
+    # damage the store front, so the write is captured instead of performed.
+    ip.save_catalog = _no_write
+    ip.record = lambda slug, url, price: True
+    # remember() appends to data/itch.json the same way, and did so here too.
+    ip.remember = lambda slug, url: None
+    ip.publish("thing", "Thing", 3.0)
+finally:
+    (ip.load_catalog, ip.page_is_live, ip.working_session,
+     ip.find_installer, ip.upload, ip.log, ip.save_catalog,
+     ip.CATALOG, ip.record, ip.remember, ip.STATE) = _real
+
+check("a catalogue entry with a live page does not ask for a session",
+      not _tried_session,
+      "publish() went to the browser for a cookie that the API key does not "
+      "need, and the bot challenge stops every attempt")
+
+_state_after = (ROOT / "data" / "itch.json").read_text(
+    encoding="utf-8") if (ROOT / "data" / "itch.json").exists() else ""
+check("and this test leaves the catalogue and the store state untouched",
+      (ROOT / "site" / "apps.json").read_text(encoding="utf-8")
+      == _catalog_before and _state_after == _state_before,
+      "a selftest rewrote site/apps.json or data/itch.json. Patching the "
+      "reader without also intercepting the writers destroyed the store "
+      "front: site/apps.json went from 48 entries to 1.")
+
 print()
 print("FAILURES:", fails if fails else "none")
 sys.exit(1 if fails else 0)
