@@ -527,13 +527,17 @@ def upload(installer: Path, slug: str, version: str) -> bool:
     cmd = [exe, "push", str(installer), target]
     if version:
         cmd += ["--userversion", version]
+    # butler itself tells CI to hand over the key in the environment rather
+    # than in a file or an argument, because an argument is visible in the
+    # process list to everything else on the runner.
+    env = dict(os.environ)
     ident = None
     if KEY:
-        ident = _identity_file(KEY)
-        cmd += [f"--identity={ident}"]
+        env["BUTLER_API_KEY"] = KEY
     log(f"butler: pushing to {target}")
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=1800,
+                           env=env)
     except (OSError, subprocess.SubprocessError) as e:
         log(f"butler could not run: {e}")
         return False

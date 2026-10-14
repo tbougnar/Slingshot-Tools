@@ -149,27 +149,35 @@ def main() -> int:
         stub = Path(tempfile.gettempdir()) / "slingshot-doctor-stub.zip"
         try:
             stub.write_bytes(b"PK\x05\x06" + b"\x00" * 18)
-            ident = ip._identity_file(key)
             r = subprocess.run(
                 [butler, "push", str(stub),
-                 f"{user}/doctor-probe-does-not-exist:windows-64",
-                 f"--identity={ident}"],
-                capture_output=True, text=True, timeout=240)
-            Path(ident).unlink(missing_ok=True)
+                 f"{user}/doctor-probe-does-not-exist:windows-64"],
+                capture_output=True, text=True, timeout=240,
+                env={**os.environ, "BUTLER_API_KEY": key})
             said = ((r.stdout or "") + (r.stderr or "")).strip()
             _out(f"   butler push to a project that does not exist exited "
                  f"{r.returncode}")
             for ln in said.splitlines()[-6:]:
                 _out(f"     {ln}")
             low = said.lower()
-            if "unauthor" in low or "forbidden" in low \
-                    or "api key" in low or "invalid" in low:
+            # A refused key is 401/403 or an explicit auth complaint. A 400
+            # "invalid game" is the opposite: it means the key got all the way
+            # to the builds endpoint and only the project name was unknown.
+            # Reading "invalid" as a credential failure inverted the answer
+            # the first time this ran.
+            if ("unauthorized" in low or "forbidden" in low
+                    or "401" in low or "403" in low
+                    or "api key" in low and "invalid" in low):
                 _out("   -> the key is REFUSED by itch.io")
                 key_ok = False
-            elif "not found" in low or "does not exist" in low \
-                    or "no such" in low:
-                _out("   -> the key is ACCEPTED. The project name is simply"
-                     " not one that exists, which is the answer we wanted.")
+            elif ("invalid game" in low or "not found" in low
+                    or "no such" in low or "400" in low):
+                _out("   -> the key is ACCEPTED. The request reached the builds"
+                     " endpoint and only the project name was unknown, which"
+                     " is the answer we wanted.")
+                key_ok = True
+            elif "success" in low or "uploaded" in low:
+                _out("   -> the key is ACCEPTED")
                 key_ok = True
             else:
                 _out("   -> butler's answer was not one of the expected"
