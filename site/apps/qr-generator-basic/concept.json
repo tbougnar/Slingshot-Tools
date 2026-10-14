@@ -1,15 +1,9 @@
 {
   "slug": "qr-generator-basic",
+  "brand": "",
   "title": "QR code generator",
   "tag": "qr",
-  "blurb": "QR code generator that works fully offline",
-  "tags": [
-    "QR",
-    "code",
-    "generator",
-    "that"
-  ],
-  "brand": "",
+  "blurb": "",
   "tier": "basic",
   "base_slug": "qr-generator"
 }

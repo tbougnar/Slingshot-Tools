@@ -1,5 +1,47 @@
 [
   {
+    "slug": "qr-generator",
+    "base_slug": "qr-generator",
+    "title": "QR code generator",
+    "tier": "full",
+    "tag": "qr",
+    "blurb": "A small, focused qr tool. QR code generator does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "qr",
+      "code",
+      "generator"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/qr-generator-basic/",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-14"
+  },
+  {
+    "slug": "qr-generator-basic",
+    "base_slug": "qr-generator",
+    "title": "QR code generator (Basic)",
+    "tier": "basic",
+    "tag": "qr",
+    "blurb": "A small, focused qr tool. QR code generator does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "qr",
+      "code",
+      "generator"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/qr-generator-basic/",
+    "download": "",
+    "price": 0.0,
+    "free": true,
+    "differences": [],
+    "published": true,
+    "badge": "New",
+    "date": "2026-10-14"
+  },
+  {
     "slug": "bmi-calculator",
     "base_slug": "bmi-calculator",
     "title": "Fitness calculator",
