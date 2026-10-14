@@ -1,0 +1,15 @@
+{
+  "slug": "random-team-basic",
+  "title": "Random team and shuffle picker",
+  "tag": "random",
+  "blurb": "random team and shuffle picker for events",
+  "tags": [
+    "random",
+    "team",
+    "and",
+    "shuffle"
+  ],
+  "brand": "",
+  "tier": "basic",
+  "base_slug": "random-team"
+}

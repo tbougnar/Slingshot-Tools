@@ -1,0 +1,11 @@
+{
+ "slug": "random-team",
+ "brand": "",
+ "title": "Random team and shuffle picker",
+ "tag": "random",
+ "differences": "",
+ "free_blurb": "",
+ "paid_blurb": "",
+ "candidate": "site/apps/random-team-basic/app/index.html",
+ "paid_dir": "paid/random-team"
+}
