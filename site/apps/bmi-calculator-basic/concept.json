@@ -1,0 +1,15 @@
+{
+  "slug": "bmi-calculator-basic",
+  "title": "Fitness calculator",
+  "tag": "bmi",
+  "blurb": "fitness calculator with metric and imperial",
+  "tags": [
+    "fitness",
+    "calculator",
+    "with",
+    "metric"
+  ],
+  "brand": "",
+  "tier": "basic",
+  "base_slug": "bmi-calculator"
+}
