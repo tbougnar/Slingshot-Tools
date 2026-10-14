@@ -158,6 +158,42 @@ def groq(system, user, max_tokens=4000, temperature=0.8, tries=3):
                 time.sleep(1.5 * (attempt + 1))
     raise RuntimeError(f"every model failed: {last}")
 
+def _json_string_body(text: str) -> str | None:
+    """The body of the JSON string that starts at the first quote in text.
+
+    A regex to the end of the reply captures the closing quote and whatever the
+    model said after the JSON, so json.loads always fails and everything falls
+    through to the substitutions below. Those then turned \\n into a real
+    newline, which terminates a regex literal: b.split(/\\n/) became b.split(/
+    ), and node answered "Invalid regular expression: missing /" on every
+    attempt for a week.
+
+    Walking the escapes to find the real closing quote is the whole fix. It is
+    the only place the difference between a well-formed reply and a guess is
+    decided.
+    """
+    start = text.find('"')
+    if start < 0:
+        return None
+    i = start + 1
+    out = []
+    n = len(text)
+    while i < n:
+        c = text[i]
+        if c == "\\":
+            if i + 1 >= n:
+                return None
+            out.append(c)
+            out.append(text[i + 1])
+            i += 2
+            continue
+        if c == '"':
+            return "".join(out)
+        out.append(c)
+        i += 1
+    return None       # truncated, the model ran out before closing it
+
+
 def best_variant(html: str) -> tuple[str, bool]:
     """Return the first escaping variant whose scripts actually parse.
 
@@ -283,13 +319,22 @@ def _salvage_html(raw):
         return None
     text = raw
 
-    # 1. a JSON string value, which may be cut off mid-document
-    m = re.search(r'"html"\s*:\s*"(.*)$', text, re.S)
+    # 1. a JSON string value, which may be cut off mid-document. The body is
+    # taken by walking the escapes to the real closing quote, not by matching
+    # to the end of the reply, so trailing prose does not make the decode fail
+    # and force the substitutions that mangle regexes.
+    m = re.search(r'"html"\s*:\s*"', text)
     if m:
-        text = m.group(1)
-        text = _unescape(text)
-        if text.endswith('"'):
-            text = text[:-1]
+        body = _json_string_body(text[m.end() - 1:])
+        if body is not None:
+            decoded = _one_json_decode(body)
+            if decoded is not None:
+                text = decoded
+            else:
+                text = _unescape(body)
+        else:
+            # truncated before the string closed: salvage what is there
+            text = _unescape(text[m.end():])
 
     # 2. drop markdown fences if they survived
     text = re.sub(r"```(?:html|HTML)?", "", text)
