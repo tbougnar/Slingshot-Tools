@@ -198,7 +198,13 @@ def _unescape(text: str) -> str:
     # app reached the gate with \\"full\\" still in it and every handler dead.
     for _ in range(3):
         before = out
-        out = out.replace('\\"', '"').replace("\\'", "'")
+        # Only quotes get a layer removed. Replacing \\' with ' is wrong:
+        # an escaped single quote inside a JavaScript string is a valid escape,
+        # and stripping its backslash turns "it\'s" into "it's", which does not
+        # parse. That is what five consecutive generate attempts were refused
+        # for, and the messages all pointed at the same line of the app's
+        # script rather than at this.
+        out = out.replace('\\"', '"')
         decoded = _one_json_decode(out.rstrip())
         if decoded is not None:
             return decoded
