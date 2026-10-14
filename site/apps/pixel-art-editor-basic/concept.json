@@ -1,15 +1,9 @@
 {
   "slug": "pixel-art-editor-basic",
+  "brand": "",
   "title": "Tiny pixel art editor",
   "tag": "pixel",
-  "blurb": "tiny pixel art editor with undo and export",
-  "tags": [
-    "tiny",
-    "pixel",
-    "art",
-    "editor"
-  ],
-  "brand": "",
+  "blurb": "",
   "tier": "basic",
   "base_slug": "pixel-art-editor"
 }

@@ -1,5 +1,47 @@
 [
   {
+    "slug": "pixel-art-editor",
+    "base_slug": "pixel-art-editor",
+    "title": "Tiny pixel art editor",
+    "tier": "full",
+    "tag": "pixel",
+    "blurb": "A small, focused pixel tool. Tiny pixel art editor does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "pixel",
+      "art",
+      "editor"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/pixel-art-editor-basic/",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-14"
+  },
+  {
+    "slug": "pixel-art-editor-basic",
+    "base_slug": "pixel-art-editor",
+    "title": "Tiny pixel art editor (Basic)",
+    "tier": "basic",
+    "tag": "pixel",
+    "blurb": "A small, focused pixel tool. Tiny pixel art editor does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "pixel",
+      "art",
+      "editor"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/pixel-art-editor-basic/",
+    "download": "",
+    "price": 0.0,
+    "free": true,
+    "differences": [],
+    "published": true,
+    "badge": "New",
+    "date": "2026-10-14"
+  },
+  {
     "slug": "qr-generator",
     "base_slug": "qr-generator",
     "title": "QR code generator",
