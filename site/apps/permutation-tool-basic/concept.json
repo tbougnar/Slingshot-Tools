@@ -1,15 +1,9 @@
 {
   "slug": "permutation-tool-basic",
+  "brand": "",
   "title": "String permutation and combination generator",
   "tag": "permutation",
-  "blurb": "string permutation and combination generator",
-  "tags": [
-    "string",
-    "permutation",
-    "and",
-    "combination"
-  ],
-  "brand": "",
+  "blurb": "",
   "tier": "basic",
   "base_slug": "permutation-tool"
 }

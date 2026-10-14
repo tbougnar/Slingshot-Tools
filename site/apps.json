@@ -1,5 +1,49 @@
 [
   {
+    "slug": "permutation-tool",
+    "base_slug": "permutation-tool",
+    "title": "String permutation and combination generator",
+    "tier": "full",
+    "tag": "permutation",
+    "blurb": "A small, focused permutation tool. String permutation and combination generator does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "permutation",
+      "string",
+      "combination",
+      "generator"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/permutation-tool-basic/",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-14"
+  },
+  {
+    "slug": "permutation-tool-basic",
+    "base_slug": "permutation-tool",
+    "title": "String permutation and combination generator (Basic)",
+    "tier": "basic",
+    "tag": "permutation",
+    "blurb": "A small, focused permutation tool. String permutation and combination generator does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "permutation",
+      "string",
+      "combination",
+      "generator"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/permutation-tool-basic/",
+    "download": "",
+    "price": 0.0,
+    "free": true,
+    "differences": [],
+    "published": true,
+    "badge": "New",
+    "date": "2026-10-14"
+  },
+  {
     "slug": "coin-toss",
     "base_slug": "coin-toss",
     "title": "Coin flip and dice roller",
