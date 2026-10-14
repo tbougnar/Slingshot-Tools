@@ -220,6 +220,34 @@ check("stage_app does not fail the release when it produced nothing",
 check("and it keeps the offending script for the self-heal job",
       "data" in _sa and "rejected" in _sa)
 
+print("\nA RELEASE MUST ACTUALLY REACH THE PUBLIC SITE\n")
+# Every commit the automation made carried [skip ci], which tells GitHub to
+# skip workflow runs for that push. pages.yml is the only workflow that deploys
+# the site, so every automated release deployed nothing and the site only
+# changed when a person pushed. Run 38594364070 verified pomodoro-timer and
+# https://tbougnar.github.io/Slingshot-Tools/apps/pomodoro-timer-basic/ was
+# 404 afterwards.
+_vwf = (ROOT / ".github" / "workflows" / "friday-verify.yml").read_text(
+    encoding="utf-8")
+check("no commit the release makes suppresses the deploy",
+      "[skip ci]" not in _vwf,
+      "[skip ci] stops the only workflow that publishes the site")
+_pg = yaml.safe_load((ROOT / ".github" / "workflows" / "pages.yml")
+                     .read_text(encoding="utf-8"))
+check("and pages deploys on a push that touches site/",
+      any("site/**" in str(p) for p in
+          (_pg.get(True, {}).get("push", {}).get("paths") or [])))
+for _w in ("friday-build.yml", "friday-verify.yml"):
+    _d = yaml.safe_load((ROOT / ".github" / "workflows" / _w)
+                        .read_text(encoding="utf-8"))
+    _on = _d.get(True, {})
+    check(f"{_w} does not run on a push, so removing [skip ci] cannot loop",
+          "push" not in _on, f"it triggers on push: {_on}")
+check("and pages.yml commits nothing back, so it cannot loop either",
+      not any("git push" in str(s.get("run", ""))
+              for s in _pg["jobs"]["deploy"]["steps"]),
+      "it pushes, so removing [skip ci] would loop")
+
 print()
 print("FAILURES:", fails if fails else "none")
 sys.exit(1 if fails else 0)

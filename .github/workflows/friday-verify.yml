@@ -94,7 +94,7 @@ jobs:
           git config user.name "slingshot-bot"
           git config user.email "bot@users.noreply.github.com"
           git add -A
-          git commit -q -m "feat: verified new Slingshot Tool [skip ci]" || echo "nothing to commit"
+          git commit -q -m "feat: verified new Slingshot Tool" || echo "nothing to commit"
           git fetch origin main
           git rebase origin/main || git -c rebase.autoStash=true pull --rebase origin main
           git fetch origin main && git pull --rebase origin main && git push || (git pull --rebase origin main && git push) || echo "push failed"
@@ -312,7 +312,7 @@ jobs:
           git config user.name "slingshot-bot"
           git config user.email "bot@users.noreply.github.com"
           git add -A
-          git commit -q -m "build: windows installer [skip ci]" || echo "nothing to commit"
+          git commit -q -m "build: windows installer" || echo "nothing to commit"
           git fetch origin main && git pull --rebase origin main && git push || (git pull --rebase origin main && git push) || echo "push failed"
 
       - name: Commit and publish the site
@@ -320,7 +320,7 @@ jobs:
           git config user.name "slingshot-bot"
           git config user.email "bot@users.noreply.github.com"
           git add -A
-          git commit -q -m "feat: verified new Slingshot Tool [skip ci]" || echo "nothing to commit"
+          git commit -q -m "feat: verified new Slingshot Tool" || echo "nothing to commit"
           git fetch origin main && git pull --rebase origin main && git push || (git pull --rebase origin main && git push) || echo "push failed"
 
       # This runs last on purpose. The free edition has shipped by now, which
