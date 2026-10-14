@@ -98,7 +98,11 @@ jobs:
                  "built or published and the previous release stays live"
           fi
 
+      # Only when there is a paid build to hand over. With no candidate the
+      # verifier writes nothing to paid/, and "No files were found" failed the
+      # job on every week where generation produced nothing.
       - name: Upload the paid build for the Windows installer
+        if: steps.fresh.outputs.fresh == 'yes'
         uses: actions/upload-artifact@v4
         with:
           name: paid-build

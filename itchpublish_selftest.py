@@ -185,18 +185,27 @@ check("and the check is not defeated by the verifier deleting the file",
       "git ls-files" in _frun or "git ls-tree" in _frun,
       "verify_app unlinks data/candidate.json before this step runs, so a "
       "file test always says no and the installer never builds anything")
+check("the paid build is only uploaded when there is one",
+      next((s.get("if") for s in _wf["jobs"]["verify"]["steps"]
+            if "Upload the paid build" in str(s.get("name"))), None)
+      == "steps.fresh.outputs.fresh == 'yes'",
+      "paid/ is empty on an empty week and 'No files were found' failed it")
 check("so the whole job is skipped, not just one step of it",
       _wf["jobs"]["installer"].get("if") is not None,
       "gating steps individually is a condition a later step forgets")
 
 _vs = (ROOT / "verify_app.py").read_text(encoding="utf-8")
-if "no candidate was produced" in _vs:
-    _seg = _vs.split("no candidate was produced")[1].split("stage = json.loads")[0]
-else:
-    _seg = ""
+_seg = ""
+for _anchor in ("no candidate was produced", "no candidate staged, so there is"):
+    if _anchor in _vs:
+        _seg = _vs.split(_anchor)[1].split("stage = json.loads")[0]
+        break
 check("verify_app treats no candidate as nothing to do, not a failure",
       "return 0" in _seg and "return 1" not in _seg,
       f"it still fails the job on a legitimate empty week: {_seg[-120:]!r}")
+check("and it does not sit waiting for a candidate that will not arrive",
+      "time.sleep" not in _vs,
+      "three minutes of sleep on every empty week, every week")
 _sa = (ROOT / "stage_app.py").read_text(encoding="utf-8")
 check("stage_app does not fail the release when it produced nothing",
       "not_verified(" in _sa,
