@@ -1,15 +1,9 @@
 {
   "slug": "breathing-exercise-basic",
+  "brand": "",
   "title": "Breathing exercise guide",
   "tag": "breathing",
-  "blurb": "breathing exercise guide with animated timer",
-  "tags": [
-    "breathing",
-    "exercise",
-    "guide",
-    "with"
-  ],
-  "brand": "",
+  "blurb": "",
   "tier": "basic",
   "base_slug": "breathing-exercise"
 }

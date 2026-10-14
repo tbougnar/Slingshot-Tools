@@ -1,5 +1,47 @@
 [
   {
+    "slug": "breathing-exercise",
+    "base_slug": "breathing-exercise",
+    "title": "Breathing exercise guide",
+    "tier": "full",
+    "tag": "breathing",
+    "blurb": "A small, focused breathing tool. Breathing exercise guide does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "breathing",
+      "exercise",
+      "guide"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/breathing-exercise-basic/",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-14"
+  },
+  {
+    "slug": "breathing-exercise-basic",
+    "base_slug": "breathing-exercise",
+    "title": "Breathing exercise guide (Basic)",
+    "tier": "basic",
+    "tag": "breathing",
+    "blurb": "A small, focused breathing tool. Breathing exercise guide does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "breathing",
+      "exercise",
+      "guide"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/breathing-exercise-basic/",
+    "download": "",
+    "price": 0.0,
+    "free": true,
+    "differences": [],
+    "published": true,
+    "badge": "New",
+    "date": "2026-10-14"
+  },
+  {
     "slug": "permutation-tool",
     "base_slug": "permutation-tool",
     "title": "String permutation and combination generator",
