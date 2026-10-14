@@ -234,6 +234,21 @@ jobs:
       # invisible: the job went green with nothing on sale. What was wrong was
       # the silence, not the failure, so it is now written where the next step
       # and the run summary both have to see it.
+      # Reports which parts of the itch.io path actually work: the key,
+      # the account, whether a project can be created through the API, and
+      # whether a stored cookie is still good. Read-only. The publish step
+      # below is where a failure used to be the only clue.
+      - name: Report what itch.io will allow
+        if: always()
+        continue-on-error: true
+        run: python itch_doctor.py
+        env:
+          ITCH_USER: ${{ vars.ITCH_USER }}
+          ITCH_API_KEY: ${{ secrets.ITCH_API_KEY }}
+          ITCH_SESSION_COOKIE: ${{ secrets.ITCH_SESSION_COOKIE }}
+          ITCH_LOGIN: ${{ secrets.ITCH_LOGIN }}
+          ITCH_PASSWORD: ${{ secrets.ITCH_PASSWORD }}
+
       - name: Put the tool on itch.io, then publish it on the site
         id: publish
         continue-on-error: true
