@@ -1,0 +1,11 @@
+{
+ "slug": "json-formatter",
+ "brand": "",
+ "title": "JSON viewer and formatter",
+ "tag": "json",
+ "differences": [],
+ "free_blurb": "",
+ "paid_blurb": "",
+ "candidate": "site/apps/json-formatter-basic/app/index.html",
+ "paid_dir": "paid/json-formatter"
+}
