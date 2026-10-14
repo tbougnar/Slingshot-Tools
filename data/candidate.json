@@ -1,0 +1,11 @@
+{
+ "slug": "pomodoro-timer",
+ "brand": "",
+ "title": "Focus timer",
+ "tag": "pomodoro",
+ "differences": "",
+ "free_blurb": "",
+ "paid_blurb": "",
+ "candidate": "site/apps/pomodoro-timer-basic/app/index.html",
+ "paid_dir": "paid/pomodoro-timer"
+}
