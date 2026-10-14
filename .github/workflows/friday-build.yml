@@ -51,6 +51,13 @@ jobs:
           python -m pip install --quiet pillow requests pyinstaller pywebview playwright pyyaml
           python -m playwright install chromium
           choco install nsis -y --no-progress
+          # The community feed returns 406 now and then, which is a transient
+          # outage and not a reason to fail a release. Try twice.
+          if (-not (Test-Path "$env:ProgramFiles\NSIS\makensis.exe")) {
+            Write-Output "::warning::NSIS was not installed; trying once more"
+            Start-Sleep -Seconds 20
+            choco install nsis -y --no-progress
+          }
           # choco installs NSIS but this step's PATH is the one from before the
           # install, so makensis was "not recognised" straight after a
           # successful choco run. Look in the install location directly rather
@@ -60,9 +67,16 @@ jobs:
             $makensis = "${env:ProgramFiles(x86)}\NSIS\makensis.exe"
           }
           if (-not (Test-Path $makensis)) {
-            Write-Output "::error::NSIS installed but makensis.exe was not found"
+            # A warning, not a failure. This job generates and verifies the
+            # app; NSIS only builds the optional installer, and stage_app.py
+            # ships a portable folder when it is absent. Exiting here turned a
+            # chocolatey hiccup into a release with no app at all, which is a
+            # much worse outcome than a release with no installer.
+            Write-Output "::warning::NSIS is unavailable, so no installer will" `
+                        "be built this week. The app is still generated and" `
+                        "verified. The installer job on windows-latest builds it."
             Get-ChildItem "C:\Program Files*\NSIS" -ErrorAction SilentlyContinue
-            exit 1
+            exit 0
           }
           Write-Output "makensis at $makensis"
           & $makensis /VERSION

@@ -113,6 +113,14 @@ jobs:
       - name: Install build tools
         run: |
           choco install nsis -y --no-progress
+          # The community feed returns 406 now and then. Try again before
+          # declaring the paid edition unbuildable, because the installer is
+          # the whole point of this job.
+          if (-not (Test-Path "$env:ProgramFiles\NSIS\makensis.exe")) {
+            Write-Output "::warning::NSIS was not installed; trying once more"
+            Start-Sleep -Seconds 20
+            choco install nsis -y --no-progress
+          }
           # playwright and its browser are needed here, not only in the verify
           # job. itch_publish logs in through a browser when the stored session
           # cookie is refused, and without this it stopped with "playwright is
