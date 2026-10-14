@@ -201,11 +201,40 @@ def mint_session() -> str:
                 # the page has that shape.
                 filled_user, filled_pass = _fill_by_shape(page, user, password)
             if not (filled_user and filled_pass):
+                # The one case that no amount of fixing the form solves.
+                # itch.io sits behind Cloudflare Turnstile, which shows a "Just
+                # a moment..." interstitial with a single hidden
+                # cf-turnstile-response input to a headless browser. It is a
+                # bot check, not a login form, and it cannot be automated away
+                # without evading an anti-abuse control, which is not
+                # something this will do.
+                try:
+                    title = page.title() or ""
+                    turnstile = bool(page.query_selector(
+                        "input[name='cf-turnstile-response']"))
+                except Exception:  # noqa: BLE001
+                    title, turnstile = "", False
+                if turnstile or "just a moment" in title.lower():
+                    log("itch.io served a Cloudflare bot challenge instead of "
+                        "the login form")
+                    log("  a headless browser cannot pass a Turnstile check, "
+                        "and working around one is not something this does")
+                    log("  the way in is a session cookie from a browser you "
+                        "have logged in with:")
+                    log("  gh secret set ITCH_SESSION_COOKIE "
+                        "--repo tbougnar/Slingshot-Tools")
+                    auditlog.blocked(
+                        "itch-login",
+                        reason="itch.io served a Cloudflare Turnstile "
+                               "challenge; a headless browser cannot pass it",
+                        evidence={"title": title})
+                    browser.close()
+                    return ""
                 log(f"the login form was not what was expected "
                     f"(user field: {filled_user}, password field: "
                     f"{filled_pass})")
                 try:
-                    log(f"  the page is titled {page.title()!r} and has "
+                    log(f"  the page is titled {title!r} and has "
                         f"{len(page.query_selector_all('input'))} input(s): "
                         + ", ".join(
                             (el.get_attribute("name") or el.get_attribute("id")

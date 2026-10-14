@@ -325,28 +325,27 @@ FOUND = [
     # ---- external blockers: confirmed, not fixable from here
     ("the itch.io session cookie is expired, so nothing can be uploaded",
      "HIGH", "itch.io publishing", ["itch_publish.py"], "BLOCKED",
-     "The repository held an ITCH_SESSION_COOKIE that itch.io refuses. This is "
-     "a credential that expires, and it was the only way in, so the pipeline "
-     "needed a person to paste a new one every few weeks. It cannot be "
-     "generated from here; the account holder has to supply credentials once.",
-     "Run 38427165880: '[itch] could not check the session: HTTP Error 404: "
-     "Not Found' followed by 'the session cookie is expired or was refused'. "
-     "The release gate then failed the run with PUBLISHED=no, which is the "
-     "correct outcome.",
-     "python itch_publish.py with credentials present",
-     "The expiring dependency is gone from the design. itch_publish now logs "
-     "in with ITCH_LOGIN and ITCH_PASSWORD, which do not expire, and mints its "
-     "own session whenever the stored cookie is refused. Those two secrets "
-     "have to be set once by the account holder; until they are, the upload is "
-     "still blocked.",
-     "itchpublish_selftest.py covers the login path, that the password is "
-     "neither logged nor written, and that a refused cookie leads to a login "
-     "rather than to a person",
-     "itchpublish_selftest.py: FAILURES: none. The publishing path up to the "
-     "credential is verified working in CI: the Windows installer is built, "
-     "uploaded as an artifact and offered to itch.io.",
-     "Needs ITCH_LOGIN and ITCH_PASSWORD set as repository secrets. The "
-     "expiring ITCH_SESSION_COOKIE can then be deleted."),
+     "itch.io sits behind a Cloudflare Turnstile bot challenge. A headless "
+     "browser is served a 'Just a moment...' interstitial with a single "
+     "hidden cf-turnstile-response input instead of the login form, so the "
+     "permanent-credentials login cannot run at all. Getting past a bot check "
+     "is evading an anti-abuse control, which this will not do, so the "
+     "expiring session cookie remains the only way in and a person must supply "
+     "it.", "Run 38592104107: 'the login form was not what was expected' "
+     "followed by 'the page is titled 'Just a moment...' and has 1 input(s): "
+     "cf-turnstile-response'. The page it wanted to fill was never a form.",
+     "gh run view 38592104107 --log",
+     "The turnstile case is detected and named for what it is, with the "
+     "honest consequence, rather than being reported as a form that could not "
+     "be filled. Everything up to it is verified working: the installer is "
+     "built in CI, uploaded as an artifact, and the publish attempt reaches "
+     "itch.io.",
+     "itchpublish_selftest.py",
+     "itchpublish_selftest.py: FAILURES: none. The publishing path is proven "
+     "as far as the bot check and no further.",
+     "Needs a session cookie pasted once by the account holder. The permanent "
+     "login is kept in the code because a Turnstile policy change, or a "
+     "non-headless runner, would let it work without anyone doing anything."),
 
     ("no product has ever been uploaded to itch.io",
      "CRITICAL", "itch.io publishing", ["site/apps.json"], "BLOCKED",

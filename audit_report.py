@@ -265,11 +265,10 @@ def main() -> int:
     section("H. Remaining risks")
     print("| Risk | Why it is still open |")
     print("|---|---|")
-    print("| Nothing is for sale | itch.io account credentials have never been "
-          "set, so the publisher cannot log in and mint a session. The "
-          "expiring session cookie that used to be needed is no longer "
-          "required; two permanent credentials are. Everything up to that "
-          "point is verified |")
+    print("| Nothing is for sale | itch.io serves a Cloudflare Turnstile bot "
+          "challenge to the headless browser that would log in, so no "
+          "automated session can be established. The store has been fetched "
+          "and lists nothing. Everything up to that point is verified |")
     print("| No purchase has ever been exercised | dependent on the above. No "
           "money was spent and no checkout was bypassed at any point |")
     print("| The Windows installer has not been run on a customer machine | CI "
@@ -300,32 +299,36 @@ def main() -> int:
               f"{stats['by_status']['VERIFIED_FIXED']} of {stats['total']}, "
               "with zero open.")
         print()
-        print("The work that remains cannot be done from here. No product has "
-              "ever been uploaded to itch.io, because the account credentials "
-              "have never been added to the repository secrets, and only the "
-              "account holder can add them. The purchase journey cannot be "
-              "exercised at all until one upload succeeds.")
+        print("The work that remains cannot be done from here, and the reason "
+              "is now known exactly rather than guessed at. itch.io sits "
+              "behind a Cloudflare Turnstile bot challenge: a headless browser "
+              "is served a \"Just a moment...\" page with a single hidden "
+              "cf-turnstile-response input instead of the login form. Getting "
+              "past a bot check is evading an anti-abuse control, and this "
+              "will not do that.")
         print()
-        print("The code is not what is stopping this. The publishing path was "
-              "exercised end to end in CI: the Windows installer was built, "
-              "uploaded as an artifact, and offered to itch.io, which refused "
-              "the credential.")
+        print("So the session cookie stays. It is the one credential that "
+              "expires, and it is the price of a store that checks for bots. "
+              "The permanent-credentials login is kept in the code because it "
+              "is the right design and would work on a runner that is not "
+              "headless, or if itch.io's policy changes.")
         print()
-        print("This is also the last recurring failure. It used to be a "
-              "session cookie that expired every few weeks and needed a "
-              "person to paste a new one into the secrets. That dependency is "
-              "gone: the publisher now logs in with the account credentials, "
-              "which do not expire, and mints its own session. Set these two "
-              "once and nobody has to touch the credentials again:")
+        print("Everything up to that point is verified working. The pipeline "
+              "runs green end to end: it generates a product, validates its "
+              "javascript, scans it in a real browser, builds a Windows "
+              "installer, uploads it as an artifact, and offers it to itch.io, "
+              "which serves the bot challenge.")
+        print()
+        print("To finish, paste a cookie from a browser you have logged in "
+              "with. It expires, and that is the whole remaining cost:")
         print()
         print("```")
-        print("gh secret set ITCH_LOGIN --repo tbougnar/Slingshot-Tools")
-        print("gh secret set ITCH_PASSWORD --repo tbougnar/Slingshot-Tools")
+        print("gh secret set ITCH_SESSION_COOKIE --repo tbougnar/Slingshot-Tools")
         print("```")
         print()
-        print("After that, dispatch `friday-build.yml`. The pipeline will "
-              "build, upload, verify the page answers, publish the site and "
-              "announce it, with no manual step.")
+        print("After that, dispatch `friday-build.yml`. The pipeline builds, "
+              "uploads, verifies the page answers, publishes the site and "
+              "announces it, with no manual step.")
     else:
         print("**PASS — ZERO KNOWN ACTIONABLE BUGS WITHIN VERIFIED SCOPE**")
     print()
