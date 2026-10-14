@@ -1,15 +1,9 @@
 {
   "slug": "ebook-converter-notes-basic",
+  "brand": "",
   "title": "Reading notes organizer",
   "tag": "ebook",
-  "blurb": "reading notes organizer with highlights",
-  "tags": [
-    "reading",
-    "notes",
-    "organizer",
-    "with"
-  ],
-  "brand": "",
+  "blurb": "",
   "tier": "basic",
   "base_slug": "ebook-converter-notes"
 }
