@@ -1,0 +1,11 @@
+{
+ "slug": "regex-tester",
+ "brand": "",
+ "title": "Regex tester",
+ "tag": "regex",
+ "differences": "",
+ "free_blurb": "",
+ "paid_blurb": "",
+ "candidate": "site/apps/regex-tester-basic/app/index.html",
+ "paid_dir": "paid/regex-tester"
+}

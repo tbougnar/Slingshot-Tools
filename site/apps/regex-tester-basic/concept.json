@@ -1,0 +1,15 @@
+{
+  "slug": "regex-tester-basic",
+  "title": "Regex tester",
+  "tag": "regex",
+  "blurb": "regex tester with live matches and explanation",
+  "tags": [
+    "regex",
+    "tester",
+    "with",
+    "live"
+  ],
+  "brand": "",
+  "tier": "basic",
+  "base_slug": "regex-tester"
+}
