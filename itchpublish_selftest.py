@@ -428,6 +428,18 @@ check("butler is told the project from the page, not the product slug",
       f"upload got slug={_seen.get('slug')!r} project={_seen.get('project')!r},"
       " so itch.io was asked for a project that does not exist")
 
+print("\nTHE INSTALLER SEES THE CATALOGUE THE VERIFY JOB WROTE\n")
+# Run 38804041777 uploaded successfully and then said 'calendar-diff is not in
+# the catalog'. The installer job checked out the commit that triggered the
+# run, which predates the verify job that adds the product, so the upload
+# landed and the product could never be marked published.
+check("the installer job checks out main, not the triggering commit",
+      any("checkout" in str(s.get("uses", ""))
+          and (s.get("with") or {}).get("ref") == "main"
+          for s in _wf["jobs"]["installer"]["steps"]),
+      "the product the installer uploads is added to site/apps.json by the "
+      "verify job, so an older tree cannot see it")
+
 print()
 print("FAILURES:", fails if fails else "none")
 sys.exit(1 if fails else 0)

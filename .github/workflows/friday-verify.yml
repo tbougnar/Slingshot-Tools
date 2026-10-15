@@ -143,7 +143,15 @@ jobs:
       PRICE_CEILING: '10.00'
       PRICE_START: "3.00"
     steps:
+      # main, not the commit that triggered this run. That commit predates the
+      # verify job, and the verify job is what adds the new product to
+      # site/apps.json. Checking out the old tree meant publish() uploaded
+      # successfully and then could not find its own product in the catalogue,
+      # so it could not mark it published. The paid build travels as an
+      # artifact and does not depend on this tree.
       - uses: actions/checkout@v4
+        with:
+          ref: main
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
