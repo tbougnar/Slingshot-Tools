@@ -1,0 +1,15 @@
+{
+  "slug": "note-taker-basic",
+  "title": "Quick note taker",
+  "tag": "note",
+  "blurb": "quick note taker with search and tags",
+  "tags": [
+    "quick",
+    "note",
+    "taker",
+    "with"
+  ],
+  "brand": "",
+  "tier": "basic",
+  "base_slug": "note-taker"
+}
