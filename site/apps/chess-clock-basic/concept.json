@@ -1,0 +1,15 @@
+{
+  "slug": "chess-clock-basic",
+  "title": "Chess clock",
+  "tag": "chess",
+  "blurb": "chess clock with move time history",
+  "tags": [
+    "chess",
+    "clock",
+    "with",
+    "move"
+  ],
+  "brand": "",
+  "tier": "basic",
+  "base_slug": "chess-clock"
+}
