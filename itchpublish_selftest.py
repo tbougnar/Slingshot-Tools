@@ -373,6 +373,21 @@ check("a product with no catalogue entry uses the store project",
       "publish() looked for a browser session for a product the catalogue "
       "had not seen yet, even though the store project is its home")
 
+print("\nTHE CHANNEL IN THE WORKFLOW IS ONE BUTLER ACCEPTS\n")
+# Run 38800... pinned ITCH_CHANNEL: "windows" in the workflow, which overrode
+# the corrected default and made butler answer 'invalid spec ... missing
+# channel'. The default being right is no protection if the workflow pins the
+# wrong value, so the pinned value itself is checked.
+_wftext = (ROOT / ".github" / "workflows" / "friday-verify.yml").read_text(
+    encoding="utf-8")
+_bad = [ln.strip() for ln in _wftext.splitlines()
+        if "ITCH_CHANNEL" in ln and '"windows"' in ln]
+check("no job pins a channel itch.io does not have", not _bad,
+      "butler refuses 'windows': invalid spec, missing channel. "
+      + "; ".join(_bad))
+check("and the jobs that upload use a real one",
+      _wftext.count('ITCH_CHANNEL: "windows-64"') >= 2)
+
 print()
 print("FAILURES:", fails if fails else "none")
 sys.exit(1 if fails else 0)
