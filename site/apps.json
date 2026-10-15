@@ -18,7 +18,8 @@
     "differences": [],
     "published": false,
     "badge": "New",
-    "date": "2026-10-15"
+    "date": "2026-10-15",
+    "itch_url": ""
   },
   {
     "slug": "chess-board-basic",
@@ -34,12 +35,13 @@
     ],
     "url": "https://tbougnar.github.io/Slingshot-Tools/apps/chess-board-basic/",
     "download": "",
-    "price": 0.0,
+    "price": 0,
     "free": true,
     "differences": [],
     "published": true,
     "badge": "New",
-    "date": "2026-10-15"
+    "date": "2026-10-15",
+    "itch_url": ""
   },
   {
     "slug": "note-taker",

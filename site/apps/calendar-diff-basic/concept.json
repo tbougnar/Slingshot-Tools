@@ -1,0 +1,15 @@
+{
+  "slug": "calendar-diff-basic",
+  "title": "Calendar",
+  "tag": "calendar",
+  "blurb": "calendar that diffs two date ranges",
+  "tags": [
+    "calendar",
+    "that",
+    "diffs",
+    "two"
+  ],
+  "brand": "",
+  "tier": "basic",
+  "base_slug": "calendar-diff"
+}

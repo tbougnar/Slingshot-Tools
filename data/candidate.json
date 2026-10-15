@@ -1,0 +1,11 @@
+{
+ "slug": "calendar-diff",
+ "brand": "",
+ "title": "Calendar",
+ "tag": "calendar",
+ "differences": "",
+ "free_blurb": "",
+ "paid_blurb": "",
+ "candidate": "site/apps/calendar-diff-basic/app/index.html",
+ "paid_dir": "paid/calendar-diff"
+}
