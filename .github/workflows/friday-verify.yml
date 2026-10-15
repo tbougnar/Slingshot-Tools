@@ -244,6 +244,7 @@ jobs:
         run: python itch_doctor.py
         env:
           ITCH_USER: ${{ vars.ITCH_USER }}
+          ITCH_STORE_URL: ${{ vars.ITCH_STORE_URL }}
           ITCH_API_KEY: ${{ secrets.ITCH_API_KEY }}
           ITCH_SESSION_COOKIE: ${{ secrets.ITCH_SESSION_COOKIE }}
           ITCH_LOGIN: ${{ secrets.ITCH_LOGIN }}
@@ -255,6 +256,7 @@ jobs:
         run: python itch_publish.py
         env:
           ITCH_USER: ${{ vars.ITCH_USER }}
+          ITCH_STORE_URL: ${{ vars.ITCH_STORE_URL }}
           ITCH_API_KEY: ${{ secrets.ITCH_API_KEY }}
           ITCH_SESSION_COOKIE: ${{ secrets.ITCH_SESSION_COOKIE }}
           # the account credentials, which do not expire. They let the
@@ -296,6 +298,7 @@ jobs:
         run: python build_paid_only.py --check
         env:
           ITCH_USER: ${{ vars.ITCH_USER }}
+          ITCH_STORE_URL: ${{ vars.ITCH_STORE_URL }}
           ITCH_API_KEY: ${{ secrets.ITCH_API_KEY }}
           ITCH_SESSION_COOKIE: ${{ secrets.ITCH_SESSION_COOKIE }}
           # the account credentials, which do not expire. They let the

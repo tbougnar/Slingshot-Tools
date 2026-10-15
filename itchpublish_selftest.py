@@ -342,6 +342,37 @@ check("and this test leaves the catalogue and the store state untouched",
       "reader without also intercepting the writers destroyed the store "
       "front: site/apps.json went from 48 entries to 1.")
 
+print("\nA PRODUCT THE CATALOGUE HAS NEVER SEEN STILL HAS A HOME\n")
+# Run 38794633538 released a product generated after the catalogue was last
+# written. It had no itch_url, so publish() concluded the project did not exist
+# and went looking for a browser session, even though the store project was
+# live and was the right home for it.
+_real2 = (ip.load_catalog, ip.page_is_live, ip.working_session,
+          ip.find_installer, ip.upload, ip.log, ip.save_catalog,
+          ip.remember, ip.record, ip.STORE_URL)
+_tried2 = []
+try:
+    ip.load_catalog = lambda: []          # the catalogue has never seen it
+    ip.page_is_live = lambda url: url == "https://slingshot-tools.itch.io/store"
+    ip.working_session = lambda: _tried2.append(1) or ""
+    ip.find_installer = lambda slug: pathlib.Path(__file__)
+    ip.upload = lambda installer, slug, version: True
+    ip.log = lambda *a, **k: None
+    ip.save_catalog = lambda apps: None
+    ip.remember = lambda slug, url: None
+    ip.record = lambda slug, url, price: True
+    ip.STORE_URL = "https://slingshot-tools.itch.io/store"
+    ip.publish("brand-new-product", "Brand new", 3.0)
+finally:
+    (ip.load_catalog, ip.page_is_live, ip.working_session,
+     ip.find_installer, ip.upload, ip.log, ip.save_catalog,
+     ip.remember, ip.record, ip.STORE_URL) = _real2
+
+check("a product with no catalogue entry uses the store project",
+      not _tried2,
+      "publish() looked for a browser session for a product the catalogue "
+      "had not seen yet, even though the store project is its home")
+
 print()
 print("FAILURES:", fails if fails else "none")
 sys.exit(1 if fails else 0)

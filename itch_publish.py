@@ -39,6 +39,12 @@ TIMEOUT = 60
 SESSION = os.environ.get("ITCH_SESSION_COOKIE", "").strip()
 KEY = os.environ.get("ITCH_API_KEY", "").strip()
 USER = (os.environ.get("ITCH_USER") or "").strip()
+# The store is one itch.io project and every product is a build in it, so a
+# product the catalogue has never seen still has a home. Without this, the
+# first release of any new product found no itch_url, decided the project did
+# not exist and went looking for a browser session, because the URL is only in
+# the catalogue for products that were there when it was last written.
+STORE_URL = os.environ.get("ITCH_STORE_URL", "").strip().rstrip("/")
 
 # the channel butler pushes the installer to
 # butler requires the target as user/slug:channel and refuses anything else
@@ -662,6 +668,15 @@ def publish(slug: str, title: str, price: float, version: str = "") -> bool:
                 url = candidate
                 log(f"1. the catalogue already points at a live project: {url}")
                 break
+    if not url and STORE_URL:
+        # A product generated after the catalogue was last written has no URL
+        # yet. It belongs to the same project as everything else, so it is
+        # used rather than inventing a second project per product.
+        if page_is_live(STORE_URL):
+            url = STORE_URL
+            log(f"1. the store project is live and holds this product: {url}")
+        else:
+            log(f"1. the store project did not answer: {STORE_URL}")
     if not url and KEY:
         found = find_game(slug)
         if found:
