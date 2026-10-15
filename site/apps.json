@@ -1,5 +1,47 @@
 [
   {
+    "slug": "note-taker",
+    "base_slug": "note-taker",
+    "title": "Quick note taker",
+    "tier": "full",
+    "tag": "note",
+    "blurb": "A small, focused note tool. Quick note taker does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "note",
+      "quick",
+      "taker"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/note-taker-basic/",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-15"
+  },
+  {
+    "slug": "note-taker-basic",
+    "base_slug": "note-taker",
+    "title": "Quick note taker (Basic)",
+    "tier": "basic",
+    "tag": "note",
+    "blurb": "A small, focused note tool. Quick note taker does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "note",
+      "quick",
+      "taker"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/note-taker-basic/",
+    "download": "",
+    "price": 0.0,
+    "free": true,
+    "differences": [],
+    "published": true,
+    "badge": "New",
+    "date": "2026-10-15"
+  },
+  {
     "slug": "timestamp-converter",
     "base_slug": "timestamp-converter",
     "title": "Unix timestamp to human date and back",
