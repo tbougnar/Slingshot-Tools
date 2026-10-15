@@ -107,8 +107,44 @@ def set_url(apps: list, slug: str, url: str) -> int:
     return 0
 
 
+def set_all(apps: list, url: str) -> int:
+    """Point every product at one project.
+
+    The store holds one itch.io project and the products are builds in it, so
+    every catalogue entry gets the same URL. Only itch_url is written: nothing
+    here marks a paid tier published, because a Buy button that leads to a
+    project without that product's build is the advertising this audit spent
+    most of its effort removing. Each product flips to published when its own
+    build is uploaded and the page answers.
+    """
+    if not valid(url):
+        log(f"{url!r} is not an https itch.io page")
+        return 1
+    slugs = sorted({(a.get("base_slug") or a.get("slug")) for a in apps})
+    touched = 0
+    for entry in apps:
+        if (entry.get("base_slug") or entry.get("slug")) in slugs:
+            entry["itch_url"] = url
+            touched += 1
+    if not touched:
+        log("the catalogue is empty, so there is nothing to point anywhere")
+        return 1
+    save(apps)
+    log(f"{len(slugs)} products ({', '.join(slugs)}) now point at {url}")
+    log(f"updated {touched} entries")
+    log("none are marked published yet: each becomes purchasable when its")
+    log("own build is uploaded and the project page answers")
+    return 0
+
+
 def main() -> int:
     args = [a for a in sys.argv[1:] if not a.startswith("-")]
+    if "--all" in sys.argv[1:]:
+        urls = [a for a in args if a.startswith("https://")]
+        if len(urls) != 1:
+            log("usage: python set_itch_url.py --all <https://...itch.io/page>")
+            return 1
+        return set_all(load(), urls[0])
     if not args:
         return show(load())
     if len(args) < 2:

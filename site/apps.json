@@ -1,49 +1,5 @@
 [
   {
-    "slug": "ebook-converter-notes",
-    "base_slug": "ebook-converter-notes",
-    "title": "Reading notes organizer",
-    "tier": "full",
-    "tag": "ebook",
-    "blurb": "A small, focused ebook tool. Reading notes organizer does one job properly, runs offline, and keeps your data on your device.",
-    "tags": [
-      "ebook",
-      "reading",
-      "notes",
-      "organizer"
-    ],
-    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/ebook-converter-notes-basic/",
-    "download": "",
-    "price": 3.0,
-    "free": false,
-    "differences": [],
-    "published": false,
-    "badge": "New",
-    "date": "2026-10-14"
-  },
-  {
-    "slug": "ebook-converter-notes-basic",
-    "base_slug": "ebook-converter-notes",
-    "title": "Reading notes organizer (Basic)",
-    "tier": "basic",
-    "tag": "ebook",
-    "blurb": "A small, focused ebook tool. Reading notes organizer does one job properly, runs offline, and keeps your data on your device.",
-    "tags": [
-      "ebook",
-      "reading",
-      "notes",
-      "organizer"
-    ],
-    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/ebook-converter-notes-basic/",
-    "download": "",
-    "price": 0.0,
-    "free": true,
-    "differences": [],
-    "published": true,
-    "badge": "New",
-    "date": "2026-10-14"
-  },
-  {
     "slug": "speed-typing-test",
     "base_slug": "speed-typing-test",
     "title": "Typing speed test",
@@ -63,7 +19,7 @@
     "published": false,
     "badge": "New",
     "date": "2026-10-14",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "speed-typing-test-basic",
@@ -79,13 +35,13 @@
     ],
     "url": "https://tbougnar.github.io/Slingshot-Tools/apps/speed-typing-test-basic/",
     "download": "",
-    "price": 0,
+    "price": 0.0,
     "free": true,
     "differences": [],
     "published": true,
     "badge": "New",
     "date": "2026-10-14",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "split-bill-app",
@@ -108,7 +64,7 @@
     "published": false,
     "badge": "New",
     "date": "2026-10-14",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "split-bill-app-basic",
@@ -131,7 +87,7 @@
     "published": true,
     "badge": "New",
     "date": "2026-10-14",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "text-stats",
@@ -154,7 +110,7 @@
     "published": false,
     "badge": "New",
     "date": "2026-10-14",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "text-stats-basic",
@@ -177,7 +133,7 @@
     "published": true,
     "badge": "New",
     "date": "2026-10-14",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "random-team",
@@ -200,7 +156,7 @@
     "published": false,
     "badge": "New",
     "date": "2026-10-14",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "random-team-basic",
@@ -223,7 +179,7 @@
     "published": true,
     "badge": "New",
     "date": "2026-10-14",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "pixel-art-editor",
@@ -245,7 +201,7 @@
     "published": false,
     "badge": "New",
     "date": "2026-10-14",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "pixel-art-editor-basic",
@@ -267,7 +223,7 @@
     "published": true,
     "badge": "New",
     "date": "2026-10-14",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "qr-generator",
@@ -289,7 +245,7 @@
     "published": false,
     "badge": "New",
     "date": "2026-10-14",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "qr-generator-basic",
@@ -311,7 +267,7 @@
     "published": true,
     "badge": "New",
     "date": "2026-10-14",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "bmi-calculator",
@@ -333,7 +289,7 @@
     "published": false,
     "badge": "New",
     "date": "2026-10-14",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "bmi-calculator-basic",
@@ -355,7 +311,7 @@
     "published": true,
     "badge": "New",
     "date": "2026-10-14",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "ip-info",
@@ -377,7 +333,7 @@
     "published": false,
     "badge": "New",
     "date": "2026-10-14",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "ip-info-basic",
@@ -399,7 +355,7 @@
     "published": true,
     "badge": "New",
     "date": "2026-10-14",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "breathing-exercise",
@@ -421,7 +377,7 @@
     "published": false,
     "badge": "New",
     "date": "2026-10-14",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "breathing-exercise-basic",
@@ -443,7 +399,7 @@
     "published": true,
     "badge": "New",
     "date": "2026-10-14",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "permutation-tool",
@@ -466,7 +422,7 @@
     "published": false,
     "badge": "New",
     "date": "2026-10-14",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "permutation-tool-basic",
@@ -489,7 +445,7 @@
     "published": true,
     "badge": "New",
     "date": "2026-10-14",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "coin-toss",
@@ -512,7 +468,7 @@
     "published": false,
     "badge": "New",
     "date": "2026-10-14",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "coin-toss-basic",
@@ -535,7 +491,7 @@
     "published": true,
     "badge": "New",
     "date": "2026-10-14",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "regex-tester",
@@ -556,7 +512,7 @@
     "published": false,
     "badge": "New",
     "date": "2026-10-14",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "regex-tester-basic",
@@ -577,7 +533,7 @@
     "published": true,
     "badge": "New",
     "date": "2026-10-14",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "lorem-generator",
@@ -600,7 +556,7 @@
     "published": false,
     "badge": "New",
     "date": "2026-10-14",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "lorem-generator-basic",
@@ -623,7 +579,7 @@
     "published": true,
     "badge": "New",
     "date": "2026-10-14",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "pomodoro-timer",
@@ -645,7 +601,7 @@
     "published": false,
     "badge": "New",
     "date": "2026-10-14",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "pomodoro-timer-basic",
@@ -667,7 +623,7 @@
     "published": true,
     "badge": "New",
     "date": "2026-10-14",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "text-diff",
@@ -690,7 +646,7 @@
     "published": false,
     "badge": "New",
     "date": "2026-10-14",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "text-diff-basic",
@@ -713,7 +669,7 @@
     "published": true,
     "badge": "New",
     "date": "2026-10-14",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "json-formatter",
@@ -735,7 +691,7 @@
     "published": false,
     "badge": "New",
     "date": "2026-10-14",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "json-formatter-basic",
@@ -757,7 +713,7 @@
     "published": true,
     "badge": "New",
     "date": "2026-10-14",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "password-strength",
@@ -779,7 +735,7 @@
     "published": false,
     "badge": "New",
     "date": "2026-10-13",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "password-strength-basic",
@@ -801,7 +757,7 @@
     "published": true,
     "badge": "New",
     "date": "2026-10-13",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "csv-viewer",
@@ -822,7 +778,7 @@
     "published": false,
     "badge": "New",
     "date": "2026-10-13",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "csv-viewer-basic",
@@ -843,7 +799,7 @@
     "published": true,
     "badge": "New",
     "date": "2026-10-13",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "bandwidth-calc",
@@ -866,7 +822,7 @@
     "published": false,
     "badge": "New",
     "date": "2026-10-13",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "bandwidth-calc-basic",
@@ -889,7 +845,7 @@
     "published": true,
     "badge": "New",
     "date": "2026-10-13",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "bookmark-organizer",
@@ -910,7 +866,7 @@
     "published": false,
     "badge": "New",
     "date": "2026-10-13",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "bookmark-organizer-basic",
@@ -931,7 +887,7 @@
     "published": true,
     "badge": "New",
     "date": "2026-10-13",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "color-picker",
@@ -952,7 +908,7 @@
     "published": false,
     "badge": "New",
     "date": "2026-10-13",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "color-picker-basic",
@@ -973,7 +929,7 @@
     "published": true,
     "badge": "New",
     "date": "2026-10-13",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "glasses-prescription",
@@ -995,7 +951,7 @@
     "published": false,
     "badge": "New",
     "date": "2026-10-13",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "glasses-prescription-basic",
@@ -1017,7 +973,7 @@
     "published": true,
     "badge": "New",
     "date": "2026-10-13",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "unit-converter",
@@ -1038,7 +994,7 @@
     "published": false,
     "badge": "New",
     "date": "2026-10-13",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "unit-converter-basic",
@@ -1059,7 +1015,7 @@
     "published": true,
     "badge": "New",
     "date": "2026-10-13",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "dev-converter",
@@ -1082,7 +1038,7 @@
     "published": false,
     "badge": "New",
     "date": "2026-10-13",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "dev-converter-basic",
@@ -1105,7 +1061,7 @@
     "published": true,
     "badge": "New",
     "date": "2026-10-13",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "password-manager",
@@ -1133,7 +1089,7 @@
     "published": false,
     "badge": "New",
     "date": "2026-10-08",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "password-manager-basic",
@@ -1161,6 +1117,52 @@
     "published": false,
     "badge": "New",
     "date": "2026-10-08",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
+  },
+  {
+    "slug": "ebook-converter-notes",
+    "base_slug": "ebook-converter-notes",
+    "title": "Reading notes organizer",
+    "tier": "full",
+    "tag": "ebook",
+    "blurb": "A small, focused ebook tool. Reading notes organizer does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "ebook",
+      "reading",
+      "notes",
+      "organizer"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/ebook-converter-notes-basic/",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-14",
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
+  },
+  {
+    "slug": "ebook-converter-notes-basic",
+    "base_slug": "ebook-converter-notes",
+    "title": "Reading notes organizer (Basic)",
+    "tier": "basic",
+    "tag": "ebook",
+    "blurb": "A small, focused ebook tool. Reading notes organizer does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "ebook",
+      "reading",
+      "notes",
+      "organizer"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/ebook-converter-notes-basic/",
+    "download": "",
+    "price": 0.0,
+    "free": true,
+    "differences": [],
+    "published": true,
+    "badge": "New",
+    "date": "2026-10-14",
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   }
 ]

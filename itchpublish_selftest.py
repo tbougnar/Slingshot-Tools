@@ -96,7 +96,8 @@ check("it names a concrete blocker rather than claiming success",
           "no ITCH_LOGIN and ITCH_PASSWORD",
           "could not log in",
           "no paid build",
-          "nothing to publish")),
+          "nothing to publish",
+          "no installer was found")),
       combined.strip()[-140:])
 # The claim that must never appear is the one the old code produced.
 check("it never says a product is on itch.io when it did not get there",
@@ -151,14 +152,24 @@ _r = subprocess.run([sys.executable, "itch_publish.py"], cwd=str(ROOT),
                     capture_output=True, text=True, timeout=900)
 _out = (_r.stdout + _r.stderr)
 check("it exits non-zero", _r.returncode != 0, f"rc={_r.returncode}")
-# with no paid build it never reaches the session check, so the credentials
-# are only named when there is a product to publish
+# with no paid build it never reaches the project check, so the blocker is only
+# named when there is a product to publish
 if "no paid build" not in _out:
-    check("it names the two secrets that fix it permanently",
-          "ITCH_LOGIN" in _out and "ITCH_PASSWORD" in _out,
+    # The session credentials are deliberately not named any more. Uploading
+    # works with the API key, so a run that cannot finish must name what
+    # actually stopped it rather than send someone to paste a cookie that
+    # would not have helped.
+    check("it does not send anyone to paste session credentials",
+          "gh secret set ITCH_LOGIN" not in _out
+          and "gh secret set ITCH_SESSION_COOKIE" not in _out,
+          "it still asks for the expiring credential the key makes "
+          "unnecessary")
+    check("and it names the step that actually stopped it",
+          any(m in _out for m in ("no installer was found", "no project",
+                                  "not publicly reachable")),
           _out.strip()[-140:])
 else:
-    print("skip  no paid build here, so it never reached the session check")
+    print("skip  no paid build here, so it never reached the project check")
 check("it no longer asks for the cookie",
       "set a new one: gh secret set ITCH_SESSION_COOKIE" not in _out,
       "it still asks for the expiring credential")
