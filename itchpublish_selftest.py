@@ -311,7 +311,7 @@ try:
     ip.page_is_live = lambda url: url.endswith("/thing")
     ip.working_session = _no_session
     ip.find_installer = lambda slug: pathlib.Path(__file__)
-    ip.upload = lambda installer, slug, version: True
+    ip.upload = lambda installer, slug, version, project="": True
     ip.log = lambda *a, **k: None
     # publish() reaches record() once the upload succeeds, and record() writes
     # whatever load_catalog returned. Patching the reader without also
@@ -356,7 +356,7 @@ try:
     ip.page_is_live = lambda url: url == "https://slingshot-tools.itch.io/store"
     ip.working_session = lambda: _tried2.append(1) or ""
     ip.find_installer = lambda slug: pathlib.Path(__file__)
-    ip.upload = lambda installer, slug, version: True
+    ip.upload = lambda installer, slug, version, project="": True
     ip.log = lambda *a, **k: None
     ip.save_catalog = lambda apps: None
     ip.remember = lambda slug, url: None
@@ -387,6 +387,46 @@ check("no job pins a channel itch.io does not have", not _bad,
       + "; ".join(_bad))
 check("and the jobs that upload use a real one",
       _wftext.count('ITCH_CHANNEL: "windows-64"') >= 2)
+
+print("\nTHE UPLOAD TARGET IS THE PROJECT, NOT THE PRODUCT\n")
+# Run 38800149146 pushed to 'slingshot-tools/chess-board:windows-64'. The
+# channel was right and the key worked, but the store project is named
+# 'slingshot-tools', so itch.io answered 'invalid game' for a project that had
+# never existed. The target has to come from the page the product resolved to.
+_seen = {}
+_real3 = (ip.load_catalog, ip.page_is_live, ip.working_session,
+          ip.find_installer, ip.log, ip.save_catalog, ip.remember,
+          ip.record, ip.STORE_URL, ip.USER)
+
+
+def _capture(installer, slug, version, project=""):
+    _seen["slug"] = slug
+    _seen["project"] = project
+    return True
+
+
+try:
+    ip.load_catalog = lambda: []
+    ip.page_is_live = lambda url: True
+    ip.working_session = lambda: ""
+    ip.find_installer = lambda slug: pathlib.Path(__file__)
+    ip.upload = _capture
+    ip.log = lambda *a, **k: None
+    ip.save_catalog = lambda apps: None
+    ip.remember = lambda slug, url: None
+    ip.record = lambda slug, url, price: True
+    ip.STORE_URL = "https://slingshot-tools.itch.io/slingshot-tools"
+    ip.USER = "slingshot-tools"
+    ip.publish("chess-board", "Chess board viewer", 3.0)
+finally:
+    (ip.load_catalog, ip.page_is_live, ip.working_session,
+     ip.find_installer, ip.log, ip.save_catalog, ip.remember,
+     ip.record, ip.STORE_URL, ip.USER) = _real3
+
+check("butler is told the project from the page, not the product slug",
+      _seen.get("project") == "slingshot-tools",
+      f"upload got slug={_seen.get('slug')!r} project={_seen.get('project')!r},"
+      " so itch.io was asked for a project that does not exist")
 
 print()
 print("FAILURES:", fails if fails else "none")

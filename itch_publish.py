@@ -25,6 +25,8 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+from urllib.parse import urlparse
+
 import auditlog
 
 ROOT = Path(__file__).resolve().parent
@@ -517,8 +519,15 @@ def _identity_file(secret: str) -> str:
     return name
 
 
-def upload(installer: Path, slug: str, version: str) -> bool:
+def upload(installer: Path, slug: str, version: str,
+           project: str = "") -> bool:
     """Push the installer with butler, itch.io's own uploader.
+
+    `project` is the itch.io project to push into, which is not the product
+    slug. The store is one project holding every product as a build, so
+    pushing to user/<product-slug> asks for a project that does not exist and
+    itch.io answers 'invalid game'. The target comes from the page the product
+    was resolved to, so the two cannot drift apart.
 
     butler authenticates with the API key, not with the browser session, so
     this half keeps working after the session cookie expires.
@@ -529,7 +538,7 @@ def upload(installer: Path, slug: str, version: str) -> bool:
         log("install it from https://itchio.itch.io/butler")
         return False
 
-    target = f"{USER}/{slug}:{CHANNEL}"
+    target = f"{USER}/{project or slug}:{CHANNEL}"
     cmd = [exe, "push", str(installer), target]
     if version:
         cmd += ["--userversion", version]
@@ -722,7 +731,8 @@ def publish(slug: str, title: str, price: float, version: str = "") -> bool:
         return False
     size = installer.stat().st_size / 1024 / 1024
     log(f"3. uploading {installer.name} ({size:.1f} MB)")
-    if not upload(installer, slug, version):
+    if not upload(installer, slug, version,
+                    project=urlparse(url).path.strip("/").split("/")[0]):
         log("the upload did not finish, so nothing will be advertised")
         return False
 
