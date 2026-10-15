@@ -1,15 +1,9 @@
 {
   "slug": "timestamp-converter-basic",
+  "brand": "",
   "title": "Unix timestamp to human date and back",
   "tag": "timestamp",
-  "blurb": "Unix timestamp to human date and back",
-  "tags": [
-    "Unix",
-    "timestamp",
-    "to",
-    "human"
-  ],
-  "brand": "",
+  "blurb": "",
   "tier": "basic",
   "base_slug": "timestamp-converter"
 }

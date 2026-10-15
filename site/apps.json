@@ -1,5 +1,49 @@
 [
   {
+    "slug": "timestamp-converter",
+    "base_slug": "timestamp-converter",
+    "title": "Unix timestamp to human date and back",
+    "tier": "full",
+    "tag": "timestamp",
+    "blurb": "A small, focused timestamp tool. Unix timestamp to human date and back does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "timestamp",
+      "unix",
+      "human",
+      "date"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/timestamp-converter-basic/",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-15"
+  },
+  {
+    "slug": "timestamp-converter-basic",
+    "base_slug": "timestamp-converter",
+    "title": "Unix timestamp to human date and back (Basic)",
+    "tier": "basic",
+    "tag": "timestamp",
+    "blurb": "A small, focused timestamp tool. Unix timestamp to human date and back does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "timestamp",
+      "unix",
+      "human",
+      "date"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/timestamp-converter-basic/",
+    "download": "",
+    "price": 0.0,
+    "free": true,
+    "differences": [],
+    "published": true,
+    "badge": "New",
+    "date": "2026-10-15"
+  },
+  {
     "slug": "speed-typing-test",
     "base_slug": "speed-typing-test",
     "title": "Typing speed test",
