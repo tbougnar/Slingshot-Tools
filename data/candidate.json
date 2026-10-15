@@ -1,0 +1,11 @@
+{
+ "slug": "chess-board",
+ "brand": "",
+ "title": "Chess board viewer",
+ "tag": "chess",
+ "differences": "",
+ "free_blurb": "",
+ "paid_blurb": "",
+ "candidate": "site/apps/chess-board-basic/app/index.html",
+ "paid_dir": "paid/chess-board"
+}

@@ -1,0 +1,15 @@
+{
+  "slug": "chess-board-basic",
+  "title": "Chess board viewer",
+  "tag": "chess",
+  "blurb": "chess board viewer with FEN loading",
+  "tags": [
+    "chess",
+    "board",
+    "viewer",
+    "with"
+  ],
+  "brand": "",
+  "tier": "basic",
+  "base_slug": "chess-board"
+}
