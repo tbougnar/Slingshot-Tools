@@ -108,30 +108,38 @@ def set_url(apps: list, slug: str, url: str) -> int:
 
 
 def set_all(apps: list, url: str) -> int:
-    """Point every product at one project.
+    """Point every paid product at one project.
 
-    The store holds one itch.io project and the products are builds in it, so
-    every catalogue entry gets the same URL. Only itch_url is written: nothing
-    here marks a paid tier published, because a Buy button that leads to a
-    project without that product's build is the advertising this audit spent
-    most of its effort removing. Each product flips to published when its own
-    build is uploaded and the page answers.
+    The store holds one itch.io project and the paid products are builds in
+    it, so those entries get the same URL. The free editions are deliberately
+    not given one: they are served from this site and have never been uploaded
+    to itch.io, so recording a store URL for them is a claim that is not true.
+    A free app that later needs a store of its own gets one explicitly.
+
+    Only itch_url is written here. Nothing is marked published, because a Buy
+    button that leads to a project without that product's build is the
+    advertising this audit spent most of its effort removing. Each product
+    becomes purchasable when its own build is uploaded and the page answers.
     """
     if not valid(url):
         log(f"{url!r} is not an https itch.io page")
         return 1
-    slugs = sorted({(a.get("base_slug") or a.get("slug")) for a in apps})
-    touched = 0
-    for entry in apps:
-        if (entry.get("base_slug") or entry.get("slug")) in slugs:
-            entry["itch_url"] = url
-            touched += 1
-    if not touched:
-        log("the catalogue is empty, so there is nothing to point anywhere")
+    free = [e for e in apps if e.get("tier") == "basic"]
+    paid = [e for e in apps if e.get("tier") != "basic"]
+    for entry in paid:
+        entry["itch_url"] = url
+    # clear a stale store URL from the free editions, which should never have
+    # one, so nothing claims they are on itch.io when they are not
+    for entry in free:
+        entry.pop("itch_url", None)
+    if not paid:
+        log("the catalogue has no paid editions, so there is nothing to point")
         return 1
+    slugs = sorted({(a.get("base_slug") or a.get("slug")) for a in paid})
     save(apps)
-    log(f"{len(slugs)} products ({', '.join(slugs)}) now point at {url}")
-    log(f"updated {touched} entries")
+    log(f"{len(slugs)} paid products now point at {url}")
+    log(f"updated {len(paid)} paid entries; {len(free)} free editions left"
+        " without a store URL, because they are not on itch.io")
     log("none are marked published yet: each becomes purchasable when its")
     log("own build is uploaded and the project page answers")
     return 0

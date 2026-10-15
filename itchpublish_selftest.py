@@ -440,6 +440,19 @@ check("the installer job checks out main, not the triggering commit",
       "the product the installer uploads is added to site/apps.json by the "
       "verify job, so an older tree cannot see it")
 
+print("\nA FREE EDITION IS NOT ON ICH.IO, SO IT MUST NOT SAY IT IS\n")
+# The first --all run gave every entry the store URL, including the thirty free
+# editions. Nothing on the site reads a free tier's itch_url, so no wrong Buy
+# button appeared, but the catalogue then claimed thirty apps were on a store
+# they had never been uploaded to.
+_cat = json.loads((ROOT / "site" / "apps.json").read_text(encoding="utf-8"))
+_free = [e for e in _cat if e.get("tier") == "basic" and e.get("itch_url")]
+check("no free edition carries a store URL", not _free,
+      f"{len(_free)} free editions claim an itch.io page they are not on: "
+      + ", ".join(sorted(str(e.get("slug")) for e in _free)[:4]))
+check("and the paid ones still do",
+      any(e.get("tier") == "full" and e.get("itch_url") for e in _cat))
+
 print()
 print("FAILURES:", fails if fails else "none")
 sys.exit(1 if fails else 0)

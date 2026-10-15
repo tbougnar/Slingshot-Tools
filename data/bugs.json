@@ -363,15 +363,16 @@
   "files": [
    "site/apps.json"
   ],
-  "status": "BLOCKED",
+  "status": "VERIFIED_FIXED",
   "root_cause": "Every path to a first upload requires a valid session cookie, which is blocked above. Until one product is uploaded there is nothing to sell, and the customer purchase journey cannot complete.",
   "evidence": "https://slingshot-tools.itch.io/ was fetched during this audit and lists no products. site/apps.json marks every paid tier published=false with an empty itch_url, which is the truth and is what the fixes made it say.",
   "repro": "webfetch https://slingshot-tools.itch.io/",
-  "fix": "none available: dependent on the credential above",
+  "fix": "The store holds a product. set_itch_url.py --all points the paid editions at the one project and deliberately leaves the free editions without a store URL, because they are served from this site and were never uploaded to itch.io.",
   "regression_test": "itchurl_selftest.py asserts the catalog never claims to be on sale",
-  "verification": "itchurl_selftest.py: FAILURES: none. The catalog is honest: 6 free editions published, 6 paid tiers kept private, no itch_url.",
-  "uncertainty": "A genuine purchase has never been exercised. No money was spent and no account was altered at any point in this audit.",
-  "opened": "2026-10-14T15:50:34+00:00"
+  "verification": "https://slingshot-tools.itch.io/slingshot-tools answers HTTP 200 and lists Chess clock-Setup.exe, which the pipeline uploaded unaided. The catalogue records the paid edition of chess-clock as published with its itch.io URL.",
+  "uncertainty": "The purchase itself has not been completed, because that would mean paying for it. The link, the price and the build behind it are verified.",
+  "opened": "2026-10-14T15:50:34+00:00",
+  "updated": "2026-10-15T21:12:18+00:00"
  },
  {
   "id": "BUG-021",
@@ -472,15 +473,16 @@
    "itch_publish.py",
    "itch_doctor.py"
   ],
-  "status": "BLOCKED",
+  "status": "VERIFIED_FIXED",
   "root_cause": "Uploading needs a project, and itch.io has no endpoint for creating one: every listing path answers 'invalid api endpoint', and the web login that would create it is behind a Cloudflare Turnstile bot challenge. Getting past a bot check is evading an anti-abuse control, which this will not do. The API key is confirmed working, so this is the last thing standing between the pipeline and a live store.",
   "evidence": "Run 38630319521: 'The API key works', and butler reached '/wharf/builds: invalid game' for a project name that does not exist. Runs 38592104107 and later: the login page is a 'Just a moment...' interstitial with one cf-turnstile-response input, not a form.",
   "repro": "gh run view 38630319521 --log",
-  "fix": "The person who owns the account creates one empty project by hand at https://itch.io/settings/mine/new/game, then runs python set_itch_url.py <slug> https://slingshot-tools.itch.io/<project>. Everything after that is hands-off forever, because the key uploads with no session.",
+  "fix": "The project was created once by the account holder, as the only manual step the store requires. Everything after that is automated: the store project is configuration rather than catalogue content, so a product the catalogue has never seen resolves to it, and the upload target is taken from the page rather than the product's name.",
   "regression_test": "itchpublish_selftest.py",
-  "verification": "The doctor states this outcome explicitly rather than leaving it implied: the key is accepted, and only the missing project stands in the way.",
-  "uncertainty": "If itch.io ever exposes a create endpoint this closes on its own; until then it needs a human once, and deliberately not on every run.",
-  "opened": "2026-10-14T20:22:26+00:00"
+  "verification": "Run 38806231965 succeeded end to end. publish() resolved the store project, confirmed the page answered, butler pushed to slingshot-tools/slingshot-tools:windows-64 with the API key, the page still answered, and the product was marked published on the site at $3.00. The paid release gate passed.",
+  "uncertainty": "itch.io still exposes no endpoint for creating a project, so this will need repeating only if the store is ever recreated.",
+  "opened": "2026-10-14T20:22:26+00:00",
+  "updated": "2026-10-15T21:12:18+00:00"
  },
  {
   "id": "BUG-027",

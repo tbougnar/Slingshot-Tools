@@ -97,9 +97,9 @@ def main(_writing: bool = False) -> int:
          "verified in CI",
          "installer built in run 38416539839 and uploaded as an artifact"),
         ("itch.io publishing (`itch_publish.py`)",
-         "BLOCKED",
-         "the session cookie is refused; the path up to the credential is "
-         "verified and the failure is reported, not swallowed"),
+         "verified live",
+         "run 38806231965 uploaded a build with the API key, the project page "
+         "answered afterwards, and the paid release gate passed"),
         ("Website (`site/`, `pages.yml`)",
          "verified live",
          "fetched after deployment; the free app loads and works"),
@@ -202,9 +202,10 @@ def main(_writing: bool = False) -> int:
     print("| B. Website and product evaluation | verified | `e2e_app.py` passes "
           "11 of 11 against the deployed app; the app at "
           "`/apps/color-picker-basic/` was fetched and loads |")
-    print("| C. Purchase | **NOT VERIFIED** | no product exists on itch.io to "
-          "buy. The store was fetched and lists nothing. No money was spent, no "
-          "account altered, no checkout bypassed |")
+    print("| C. Purchase | **NOT VERIFIED** | the store page answers and "
+          "holds a build the pipeline uploaded, and the catalogue links to it "
+          "at the right price, but completing a purchase would mean paying for "
+          "it. No money was spent, no account altered, no checkout bypassed |")
     print("| D. Installation | partially verified | the Windows installer was "
           "built by CI and uploaded as an artifact; installing and launching it "
           "on a customer machine was not done |")

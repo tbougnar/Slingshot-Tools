@@ -61,7 +61,11 @@
     "published": false,
     "badge": "New",
     "date": "2026-10-15",
+<<<<<<< HEAD
     "itch_url": ""
+=======
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
+>>>>>>> 47294d1 (Never give a free edition a store URL, and stop the report claiming a block that is gone)
   },
   {
     "slug": "calendar-diff-basic",
@@ -103,7 +107,7 @@
     "published": false,
     "badge": "New",
     "date": "2026-10-15",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "chess-board-basic",
@@ -124,8 +128,7 @@
     "differences": [],
     "published": true,
     "badge": "New",
-    "date": "2026-10-15",
-    "itch_url": ""
+    "date": "2026-10-15"
   },
   {
     "slug": "note-taker",
@@ -147,7 +150,7 @@
     "published": false,
     "badge": "New",
     "date": "2026-10-15",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "note-taker-basic",
@@ -168,8 +171,7 @@
     "differences": [],
     "published": true,
     "badge": "New",
-    "date": "2026-10-15",
-    "itch_url": ""
+    "date": "2026-10-15"
   },
   {
     "slug": "timestamp-converter",
@@ -192,7 +194,7 @@
     "published": false,
     "badge": "New",
     "date": "2026-10-15",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "timestamp-converter-basic",
@@ -214,8 +216,7 @@
     "differences": [],
     "published": true,
     "badge": "New",
-    "date": "2026-10-15",
-    "itch_url": ""
+    "date": "2026-10-15"
   },
   {
     "slug": "speed-typing-test",
@@ -258,8 +259,7 @@
     "differences": [],
     "published": true,
     "badge": "New",
-    "date": "2026-10-14",
-    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
+    "date": "2026-10-14"
   },
   {
     "slug": "split-bill-app",
@@ -304,8 +304,7 @@
     "differences": [],
     "published": true,
     "badge": "New",
-    "date": "2026-10-14",
-    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
+    "date": "2026-10-14"
   },
   {
     "slug": "text-stats",
@@ -350,8 +349,7 @@
     "differences": [],
     "published": true,
     "badge": "New",
-    "date": "2026-10-14",
-    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
+    "date": "2026-10-14"
   },
   {
     "slug": "random-team",
@@ -396,8 +394,7 @@
     "differences": [],
     "published": true,
     "badge": "New",
-    "date": "2026-10-14",
-    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
+    "date": "2026-10-14"
   },
   {
     "slug": "pixel-art-editor",
@@ -440,8 +437,7 @@
     "differences": [],
     "published": true,
     "badge": "New",
-    "date": "2026-10-14",
-    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
+    "date": "2026-10-14"
   },
   {
     "slug": "qr-generator",
@@ -484,8 +480,7 @@
     "differences": [],
     "published": true,
     "badge": "New",
-    "date": "2026-10-14",
-    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
+    "date": "2026-10-14"
   },
   {
     "slug": "bmi-calculator",
@@ -528,8 +523,7 @@
     "differences": [],
     "published": true,
     "badge": "New",
-    "date": "2026-10-14",
-    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
+    "date": "2026-10-14"
   },
   {
     "slug": "ip-info",
@@ -572,8 +566,7 @@
     "differences": [],
     "published": true,
     "badge": "New",
-    "date": "2026-10-14",
-    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
+    "date": "2026-10-14"
   },
   {
     "slug": "breathing-exercise",
@@ -616,8 +609,7 @@
     "differences": [],
     "published": true,
     "badge": "New",
-    "date": "2026-10-14",
-    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
+    "date": "2026-10-14"
   },
   {
     "slug": "permutation-tool",
@@ -662,8 +654,7 @@
     "differences": [],
     "published": true,
     "badge": "New",
-    "date": "2026-10-14",
-    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
+    "date": "2026-10-14"
   },
   {
     "slug": "coin-toss",
@@ -708,8 +699,7 @@
     "differences": [],
     "published": true,
     "badge": "New",
-    "date": "2026-10-14",
-    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
+    "date": "2026-10-14"
   },
   {
     "slug": "regex-tester",
@@ -750,8 +740,7 @@
     "differences": [],
     "published": true,
     "badge": "New",
-    "date": "2026-10-14",
-    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
+    "date": "2026-10-14"
   },
   {
     "slug": "lorem-generator",
@@ -796,8 +785,7 @@
     "differences": [],
     "published": true,
     "badge": "New",
-    "date": "2026-10-14",
-    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
+    "date": "2026-10-14"
   },
   {
     "slug": "pomodoro-timer",
@@ -840,8 +828,7 @@
     "differences": [],
     "published": true,
     "badge": "New",
-    "date": "2026-10-14",
-    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
+    "date": "2026-10-14"
   },
   {
     "slug": "text-diff",
@@ -886,8 +873,7 @@
     "differences": [],
     "published": true,
     "badge": "New",
-    "date": "2026-10-14",
-    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
+    "date": "2026-10-14"
   },
   {
     "slug": "json-formatter",
@@ -930,8 +916,7 @@
     "differences": [],
     "published": true,
     "badge": "New",
-    "date": "2026-10-14",
-    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
+    "date": "2026-10-14"
   },
   {
     "slug": "password-strength",
@@ -974,8 +959,7 @@
     "differences": [],
     "published": true,
     "badge": "New",
-    "date": "2026-10-13",
-    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
+    "date": "2026-10-13"
   },
   {
     "slug": "csv-viewer",
@@ -1016,8 +1000,7 @@
     "differences": [],
     "published": true,
     "badge": "New",
-    "date": "2026-10-13",
-    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
+    "date": "2026-10-13"
   },
   {
     "slug": "bandwidth-calc",
@@ -1062,8 +1045,7 @@
     "differences": [],
     "published": true,
     "badge": "New",
-    "date": "2026-10-13",
-    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
+    "date": "2026-10-13"
   },
   {
     "slug": "bookmark-organizer",
@@ -1104,8 +1086,7 @@
     "differences": [],
     "published": true,
     "badge": "New",
-    "date": "2026-10-13",
-    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
+    "date": "2026-10-13"
   },
   {
     "slug": "color-picker",
@@ -1146,8 +1127,7 @@
     "differences": [],
     "published": true,
     "badge": "New",
-    "date": "2026-10-13",
-    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
+    "date": "2026-10-13"
   },
   {
     "slug": "glasses-prescription",
@@ -1190,8 +1170,7 @@
     "differences": [],
     "published": true,
     "badge": "New",
-    "date": "2026-10-13",
-    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
+    "date": "2026-10-13"
   },
   {
     "slug": "unit-converter",
@@ -1232,8 +1211,7 @@
     "differences": [],
     "published": true,
     "badge": "New",
-    "date": "2026-10-13",
-    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
+    "date": "2026-10-13"
   },
   {
     "slug": "dev-converter",
@@ -1278,8 +1256,7 @@
     "differences": [],
     "published": true,
     "badge": "New",
-    "date": "2026-10-13",
-    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
+    "date": "2026-10-13"
   },
   {
     "slug": "password-manager",
@@ -1334,8 +1311,7 @@
     ],
     "published": false,
     "badge": "New",
-    "date": "2026-10-08",
-    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
+    "date": "2026-10-08"
   },
   {
     "slug": "ebook-converter-notes",
@@ -1380,7 +1356,6 @@
     "differences": [],
     "published": true,
     "badge": "New",
-    "date": "2026-10-14",
-    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
+    "date": "2026-10-14"
   }
 ]
