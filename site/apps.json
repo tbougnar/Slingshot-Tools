@@ -1,5 +1,47 @@
 [
   {
+    "slug": "chess-board",
+    "base_slug": "chess-board",
+    "title": "Chess board viewer",
+    "tier": "full",
+    "tag": "chess",
+    "blurb": "A small, focused chess tool. Chess board viewer does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "chess",
+      "board",
+      "viewer"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/chess-board-basic/",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-15"
+  },
+  {
+    "slug": "chess-board-basic",
+    "base_slug": "chess-board",
+    "title": "Chess board viewer (Basic)",
+    "tier": "basic",
+    "tag": "chess",
+    "blurb": "A small, focused chess tool. Chess board viewer does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "chess",
+      "board",
+      "viewer"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/chess-board-basic/",
+    "download": "",
+    "price": 0.0,
+    "free": true,
+    "differences": [],
+    "published": true,
+    "badge": "New",
+    "date": "2026-10-15"
+  },
+  {
     "slug": "note-taker",
     "base_slug": "note-taker",
     "title": "Quick note taker",
