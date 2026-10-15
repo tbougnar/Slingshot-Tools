@@ -1,5 +1,43 @@
 [
   {
+    "slug": "calendar-diff",
+    "base_slug": "calendar-diff",
+    "title": "Calendar",
+    "tier": "full",
+    "tag": "calendar",
+    "blurb": "A small, focused calendar tool. Calendar does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "calendar"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/calendar-diff-basic/",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-15"
+  },
+  {
+    "slug": "calendar-diff-basic",
+    "base_slug": "calendar-diff",
+    "title": "Calendar (Basic)",
+    "tier": "basic",
+    "tag": "calendar",
+    "blurb": "A small, focused calendar tool. Calendar does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "calendar"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/calendar-diff-basic/",
+    "download": "",
+    "price": 0.0,
+    "free": true,
+    "differences": [],
+    "published": true,
+    "badge": "New",
+    "date": "2026-10-15"
+  },
+  {
     "slug": "chess-board",
     "base_slug": "chess-board",
     "title": "Chess board viewer",
