@@ -1,5 +1,45 @@
 [
   {
+    "slug": "chess-clock",
+    "base_slug": "chess-clock",
+    "title": "Chess clock",
+    "tier": "full",
+    "tag": "chess",
+    "blurb": "A small, focused chess tool. Chess clock does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "chess",
+      "clock"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/chess-clock-basic/",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-15"
+  },
+  {
+    "slug": "chess-clock-basic",
+    "base_slug": "chess-clock",
+    "title": "Chess clock (Basic)",
+    "tier": "basic",
+    "tag": "chess",
+    "blurb": "A small, focused chess tool. Chess clock does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "chess",
+      "clock"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/chess-clock-basic/",
+    "download": "",
+    "price": 0.0,
+    "free": true,
+    "differences": [],
+    "published": true,
+    "badge": "New",
+    "date": "2026-10-15"
+  },
+  {
     "slug": "calendar-diff",
     "base_slug": "calendar-diff",
     "title": "Calendar",
