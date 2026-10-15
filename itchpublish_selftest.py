@@ -453,6 +453,25 @@ check("no free edition carries a store URL", not _free,
 check("and the paid ones still do",
       any(e.get("tier") == "full" and e.get("itch_url") for e in _cat))
 
+print("\nTHE CATALOGUE IS VALID JSON AND SAYS WHAT IT MEANS\n")
+# site/apps.json is read by the live site. A rebase conflict left '<<<<<<<' in
+# it, the markers were committed, and the storefront shipped invalid JSON.
+# Nothing about that is a runtime error anyone would catch: the file is data,
+# so the suite has to read it the way the site does.
+_check = (ROOT / "site" / "apps.json").read_text(encoding="utf-8")
+try:
+    _parsed = json.loads(_check)
+    check("site/apps.json parses as JSON", isinstance(_parsed, list),
+          f"it is a {type(_parsed).__name__}, not the list the site expects")
+except json.JSONDecodeError as e:
+    check("site/apps.json parses as JSON", False,
+          f"line {e.lineno}: {e.msg}. The storefront reads this file, so "
+          "this breaks the site.")
+    _parsed = []
+check("and it holds no conflict markers",
+      not any(m in _check for m in ("<<<<<<<", ">>>>>>>", "=======")),
+      "a merge conflict was committed into the storefront's data")
+
 print()
 print("FAILURES:", fails if fails else "none")
 sys.exit(1 if fails else 0)

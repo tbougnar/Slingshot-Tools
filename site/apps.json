@@ -40,7 +40,6 @@
     "published": true,
     "badge": "New",
     "date": "2026-10-15",
-    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools",
     "built": true
   },
   {
@@ -61,11 +60,7 @@
     "published": false,
     "badge": "New",
     "date": "2026-10-15",
-<<<<<<< HEAD
-    "itch_url": ""
-=======
     "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
->>>>>>> 47294d1 (Never give a free edition a store URL, and stop the report claiming a block that is gone)
   },
   {
     "slug": "calendar-diff-basic",
@@ -84,8 +79,7 @@
     "differences": [],
     "published": true,
     "badge": "New",
-    "date": "2026-10-15",
-    "itch_url": ""
+    "date": "2026-10-15"
   },
   {
     "slug": "chess-board",
