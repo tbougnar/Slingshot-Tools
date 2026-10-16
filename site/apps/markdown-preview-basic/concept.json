@@ -1,0 +1,15 @@
+{
+  "slug": "markdown-preview-basic",
+  "title": "Markdown editor",
+  "tag": "markdown",
+  "blurb": "markdown editor with live preview",
+  "tags": [
+    "markdown",
+    "editor",
+    "with",
+    "live"
+  ],
+  "brand": "",
+  "tier": "basic",
+  "base_slug": "markdown-preview"
+}
