@@ -482,6 +482,50 @@ check("record() did not give a published product's free edition a store URL",
       f"{len(_leaked)} free editions of a published product carry a store "
       "URL: " + ", ".join(sorted(str(s) for s in _leaked)[:4]))
 
+print("\nONE UNLUCKY REQUEST IS NOT A VERDICT\n")
+# Run 38912830336 said 'the store project did not answer' on a project that
+# had been uploaded to twice, then told the account holder to create a project
+# they had already created. itch.io rate-limits, and consecutive probes of the
+# same live page alternated between answering and not.
+_realp = ip.page_probe
+_real_sleep = ip.time.sleep
+try:
+    _calls = []
+
+    def _flaky(url):
+        _calls.append(url)
+        return (None, "HTTP 429") if len(_calls) < 3 else (True, "HTTP 200")
+
+    ip.page_probe = _flaky
+    ip.time.sleep = lambda s: None
+    check("a page that declines at first is retried before being called absent",
+          ip.page_is_live("https://slingshot-tools.itch.io/slingshot-tools")
+          and len(_calls) == 3,
+          f"probed {len(_calls)} time(s): one 429 made a live project look "
+          "like it did not exist")
+
+    _calls2 = []
+
+    def _always_declines(url):
+        _calls2.append(url)
+        return (None, "HTTP 429")
+
+    ip.page_probe = _always_declines
+    check("and it gives up honestly rather than calling it absent",
+          ip.page_is_live("https://slingshot-tools.itch.io/slingshot-tools")
+          is False and len(_calls2) == 4,
+          f"probed {len(_calls2)} time(s), expected 4 before giving up")
+finally:
+    ip.page_probe = _realp
+    ip.time.sleep = _real_sleep
+
+# and the run must not tell someone to create a project that already exists
+_src = " ".join((ROOT / "itch_publish.py").read_text(encoding="utf-8").split())
+check("and it does not call the project missing when the server declined",
+      "not the same as not existing" in _src,
+      "the run said the store did not exist and told the account holder to "
+      "create it again")
+
 print("\nTHE CATALOGUE IS VALID JSON AND SAYS WHAT IT MEANS\n")
 # site/apps.json is read by the live site. A rebase conflict left '<<<<<<<' in
 # it, the markers were committed, and the storefront shipped invalid JSON.

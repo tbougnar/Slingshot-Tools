@@ -21,6 +21,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -122,20 +123,48 @@ def find_game(slug: str) -> dict | None:
 
 # ------------------------------------------------------------- page is real
 
-def page_is_live(url: str) -> bool:
-    """Does the public page answer? The simplest proof it was created."""
+def page_probe(url: str) -> tuple[bool | None, str]:
+    """Is the public page there?
+
+    Three outcomes, not two. True and False are facts. None means the page
+    could not be reached or answered with something that is not a verdict,
+    which is not the same as the page being absent and must not be reported as
+    though it were.
+    """
     if not url.startswith(OK_URL) or ".itch.io/" not in url:
-        return False
+        return False, "not an itch.io page"
     req = urllib.request.Request(url, headers={"User-Agent": "slingshot-tools"})
     try:
         with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
-            return r.status == 200
-    except urllib.error.HTTPError:
-        # 403 and 404 both mean it is not publicly there, which is a no
-        return False
+            return r.status == 200, f"HTTP {r.status}"
+    except urllib.error.HTTPError as e:
+        # 403 and 404 are verdicts: it is not publicly there.
+        if e.code in (403, 404):
+            return False, f"HTTP {e.code}"
+        # 429 and 5xx are the server declining to answer right now.
+        return None, f"HTTP {e.code}"
     except Exception as e:  # noqa: BLE001
-        log(f"could not reach {url}: {e}")
-        return False
+        return None, str(e)[:90]
+
+
+def page_is_live(url: str, attempts: int = 4) -> bool:
+    """Does the public page answer, retrying while it declines to.
+
+    itch.io rate-limits and a single probe alternated between answering and not
+    on consecutive calls, so one unlucky request decided the store project did
+    not exist. The publish path then told the account holder to go and create a
+    project they had already created, which is the opposite of help.
+    """
+    live, detail = page_probe(url)
+    if live is not None:
+        return live
+    for i in range(1, attempts):
+        time.sleep(min(2 ** i, 12))
+        live, detail = page_probe(url)
+        if live is not None:
+            return live
+    log(f"   {url} did not answer after {attempts} tries ({detail})")
+    return False
 
 
 # ------------------------------------------------------- create with a browser
@@ -709,6 +738,16 @@ def publish(slug: str, title: str, price: float, version: str = "") -> bool:
             url = STORE_URL
             log(f"1. the store project is live and holds this product: {url}")
         else:
+            _verdict, _why = page_probe(STORE_URL)
+            if _verdict is None:
+                # The store declined to answer. It has products on it, so
+                # saying it does not exist would send the account holder off to
+                # create a project they already created.
+                log(f"1. the store project did not answer ({_why}), which is "
+                    f"not the same as not existing. It has been uploading "
+                    f"all along, so this run stops rather than guess: "
+                    f"{STORE_URL}")
+                return False
             log(f"1. the store project did not answer: {STORE_URL}")
     if not url and KEY:
         found = find_game(slug)

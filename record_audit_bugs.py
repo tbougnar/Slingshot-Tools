@@ -644,6 +644,30 @@ FOUND = [
      "itchpublish_selftest.py: FAILURES: none, and the catalogue was cleaned "
      "and re-checked.",
      ""),
+
+    ("one unlucky request deleted a project that existed",
+     "HIGH", "itch.io publishing", ["itch_publish.py"], "VERIFIED_FIXED",
+     "page_is_live made a single request and treated anything other than 200 "
+     "as proof the project did not exist, including a 429 and a timeout. "
+     "itch.io rate-limits, and four consecutive probes of the same live page "
+     "returned True, False, True, False. The publish path turned one of those "
+     "into 'the store project did not answer', fell through to browser project "
+     "creation, and told the account holder to go and create a project they "
+     "had already created and that had been uploaded to twice.",
+     "Run 38912830336: '1. the store project did not answer' followed by 'no "
+     "project exists and one cannot be created from here'. Concurrently on the "
+     "same URL, page_probe returned True, False, True, False.",
+     "call page_is_live on the live store project several times in a row",
+     "The probe now distinguishes a verdict from a refusal. 403 and 404 are "
+     "verdicts, so the page genuinely is not there; 429, 5xx and transport "
+     "errors are refusals and are retried with backoff. If the store never "
+     "answers, the run stops and says the store declined to answer, which is "
+     "not the same as saying it does not exist.",
+     "itchpublish_selftest.py drives a probe that declines twice then answers, "
+     "and one that never answers",
+     "itchpublish_selftest.py: FAILURES: none. It is probed three times and "
+     "concluded live, and four times before giving up when it never answers.",
+     ""),
 ]
 
 
