@@ -1,15 +1,9 @@
 {
   "slug": "stopwatch-basic",
+  "brand": "",
   "title": "Lap stopwatch",
   "tag": "stopwatch",
-  "blurb": "lap stopwatch with export",
-  "tags": [
-    "lap",
-    "stopwatch",
-    "with",
-    "export"
-  ],
-  "brand": "",
+  "blurb": "",
   "tier": "basic",
   "base_slug": "stopwatch"
 }
