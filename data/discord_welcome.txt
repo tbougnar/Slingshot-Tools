@@ -3,7 +3,7 @@ Welcome to **Slingshot Tools**.
 Everything we make is here, and everything here links to everything else:
 
 Website  ->  https://tbougnar.github.io/Slingshot-Tools/
-itch.io  ->  https://slingshot-tools.itch.io/
+itch.io  ->  https://slingshot-tools.itch.io/slingshot-tools
 YouTube  ->  https://www.youtube.com/@Slingshot_Tools
 Discord  ->  https://discord.gg/uajfhbkMY
 GitHub  ->  https://github.com/tbougnar/Slingshot-Tools

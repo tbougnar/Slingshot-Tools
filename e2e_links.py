@@ -10,6 +10,7 @@ door into it at all.
 from __future__ import annotations
 
 import pathlib
+import re
 import sys
 import urllib.error
 import urllib.parse
@@ -50,13 +51,21 @@ def main() -> int:
                 f"{code} -> {final[:60]}" if good
                 else f"HTTP {code} {final[:60]}")
             if "itch" in c["key"]:
-                # the store page has to list the product, not merely answer.
-                # It answering 200 is not the same as there being something
-                # to buy, which is how an empty shop looks healthy.
-                has = "password" in body.lower() or "vault" in body.lower()
-                say(has, "the itch.io store actually lists the product",
-                    "the page answers but shows no password manager"
-                    if not has else "")
+                # The store page has to list something to buy, not merely
+                # answer. It answering 200 is not the same as there being
+                # something to buy, which is how an empty shop looks healthy.
+                #
+                # It is checked against whatever is actually for sale rather
+                # than against a fixed product name. The store is one project
+                # holding every product, so it shows whichever build was
+                # uploaded last; hardcoding one name made this fail the moment
+                # a different product shipped, which is the normal case.
+                builds = re.findall(r"[^<>]{1,80}Setup\.exe", body)
+                say(bool(builds),
+                    "the itch.io store lists a build to buy",
+                    "the page answers but lists no build, which is how an "
+                    "empty shop looks healthy"
+                    if not builds else "")
         except urllib.error.HTTPError as e:
             say(False, f"the {c['label']} link works", f"HTTP {e.code}")
         except Exception as e:  # noqa: BLE001

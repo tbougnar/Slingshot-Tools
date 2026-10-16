@@ -29,9 +29,12 @@ CHANNELS = [
     {
         "key": "itch",
         "label": "itch.io",
-        # the main store page, not one product
+        # The project page, where the builds actually are. The fallback used
+        # to be the account page, which answers HTTP 200 and lists nothing, so
+        # a customer following "itch.io" in the footer arrived at an empty
+        # shop and the link check could not tell the difference.
         "url": os.environ.get("ITCH_STORE_URL", "").strip()
-        or "https://slingshot-tools.itch.io/",
+        or "https://slingshot-tools.itch.io/slingshot-tools",
         "icon": "bag",
         "primary": True,
     },
