@@ -1,0 +1,15 @@
+{
+  "slug": "base64-tool-basic",
+  "title": "Base64 and URL encoding tool",
+  "tag": "base64",
+  "blurb": "base64 and URL encoding tool",
+  "tags": [
+    "base64",
+    "and",
+    "URL",
+    "encoding"
+  ],
+  "brand": "",
+  "tier": "basic",
+  "base_slug": "base64-tool"
+}
