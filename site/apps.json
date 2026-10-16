@@ -15,9 +15,11 @@
     "price": 3.0,
     "free": false,
     "differences": [],
-    "published": false,
+    "published": true,
     "badge": "New",
-    "date": "2026-10-16"
+    "date": "2026-10-16",
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools",
+    "built": true
   },
   {
     "slug": "password-manager-basic",
