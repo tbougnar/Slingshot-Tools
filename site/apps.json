@@ -17,7 +17,8 @@
     "differences": [],
     "published": false,
     "badge": "New",
-    "date": "2026-10-16"
+    "date": "2026-10-16",
+    "itch_url": ""
   },
   {
     "slug": "stopwatch-basic",
@@ -32,12 +33,13 @@
     ],
     "url": "https://tbougnar.github.io/Slingshot-Tools/apps/stopwatch-basic/",
     "download": "",
-    "price": 0.0,
+    "price": 0,
     "free": true,
     "differences": [],
     "published": true,
     "badge": "New",
-    "date": "2026-10-16"
+    "date": "2026-10-16",
+    "itch_url": ""
   },
   {
     "slug": "base64-tool",
