@@ -1,5 +1,47 @@
 [
   {
+    "slug": "base64-tool",
+    "base_slug": "base64-tool",
+    "title": "Base64 and URL encoding tool",
+    "tier": "full",
+    "tag": "base64",
+    "blurb": "A small, focused base64 tool. Base64 and URL encoding tool does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "base64",
+      "url",
+      "encoding"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/base64-tool-basic/",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-16"
+  },
+  {
+    "slug": "base64-tool-basic",
+    "base_slug": "base64-tool",
+    "title": "Base64 and URL encoding tool (Basic)",
+    "tier": "basic",
+    "tag": "base64",
+    "blurb": "A small, focused base64 tool. Base64 and URL encoding tool does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "base64",
+      "url",
+      "encoding"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/base64-tool-basic/",
+    "download": "",
+    "price": 0.0,
+    "free": true,
+    "differences": [],
+    "published": true,
+    "badge": "New",
+    "date": "2026-10-16"
+  },
+  {
     "slug": "markdown-preview",
     "base_slug": "markdown-preview",
     "title": "Markdown editor",
