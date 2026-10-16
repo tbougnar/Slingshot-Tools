@@ -1,0 +1,11 @@
+{
+ "slug": "stopwatch",
+ "brand": "",
+ "title": "Lap stopwatch",
+ "tag": "stopwatch",
+ "differences": "",
+ "free_blurb": "",
+ "paid_blurb": "",
+ "candidate": "site/apps/stopwatch-basic/app/index.html",
+ "paid_dir": "paid/stopwatch"
+}
