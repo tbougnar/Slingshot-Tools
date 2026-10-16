@@ -38,7 +38,13 @@ jobs:
         with:
           python-version: "3.12"
 
+      # CHECK_LIVE_FOOTER=0 because this compares links.py against the page
+      # that is already live. Checked here it would refuse the deploy that
+      # would satisfy it, so no link could ever be changed. It is run again
+      # below, once the site is actually up.
       - name: Confirm the links still work
+        env:
+          CHECK_LIVE_FOOTER: "0"
         run: python check_links.py
 
       - name: Refresh the platform links
@@ -60,3 +66,5 @@ jobs:
 
       - id: deploy
         uses: actions/deploy-pages@v4
+      - name: Confirm the deployed footer matches
+        run: python check_links.py

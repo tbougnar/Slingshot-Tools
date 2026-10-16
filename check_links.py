@@ -14,6 +14,7 @@ generic 404.
 from __future__ import annotations
 
 import json
+import os
 import re
 import time
 import urllib.error
@@ -140,7 +141,12 @@ def check_one(c: dict) -> tuple[bool, str]:
                            "so the footer ships")
         gone = [k for k in ("discord", "youtube", "itch")
                 if __import__("links").url(k) not in body]
-        if gone:
+        if gone and os.environ.get("CHECK_LIVE_FOOTER", "1") != "0":
+            # Skipped before a deploy. This assertion compares links.py against
+            # the page that is already live, so running it ahead of the deploy
+            # makes it refuse the very deploy that would satisfy it: changing a
+            # link could never be published. pages.yml runs it again once the
+            # site is up, where it is a real check.
             return False, f"the live footer is missing: {', '.join(gone)}"
     else:
         detail = landed[:52]
