@@ -145,11 +145,10 @@
     "price": 3.0,
     "free": false,
     "differences": [],
-    "published": true,
+    "published": false,
     "badge": "New",
     "date": "2026-10-16",
-    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools",
-    "built": true
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "markdown-preview-basic",
@@ -189,11 +188,10 @@
     "price": 3.0,
     "free": false,
     "differences": [],
-    "published": true,
+    "published": false,
     "badge": "New",
     "date": "2026-10-15",
-    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools",
-    "built": true
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "chess-clock-basic",

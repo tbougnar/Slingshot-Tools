@@ -668,6 +668,32 @@ FOUND = [
      "itchpublish_selftest.py: FAILURES: none. It is probed three times and "
      "concluded live, and four times before giving up when it never answers.",
      ""),
+
+    ("two products were on sale with no download behind them",
+     "CRITICAL", "itch.io publishing", ["itch_publish.py"], "VERIFIED_FIXED",
+     "Step 4 asked only whether the project page answered. The store is one "
+     "project holding every product, so it answers perfectly well while "
+     "missing the particular build being sold. chess-clock and markdown-preview "
+     "had been published before builds got their own channel; their builds were "
+     "replaced by later releases and the catalogue kept offering them, which is "
+     "taking money for a download that cannot be delivered.",
+     "The store listed 'Base64 and URL encoding tool-Setup.exe' and 'Offline "
+     "password manager-Setup.exe' while the catalogue marked chess-clock and "
+     "markdown-preview as published. build_is_listed confirmed chess-clock's "
+     "file is absent.",
+     "publish a product, then replace its build, and check whether the site "
+     "still offers it",
+     "Publishing now verifies that this product's own installer file is listed "
+     "on the page before it is advertised, retried because itch.io publishes "
+     "builds asynchronously after the upload returns. The two orphans were "
+     "taken off sale, since nothing can restore them without rebuilding those "
+     "products and advertising them is worse than not offering them.",
+     "itchpublish_selftest.py asserts the step-4 check exists and that no "
+     "advertised paid product lacks a build",
+     "itchpublish_selftest.py: FAILURES: none. The store now lists a build for "
+     "every product on sale.",
+     "chess-clock and markdown-preview will return to the shop if and when the "
+     "pipeline builds them again."),
 ]
 
 

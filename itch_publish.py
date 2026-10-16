@@ -26,7 +26,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 import auditlog
 
@@ -145,6 +145,30 @@ def page_probe(url: str) -> tuple[bool | None, str]:
         return None, f"HTTP {e.code}"
     except Exception as e:  # noqa: BLE001
         return None, str(e)[:90]
+
+
+def build_is_listed(url: str, filename: str, attempts: int = 4) -> bool:
+    """Is this exact build on the page, the way a buyer would see it?
+
+    itch.io publishes a build asynchronously after the upload returns, so the
+    page can answer for a moment before the file appears. Retried rather than
+    concluded, because concluding too early means a product that is genuinely
+    on its way is never sold.
+    """
+    needle = quote(filename.lower())
+    for i in range(attempts):
+        try:
+            req = urllib.request.Request(
+                url, headers={"User-Agent": "slingshot-tools"})
+            with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+                body = r.read(400_000).decode("utf-8", "replace").lower()
+            if needle in body or filename.lower() in body:
+                return True
+        except Exception:  # noqa: BLE001
+            pass
+        if i < attempts - 1:
+            time.sleep(min(4 * (i + 1), 15))
+    return False
 
 
 def page_is_live(url: str, attempts: int = 4) -> bool:
@@ -803,7 +827,18 @@ def publish(slug: str, title: str, price: float, version: str = "") -> bool:
     if not page_is_live(url):
         log("4. the page stopped answering after the upload; not publishing")
         return False
-    log("4. the page still answers")
+    # The page answering is not enough. The store is one project holding every
+    # product, so it answers whatever else is on it. Advertising a product
+    # whose build is not actually listed means taking money for a download
+    # nobody can be given, so this product's own file has to be on the page.
+    if not build_is_listed(url, installer.name):
+        log(f"4. the page answers but does not list {installer.name}, so this "
+            "product is not being sold")
+        log("   something else may occupy the build's channel, or itch.io has "
+            "not published it yet; either way it is not for sale until the "
+            "file is on the page")
+        return False
+    log(f"4. the page answers and lists {installer.name}")
 
     # 5. only now is it safe to show a buy button
     if not record(slug, url, price):

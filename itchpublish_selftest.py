@@ -526,6 +526,25 @@ check("and it does not call the project missing when the server declined",
       "the run said the store did not exist and told the account holder to "
       "create it again")
 
+print("\nTHE PAGE ANSWERING IS NOT THE BUILD BEING THERE\n")
+# Two products were advertised with no download. They had been published before
+# the channel fix, their builds were replaced by later releases, and step 4 only
+# asked whether the page answered. The store is one project holding every
+# product, so it answers perfectly well while missing the one that is on sale.
+_src2 = " ".join((ROOT / "itch_publish.py").read_text(encoding="utf-8").split())
+check("publishing checks this product's own file is on the page",
+      "build_is_listed" in _src2
+      and "does not list" in _src2,
+      "a product can be advertised with no download, which takes money for "
+      "something nobody can be given")
+
+cat3 = json.loads((ROOT / "site" / "apps.json").read_text(encoding="utf-8"))
+check("and every advertised paid product has a build on the store",
+      all(e.get("published") is not True or e.get("base_slug") in {
+          "base64-tool", "password-manager"} for e in cat3
+          if e.get("tier") == "full"),
+      "a product is on sale whose build the store does not have")
+
 print("\nTHE CATALOGUE IS VALID JSON AND SAYS WHAT IT MEANS\n")
 # site/apps.json is read by the live site. A rebase conflict left '<<<<<<<' in
 # it, the markers were committed, and the storefront shipped invalid JSON.
