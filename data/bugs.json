@@ -609,5 +609,42 @@
   "verification": "itchpublish_selftest.py: FAILURES: none. The test fails if the catalogue lookup is removed.",
   "uncertainty": "The API listing endpoint remains unreadable, so find_game() is kept as a fallback but is no longer the only way existence is decided.",
   "opened": "2026-10-14T21:08:40+00:00"
+ },
+ {
+  "id": "BUG-034",
+  "symptom": "each release deleted the previous product's build from the store",
+  "severity": "CRITICAL",
+  "component": "itch.io publishing",
+  "files": [
+   "itch_publish.py"
+  ],
+  "status": "VERIFIED_FIXED",
+  "root_cause": "Every product was pushed to the same channel, windows-64, inside the one shared project. An itch.io channel holds a single build, so each weekly release replaced the one before it. After three successful runs the store listed only the newest build while the catalogue still advertised all three as purchasable, so a customer could pay for a download that was no longer there. That is worse than the empty store this audit spent its effort on: an empty shop is honest, a shop selling what it no longer has is not.",
+  "evidence": "After run 38900671183 the project page listed only 'Base64 and URL encoding tool-Setup.exe', while the catalogue marked chess-clock, markdown-preview and base64-tool as published, so two of the three had nothing to download.",
+  "repro": "publish two different products into the shared project and fetch the page afterwards",
+  "fix": "Each product gets its own channel, derived from its slug, so the builds accumulate instead of overwriting. ITCH_CHANNEL still overrides it for anyone who wants a single channel, and the workflow no longer pins a channel that would defeat the per-product default.",
+  "regression_test": "itchpublish_selftest.py asserts two products resolve to two different channels, and that no workflow pins one",
+  "verification": "itchpublish_selftest.py: FAILURES: none. butler accepted a per-product channel name and refused only on the deliberately dummy key with 403, which is the refused-key shape rather than a bad-channel one.",
+  "uncertainty": "The builds already overwritten are gone from the store and have to be put back by publishing those products again.",
+  "opened": "2026-10-16T13:11:44+00:00"
+ },
+ {
+  "id": "BUG-035",
+  "symptom": "record() put a store URL on the free edition of a published product",
+  "severity": "HIGH",
+  "component": "itch.io publishing",
+  "files": [
+   "itch_publish.py",
+   "set_itch_url.py"
+  ],
+  "status": "VERIFIED_FIXED",
+  "root_cause": "record() wrote itch_url onto every entry of the family, the free basic edition included, each time a product was published. The free edition is served from this site and is never uploaded to itch.io, so the catalogue claimed it was on a store it had never reached. set_itch_url.py --all had already been corrected for this, but record() is the path that runs on every release, so the correction never held.",
+  "evidence": "site/apps.json carried itch_url on base64-tool-basic and markdown-preview-basic, both free editions whose paid siblings were published.",
+  "repro": "publish a product and read the free edition's itch_url",
+  "fix": "record() writes the URL to the paid edition only and clears any stale one from the free edition, so the catalogue cannot claim a free app is on itch.io.",
+  "regression_test": "itchpublish_selftest.py asserts no free edition of a published product carries a store URL",
+  "verification": "itchpublish_selftest.py: FAILURES: none, and the catalogue was cleaned and re-checked.",
+  "uncertainty": "",
+  "opened": "2026-10-16T13:11:44+00:00"
  }
 ]

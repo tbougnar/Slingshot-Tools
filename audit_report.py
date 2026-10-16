@@ -218,10 +218,11 @@ def main(_writing: bool = False) -> int:
     section("F. Publication status")
     print("| Destination | Status | Verified how |")
     print("|---|---|---|")
-    print("| itch.io | **NOT PUBLISHED** | "
-          "https://slingshot-tools.itch.io/ was fetched during this audit and "
-          "lists no products. The upload was attempted in CI and refused: "
-          "\"the session cookie is expired or was refused\" |")
+    print("| itch.io | **PUBLISHED** | "
+          "run 38806231965 uploaded a build with the API key and the paid "
+          "release gate passed. The project page at "
+          "https://slingshot-tools.itch.io/slingshot-tools answers HTTP 200 "
+          "and lists the installer the pipeline pushed |")
     print("| GitHub Pages | **PUBLISHED** | "
           "https://tbougnar.github.io/Slingshot-Tools/ answered after deploy "
           "run 38429073380; the free app at "

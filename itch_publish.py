@@ -49,10 +49,26 @@ USER = (os.environ.get("ITCH_USER") or "").strip()
 STORE_URL = os.environ.get("ITCH_STORE_URL", "").strip().rstrip("/")
 
 # the channel butler pushes the installer to
-# butler requires the target as user/slug:channel and refuses anything else
-# with "missing channel". itch.io's own Windows channel is windows-64, so the
-# bare word "windows" was rejected before any request was made.
-CHANNEL = os.environ.get("ITCH_CHANNEL", "windows-64").strip()
+# butler requires the target as user/project:channel and refuses anything else
+# with "missing channel".
+#
+# Every product gets its own channel inside the shared project. They used to
+# share one, "windows-64", and each release replaced the last: after three
+# successes the store listed only the newest build while the catalogue still
+# advertised all three, so two customers could pay for a download that was no
+# longer there. A channel per product means the builds accumulate, which is
+# what one project holding every product has to mean.
+#
+# ITCH_CHANNEL overrides this for anyone who genuinely wants one channel.
+CHANNEL = os.environ.get("ITCH_CHANNEL", "").strip()
+
+
+def channel_for(slug: str) -> str:
+    """The itch.io channel one product's build goes to."""
+    if CHANNEL:
+        return CHANNEL
+    clean = "".join(c for c in slug.lower() if c.isalnum() or c in "-_")
+    return f"{clean or 'build'}-win"
 
 # only https itch.io pages count as a project link
 OK_URL = "https://"
@@ -538,7 +554,7 @@ def upload(installer: Path, slug: str, version: str,
         log("install it from https://itchio.itch.io/butler")
         return False
 
-    target = f"{USER}/{project or slug}:{CHANNEL}"
+    target = f"{USER}/{project or slug}:{channel_for(slug)}"
     cmd = [exe, "push", str(installer), target]
     if version:
         cmd += ["--userversion", version]
@@ -603,6 +619,14 @@ def record(slug: str, url: str, price: float) -> bool:
         return False
 
     for entry in family:
+        # Only the paid edition gets a store URL, and only once its own build
+        # is on the store. The free edition is served from this site and has
+        # never been uploaded to itch.io, so recording a store URL for it is a
+        # claim that is not true. set_itch_url.py --all enforces the same rule
+        # and this enforces it on every release, which is the path that runs.
+        if entry.get("tier") == "basic":
+            entry.pop("itch_url", None)
+            continue
         entry["itch_url"] = url
         entry["built"] = True
         entry["published"] = True

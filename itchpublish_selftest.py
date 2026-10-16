@@ -374,19 +374,34 @@ check("a product with no catalogue entry uses the store project",
       "had not seen yet, even though the store project is its home")
 
 print("\nTHE CHANNEL IN THE WORKFLOW IS ONE BUTLER ACCEPTS\n")
-# Run 38800... pinned ITCH_CHANNEL: "windows" in the workflow, which overrode
-# the corrected default and made butler answer 'invalid spec ... missing
-# channel'. The default being right is no protection if the workflow pins the
-# wrong value, so the pinned value itself is checked.
+# Every product used to be pushed to the same channel, so each release replaced
+# the last. After three successful runs the store listed only the newest build
+# while the catalogue still advertised all three, so two customers could pay for
+# a download that was no longer there. An empty shop is honest; a shop selling
+# something it no longer has is not.
+_cf = ip.channel_for
+_realc = ip.CHANNEL
+try:
+    ip.CHANNEL = ""
+    check("two products get two different channels",
+          ip.channel_for("chess-clock") != ip.channel_for("base64-tool"),
+          "they share a channel, so each release deletes the previous "
+          "product's build from the store")
+    check("and the channel is safe for itch.io",
+          ip.channel_for("A B!") == "ab-win",
+          ip.channel_for("A B!"))
+    ip.CHANNEL = "windows-64"
+    check("an explicit ITCH_CHANNEL still overrides it",
+          ip.channel_for("chess-clock") == "windows-64")
+finally:
+    ip.CHANNEL = _realc
+
 _wftext = (ROOT / ".github" / "workflows" / "friday-verify.yml").read_text(
     encoding="utf-8")
-_bad = [ln.strip() for ln in _wftext.splitlines()
-        if "ITCH_CHANNEL" in ln and '"windows"' in ln]
-check("no job pins a channel itch.io does not have", not _bad,
-      "butler refuses 'windows': invalid spec, missing channel. "
-      + "; ".join(_bad))
-check("and the jobs that upload use a real one",
-      _wftext.count('ITCH_CHANNEL: "windows-64"') >= 2)
+check("and no job pins one channel for everything",
+      "ITCH_CHANNEL" not in _wftext,
+      "a pinned channel overrides the per-product one and puts every product "
+      "back on top of the last")
 
 print("\nTHE UPLOAD TARGET IS THE PROJECT, NOT THE PRODUCT\n")
 # Run 38800149146 pushed to 'slingshot-tools/chess-board:windows-64'. The
@@ -452,6 +467,20 @@ check("no free edition carries a store URL", not _free,
       + ", ".join(sorted(str(e.get("slug")) for e in _free)[:4]))
 check("and the paid ones still do",
       any(e.get("tier") == "full" and e.get("itch_url") for e in _cat))
+
+# set_itch_url.py --all was fixed, but record() runs on every release and it
+# was writing the URL onto the whole family, free edition included. That is
+# the path that actually runs, so it is checked here.
+_cat2 = json.loads((ROOT / "site" / "apps.json").read_text(encoding="utf-8"))
+_pub_families = {(e.get("base_slug") or e.get("slug")) for e in _cat2
+                 if e.get("tier") == "full" and e.get("published") is True}
+_leaked = [e.get("slug") for e in _cat2
+           if e.get("tier") == "basic" and e.get("itch_url")
+           and (e.get("base_slug") or e.get("slug")) in _pub_families]
+check("record() did not give a published product's free edition a store URL",
+      not _leaked,
+      f"{len(_leaked)} free editions of a published product carry a store "
+      "URL: " + ", ".join(sorted(str(s) for s in _leaked)[:4]))
 
 print("\nTHE CATALOGUE IS VALID JSON AND SAYS WHAT IT MEANS\n")
 # site/apps.json is read by the live site. A rebase conflict left '<<<<<<<' in

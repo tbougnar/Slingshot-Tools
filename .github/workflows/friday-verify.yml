@@ -272,8 +272,7 @@ jobs:
           # cookie is refused, so nobody has to paste a new cookie.
           ITCH_LOGIN: ${{ secrets.ITCH_LOGIN }}
           ITCH_PASSWORD: ${{ secrets.ITCH_PASSWORD }}
-          ITCH_CHANNEL: "windows-64"
-
+  
       # The record step needs an id of its own. Without one, PUBLISHED was
       # written to an output belonging to this step and read by nothing, so
       # the whole calculation was dead and the job reported success either
@@ -314,8 +313,7 @@ jobs:
           # cookie is refused, so nobody has to paste a new cookie.
           ITCH_LOGIN: ${{ secrets.ITCH_LOGIN }}
           ITCH_PASSWORD: ${{ secrets.ITCH_PASSWORD }}
-          ITCH_CHANNEL: "windows-64"
-      # Discord is best-effort: no credentials, or a Discord outage, must never
+        # Discord is best-effort: no credentials, or a Discord outage, must never
       # stop a release. discord_post.py posts through DISCORD_WEBHOOK_URL when
       # one is set and falls back to the bot token, so either credential works.
       # Ballots are NOT handled here: votes hold Discord user ids and a CI
