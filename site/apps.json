@@ -1,5 +1,45 @@
 [
   {
+    "slug": "markdown-preview",
+    "base_slug": "markdown-preview",
+    "title": "Markdown editor",
+    "tier": "full",
+    "tag": "markdown",
+    "blurb": "A small, focused markdown tool. Markdown editor does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "markdown",
+      "editor"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/markdown-preview-basic/",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-16"
+  },
+  {
+    "slug": "markdown-preview-basic",
+    "base_slug": "markdown-preview",
+    "title": "Markdown editor (Basic)",
+    "tier": "basic",
+    "tag": "markdown",
+    "blurb": "A small, focused markdown tool. Markdown editor does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "markdown",
+      "editor"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/markdown-preview-basic/",
+    "download": "",
+    "price": 0.0,
+    "free": true,
+    "differences": [],
+    "published": true,
+    "badge": "New",
+    "date": "2026-10-16"
+  },
+  {
     "slug": "chess-clock",
     "base_slug": "chess-clock",
     "title": "Chess clock",
