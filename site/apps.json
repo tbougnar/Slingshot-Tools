@@ -1,5 +1,45 @@
 [
   {
+    "slug": "password-manager",
+    "base_slug": "password-manager",
+    "title": "Offline password manager",
+    "tier": "full",
+    "tag": "password",
+    "blurb": "A small, focused password tool. Offline password manager does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "password",
+      "manager"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/password-manager-basic/",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-16"
+  },
+  {
+    "slug": "password-manager-basic",
+    "base_slug": "password-manager",
+    "title": "Offline password manager (Basic)",
+    "tier": "basic",
+    "tag": "password",
+    "blurb": "A small, focused password tool. Offline password manager does one job properly, runs offline, and keeps your data on your device.",
+    "tags": [
+      "password",
+      "manager"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/password-manager-basic/",
+    "download": "",
+    "price": 0.0,
+    "free": true,
+    "differences": [],
+    "published": true,
+    "badge": "New",
+    "date": "2026-10-16"
+  },
+  {
     "slug": "stopwatch",
     "base_slug": "stopwatch",
     "title": "Lap stopwatch",
@@ -1411,62 +1451,6 @@
     "published": true,
     "badge": "New",
     "date": "2026-10-13",
-    "itch_url": ""
-  },
-  {
-    "slug": "password-manager",
-    "base_slug": "password-manager",
-    "title": "Offline password manager",
-    "tier": "full",
-    "tag": "password",
-    "blurb": "A small, focused password tool. Offline password manager does one job properly, runs offline, and keeps your data on your device.",
-    "tags": [
-      "password",
-      "manager"
-    ],
-    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/password-manager-basic/",
-    "download": "",
-    "price": 3.0,
-    "free": false,
-    "differences": [
-      "Unlimited entries, not a three item trial",
-      "Light and dark, whichever you prefer",
-      "Stored on your own disk, never sent anywhere",
-      "Takes every entry out to one file you control",
-      "Brings entries in from another manager",
-      "Stores site, username and password together in one place"
-    ],
-    "published": false,
-    "badge": "New",
-    "date": "2026-10-08",
-    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
-  },
-  {
-    "slug": "password-manager-basic",
-    "base_slug": "password-manager",
-    "title": "Offline password manager (Basic)",
-    "tier": "basic",
-    "tag": "password",
-    "blurb": "A small, focused password tool. Offline password manager does one job properly, runs offline, and keeps your data on your device.",
-    "tags": [
-      "password",
-      "manager"
-    ],
-    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/password-manager-basic/",
-    "download": "",
-    "price": 0,
-    "free": true,
-    "differences": [
-      "Unlimited entries, not a three item trial",
-      "Light and dark, whichever you prefer",
-      "Stored on your own disk, never sent anywhere",
-      "Takes every entry out to one file you control",
-      "Brings entries in from another manager",
-      "Stores site, username and password together in one place"
-    ],
-    "published": false,
-    "badge": "New",
-    "date": "2026-10-08",
     "itch_url": ""
   },
   {
