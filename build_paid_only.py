@@ -55,16 +55,32 @@ def plausible(path: Path) -> bool:
         return False
 
 
+def _norm(text: str) -> str:
+    """A comparable form of a product name or an installer stem."""
+    s = text.lower().replace("-", "").replace("_", "").replace(" ", "")
+    return s.replace("slingshottool", "").replace("setup.exe", "")
+
+
 def find_existing(paid: Path) -> Path | None:
-    """An installer that already exists and is worth keeping.
+    """An installer for THIS product that already exists and is worth keeping.
+
+    It used to return the first plausible *-Setup.exe anywhere in dist/. dist/
+    is shared between builds, so building a product could pick up an older
+    product's installer and upload it under this product's name: a customer
+    would have paid for one tool and been sent another. The name has to match
+    the product being built.
 
     A stub is reported rather than silently skipped, because a run of these is
     the clearest evidence that something upstream is building empty installers.
     """
+    want = _norm(paid.name)
     candidates = sorted(paid.rglob("*Setup.exe"))
     for exe in sorted(Path("dist").glob("*-Setup.exe")) \
             if Path("dist").exists() else []:
-        candidates.append(exe)
+        # another product's installer sitting in the shared folder is not a
+        # candidate for this product, however plausible the binary is
+        if _norm(exe.stem) == want:
+            candidates.append(exe)
 
     stubs = []
     for c in candidates:

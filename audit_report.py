@@ -14,6 +14,12 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
+# --quick leaves out the live customer journeys. They fetch the public site and
+# the itch.io store, and itch.io rate-limits, so a full report took 25 minutes
+# and would time out anywhere with a limit. The journeys are still run by
+# e2e_all.py and by prove_everything.py; --quick is for generating the document
+# without waiting on the network.
+QUICK = "--quick" in sys.argv
 
 sys.path.insert(0, str(ROOT))
 import auditlog
@@ -39,7 +45,7 @@ def section(title):
     print()
 
 
-def main(_writing: bool = False) -> int:
+def main() -> int:
     stats = bugtrack.stats()
     bugs = bugtrack.sorted_bugs()
 
@@ -52,7 +58,14 @@ def main(_writing: bool = False) -> int:
     scanned = ""
     for ln in audited.splitlines():
         if "scanning" in ln:
-            scanned = ln.strip().split()[-1]
+            # "scanning 138 python files": the count is not the last word, which
+            # is "files". The report used to print the word files where a count
+            # belonged.
+            for tok in ln.split():
+                if tok.isdigit():
+                    scanned = tok
+                    break
+            break
     print("| Item | Count | How it was counted |")
     print("|---|---|---|")
     print(f"| Python modules at the repository root | {py} | "
@@ -175,8 +188,9 @@ def main(_writing: bool = False) -> int:
         ("python itchurl_selftest.py", "itch URL truthfulness"),
         ("python itchpublish_selftest.py", "publish reporting"),
         ("python shellcheck_selftest.py", "workflow shell correctness"),
-        ("python e2e_all.py", "customer journeys"),
     ]
+    if not QUICK:
+        checks.append(("python e2e_all.py", "customer journeys"))
     print("| Command | Purpose | Result |")
     print("|---|---|---|")
     for cmd, why in checks:
@@ -353,12 +367,10 @@ def main(_writing: bool = False) -> int:
           "documented blocker, and a test where one was practicable, and that "
           "the ones that mattered most were invisible to a green suite until "
           "the code was broken deliberately.")
-    if not _writing:
-        write_report()
     return 0
 
 
-def write_report() -> None:
+def write_report(body: str) -> None:
     """Write BUG_AUDIT.md from the same text this run prints.
 
     The report used to be a hand-maintained markdown file that nothing
@@ -366,19 +378,12 @@ def write_report() -> None:
     cookie which measurement had already proved unnecessary, which is worse
     than saying nothing. It is generated now, from the tracker, so it cannot
     disagree with data/bugs.json.
+
+    It writes what main() already produced. main() is not called a second time
+    to capture it: it runs the whole suite, including cleanroom, and doing that
+    twice made generating this document take twenty-three minutes.
     """
-    import contextlib
-    import io
-
     stats = bugtrack.stats()
-    buf = io.StringIO()
-    # main() is what prints the body and it calls write_report() itself, so
-    # the capture is what stops that becoming infinite: the redirected run
-    # prints into buf, and this call is the one that reaches the file.
-    with contextlib.redirect_stdout(buf):
-        main(_writing=True)
-    body = buf.getvalue().strip()
-
     out = [
         "# Slingshot Tools audit",
         "",
@@ -390,7 +395,7 @@ def write_report() -> None:
     for name, count in stats["by_status"].items():
         if count:
             out.append(f"- {name.replace('_', ' ').title()}: **{count}**")
-    out += ["", body, ""]
+    out += ["", body.strip(), ""]
 
     target = ROOT / "BUG_AUDIT.md"
     target.write_text("\n".join(out), encoding="utf-8")
@@ -398,4 +403,12 @@ def write_report() -> None:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    import contextlib
+    import io
+
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        rc = main()
+    print(buf.getvalue())
+    write_report(buf.getvalue())
+    raise SystemExit(rc)

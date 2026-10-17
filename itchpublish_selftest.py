@@ -496,6 +496,7 @@ try:
         _calls.append(url)
         return (None, "HTTP 429") if len(_calls) < 3 else (True, "HTTP 200")
 
+    ip._PROBE_CACHE.clear()
     ip.page_probe = _flaky
     ip.time.sleep = lambda s: None
     check("a page that declines at first is retried before being called absent",
@@ -510,14 +511,32 @@ try:
         _calls2.append(url)
         return (None, "HTTP 429")
 
+    ip._PROBE_CACHE.clear()
     ip.page_probe = _always_declines
     check("and it gives up honestly rather than calling it absent",
           ip.page_is_live("https://slingshot-tools.itch.io/slingshot-tools")
-          is False and len(_calls2) == 4,
-          f"probed {len(_calls2)} time(s), expected 4 before giving up")
+          is False and len(_calls2) == 3,
+          f"probed {len(_calls2)} time(s), expected 3 before giving up")
+
+    # and it must not ask the same question again: one fetch per URL per run
+    _calls3 = []
+
+    def _answers(url):
+        _calls3.append(url)
+        return (True, "HTTP 200")
+
+    ip._PROBE_CACHE.clear()
+    ip.page_probe = _answers
+    for _ in range(5):
+        ip.page_is_live("https://slingshot-tools.itch.io/slingshot-tools")
+    check("and it fetches once per run rather than once per question",
+          len(_calls3) == 1,
+          f"fetched {len(_calls3)} times for one question, which is what made "
+          "a full audit report take over twenty minutes")
 finally:
     ip.page_probe = _realp
     ip.time.sleep = _real_sleep
+    ip._PROBE_CACHE.clear()
 
 # and the run must not tell someone to create a project that already exists
 _src = " ".join((ROOT / "itch_publish.py").read_text(encoding="utf-8").split())
@@ -544,6 +563,46 @@ check("and every advertised paid product has a build on the store",
           "base64-tool", "password-manager"} for e in cat3
           if e.get("tier") == "full"),
       "a product is on sale whose build the store does not have")
+
+print("\nONE PRODUCT'S INSTALLER IS NEVER ANOTHER'S\n")
+# Building chess-clock reused invoice-maker-Setup.exe out of the shared dist/
+# folder: find_existing took the first plausible *-Setup.exe anywhere in dist/
+# with no regard for which product it belonged to. The publisher's
+# find_installer had the same shape, falling back to a substring test in both
+# directions. Either one hands a customer the wrong tool under a name they paid
+# for.
+def _mk(p: pathlib.Path, size: int = 2_000_000) -> pathlib.Path:
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_bytes(b"MZ" + bytes(size - 2))
+    return p
+
+
+_tmp = pathlib.Path(tempfile.mkdtemp())
+try:
+    import build_paid_only as bpo
+    _paid = _tmp / "chess-clock"
+    _mk(_paid / "app" / "x.txt")
+    _mk(ROOT / "dist" / "invoice-maker-Setup.exe")
+    _mk(ROOT / "dist" / "chess-clock-Setup.exe")
+    got = bpo.find_existing(_paid)
+    check("the builder ignores another product's installer in dist/",
+          got is None or got.stem == "Chess-clock",
+          f"building chess-clock would reuse {got.name if got else None}, "
+          "so a customer would be sent invoice-maker's tool")
+
+    import itch_publish as ip
+    found = ip.find_installer("chess-clock")
+    _norm = (lambda s: s.lower().replace("-", "").replace("_", "")
+             .replace("slingshottool", "").replace("setup", ""))
+    check("and the publisher will not pick up someone else's either",
+          found is None or _norm(found.stem) == "chessclock",
+          f"find_installer returned {found.name if found else None} for "
+          "chess-clock")
+finally:
+    import shutil
+    shutil.rmtree(_tmp, ignore_errors=True)
+    for _f in ("invoice-maker-Setup.exe", "chess-clock-Setup.exe"):
+        (ROOT / "dist" / _f).unlink(missing_ok=True)
 
 print("\nTHE CATALOGUE IS VALID JSON AND SAYS WHAT IT MEANS\n")
 # site/apps.json is read by the live site. A rebase conflict left '<<<<<<<' in

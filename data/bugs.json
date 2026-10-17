@@ -682,5 +682,60 @@
   "verification": "itchpublish_selftest.py: FAILURES: none. The store now lists a build for every product on sale.",
   "uncertainty": "chess-clock and markdown-preview will return to the shop if and when the pipeline builds them again.",
   "opened": "2026-10-16T15:06:03+00:00"
+ },
+ {
+  "id": "BUG-038",
+  "symptom": "the builder could upload one product's installer as another's",
+  "severity": "CRITICAL",
+  "component": "packaging",
+  "files": [
+   "build_paid_only.py",
+   "itch_publish.py"
+  ],
+  "status": "VERIFIED_FIXED",
+  "root_cause": "find_existing returned the first plausible *-Setup.exe anywhere in dist/, which is a folder shared by every build, with no regard for which product the file belonged to. Building chess-clock reused invoice-maker-Setup.exe. The publisher's find_installer had the same shape, falling back to `needle in stem or stem in needle`, a substring test in both directions. Either one sells a customer the wrong tool under the name they paid for.",
+  "evidence": "python rebuild_paid.py chess-clock reported 'ready for itch.io: dist\\invoice-maker-Setup.exe' for a product it had just reconstructed as chess-clock. dist/ held eleven installers, none of them chess-clock's.",
+  "repro": "put another product's installer in dist/ and build this product",
+  "fix": "find_existing only accepts a dist installer whose normalised name is this product's, and find_installer no longer falls back to a substring match at all. A missing installer stops the release, which is recoverable; shipping the wrong tool is not.",
+  "regression_test": "itchpublish_selftest.py puts a foreign installer in dist/ and checks neither the builder nor the publisher will take it",
+  "verification": "itchpublish_selftest.py: FAILURES: none.",
+  "uncertainty": "",
+  "opened": "2026-10-17T17:25:39+00:00"
+ },
+ {
+  "id": "BUG-039",
+  "symptom": "importing a module created directories in the repository",
+  "severity": "LOW",
+  "component": "repository",
+  "files": [
+   "itch_login.py"
+  ],
+  "status": "VERIFIED_FIXED",
+  "root_cause": "itch_login.py called mkdir on .sessions and .cookies at module level, so merely importing it, including from a check that never runs the login, put two folders in the working tree. This is the general shape of the defect that started this audit's catalogue incident: a file nobody intended to write appearing in the tree.",
+  "evidence": "prove_everything.py reported 'itch_login.py (mkdir)' as the one module that wrote to disk on import, twice, once for each directory.",
+  "repro": "import itch_login with .sessions and .cookies absent and check whether they appear",
+  "fix": "Both directories are created where they are written, inside the function that needs them, not on import.",
+  "regression_test": "prove_everything.py, which checks every module for writes at import",
+  "verification": "prove_everything.py: 0 BROKEN. Importing itch_login now creates neither directory.",
+  "uncertainty": "",
+  "opened": "2026-10-17T17:25:39+00:00"
+ },
+ {
+  "id": "BUG-040",
+  "symptom": "generating the audit report took twenty-three minutes",
+  "severity": "MEDIUM",
+  "component": "tooling",
+  "files": [
+   "audit_report.py"
+  ],
+  "status": "VERIFIED_FIXED",
+  "root_cause": "The report runs the whole suite, including cleanroom, and then write_report() called main() a second time to capture its output. Every check therefore ran twice, so a document that reads as a summary cost more than twenty minutes and would time out in CI.",
+  "evidence": "Timed at 1410s before and 654s after, with run_selftests.py at 330s and cleanroom_selftest.py at 284s being paid for twice.",
+  "repro": "time python audit_report.py",
+  "fix": "The output of the single run is captured once and written from that, so the checks run one time. --quick leaves out the live customer journeys as well, for anyone who wants the document without the network.",
+  "regression_test": "prove_everything.py runs it as an entry point and reports how long it took",
+  "verification": "prove_everything.py: EXECUTED, rc=0 in 554.6s.",
+  "uncertainty": "The report is still a heavy thing to generate because it genuinely runs the suite; --quick is the fast path.",
+  "opened": "2026-10-17T17:25:40+00:00"
  }
 ]

@@ -147,14 +147,18 @@ def page_probe(url: str) -> tuple[bool | None, str]:
         return None, str(e)[:90]
 
 
-def build_is_listed(url: str, filename: str, attempts: int = 4) -> bool:
+def build_is_listed(url: str, filename: str, attempts: int = 3) -> bool:
     """Is this exact build on the page, the way a buyer would see it?
 
     itch.io publishes a build asynchronously after the upload returns, so the
     page can answer for a moment before the file appears. Retried rather than
     concluded, because concluding too early means a product that is genuinely
-    on its way is never sold.
+    on its way is never sold. Cached per URL and filename for the same reason
+    page_is_live caches: one fetch, not one per question.
     """
+    key = f"{url}|{filename}"
+    if key in _PROBE_CACHE:
+        return _PROBE_CACHE[key][0]
     needle = quote(filename.lower())
     for i in range(attempts):
         try:
@@ -162,16 +166,33 @@ def build_is_listed(url: str, filename: str, attempts: int = 4) -> bool:
                 url, headers={"User-Agent": "slingshot-tools"})
             with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
                 body = r.read(400_000).decode("utf-8", "replace").lower()
-            if needle in body or filename.lower() in body:
-                return True
+            found = needle in body or filename.lower() in body
+            _PROBE_CACHE[key] = (found, f"HTTP {r.status}")
+            return found
         except Exception:  # noqa: BLE001
             pass
         if i < attempts - 1:
-            time.sleep(min(4 * (i + 1), 15))
+            time.sleep(min(3 * (i + 1), 8))
+    _PROBE_CACHE[key] = (False, "not listed")
     return False
 
 
-def page_is_live(url: str, attempts: int = 4) -> bool:
+_PROBE_CACHE: dict[str, tuple[bool, str]] = {}
+
+
+def _probe_cached(url: str):
+    """One answer per URL per process.
+
+    publish() asks about the same store page several times and the selftests run
+    it repeatedly. Re-probing on each call while itch.io is rate-limiting made
+    a full report take over twenty minutes, which is long enough to time out.
+    """
+    if url not in _PROBE_CACHE:
+        _PROBE_CACHE[url] = page_probe(url)
+    return _PROBE_CACHE[url]
+
+
+def page_is_live(url: str, attempts: int = 3) -> bool:
     """Does the public page answer, retrying while it declines to.
 
     itch.io rate-limits and a single probe alternated between answering and not
@@ -179,13 +200,15 @@ def page_is_live(url: str, attempts: int = 4) -> bool:
     not exist. The publish path then told the account holder to go and create a
     project they had already created, which is the opposite of help.
     """
-    live, detail = page_probe(url)
+    live, detail = _probe_cached(url)
     if live is not None:
         return live
     for i in range(1, attempts):
-        time.sleep(min(2 ** i, 12))
+        time.sleep(min(2 ** i, 6))
+        _PROBE_CACHE.pop(url, None)
         live, detail = page_probe(url)
         if live is not None:
+            _PROBE_CACHE[url] = (live, detail)
             return live
     log(f"   {url} did not answer after {attempts} tries ({detail})")
     return False
@@ -726,12 +749,11 @@ def find_installer(slug: str) -> Path | None:
         stem = stem.replace("slingshottool", "").replace("setup.exe", "")
         if stem == needle:
             return exe
-    # then any file that genuinely mentions the tool
-    for exe in candidates:
-        stem = exe.name.lower().replace("-", "").replace("_", "")
-        stem = stem.replace("slingshottool", "").replace("setup.exe", "")
-        if needle and (needle in stem or stem in needle):
-            return exe
+    # Anything less than an exact match is refused. This used to fall back to
+    # `needle in stem or stem in needle`, which is a substring test in both
+    # directions: with a shared dist/ folder it could hand back one product's
+    # installer for another product entirely. A missing installer stops the
+    # release, which is recoverable. Shipping the wrong tool is not.
     return None
 
 

@@ -694,6 +694,67 @@ FOUND = [
      "every product on sale.",
      "chess-clock and markdown-preview will return to the shop if and when the "
      "pipeline builds them again."),
+
+    ("the builder could upload one product's installer as another's",
+     "CRITICAL", "packaging", ["build_paid_only.py", "itch_publish.py"],
+     "VERIFIED_FIXED",
+     "find_existing returned the first plausible *-Setup.exe anywhere in "
+     "dist/, which is a folder shared by every build, with no regard for which "
+     "product the file belonged to. Building chess-clock reused "
+     "invoice-maker-Setup.exe. The publisher's find_installer had the same "
+     "shape, falling back to `needle in stem or stem in needle`, a substring "
+     "test in both directions. Either one sells a customer the wrong tool "
+     "under the name they paid for.",
+     "python rebuild_paid.py chess-clock reported 'ready for itch.io: "
+     "dist\\invoice-maker-Setup.exe' for a product it had just reconstructed as "
+     "chess-clock. dist/ held eleven installers, none of them chess-clock's.",
+     "put another product's installer in dist/ and build this product",
+     "find_existing only accepts a dist installer whose normalised name is "
+     "this product's, and find_installer no longer falls back to a substring "
+     "match at all. A missing installer stops the release, which is "
+     "recoverable; shipping the wrong tool is not.",
+     "itchpublish_selftest.py puts a foreign installer in dist/ and checks "
+     "neither the builder nor the publisher will take it",
+     "itchpublish_selftest.py: FAILURES: none.",
+     ""),
+
+    ("importing a module created directories in the repository",
+     "LOW", "repository", ["itch_login.py"], "VERIFIED_FIXED",
+     "itch_login.py called mkdir on .sessions and .cookies at module level, so "
+     "merely importing it, including from a check that never runs the login, "
+     "put two folders in the working tree. This is the general shape of the "
+     "defect that started this audit's catalogue incident: a file nobody "
+     "intended to write appearing in the tree. The module is gitignored on "
+     "purpose because it handles a session cookie, so this affects the "
+     "working copy only and no workflow runs it.",
+     "prove_everything.py reported 'itch_login.py (mkdir)' as the one module "
+     "that wrote to disk on import, twice, once for each directory.",
+     "import itch_login with .sessions and .cookies absent and check whether "
+     "they appear",
+     "Both directories are created where they are written, inside the "
+     "function that needs them, not on import.",
+     "prove_everything.py, which checks every module for writes at import",
+     "prove_everything.py: 0 BROKEN. Importing itch_login now creates neither "
+     "directory.",
+     ""),
+
+    ("generating the audit report took twenty-three minutes",
+     "MEDIUM", "tooling", ["audit_report.py"], "VERIFIED_FIXED",
+     "The report runs the whole suite, including cleanroom, and then "
+     "write_report() called main() a second time to capture its output. Every "
+     "check therefore ran twice, so a document that reads as a summary cost "
+     "more than twenty minutes and would time out in CI.",
+     "Timed at 1410s before and 654s after, with run_selftests.py at 330s and "
+     "cleanroom_selftest.py at 284s being paid for twice.",
+     "time python audit_report.py",
+     "The output of the single run is captured once and written from that, so "
+     "the checks run one time. --quick leaves out the live customer journeys "
+     "as well, for anyone who wants the document without the network.",
+     "prove_everything.py runs it as an entry point and reports how long it "
+     "took",
+     "prove_everything.py: EXECUTED, rc=0 in 554.6s.",
+     "The report is still a heavy thing to generate because it genuinely runs "
+     "the suite; --quick is the fast path."),
 ]
 
 
