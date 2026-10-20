@@ -818,6 +818,26 @@ FOUND = [
      "fixing only app/index.html would have left the live exploit in the file "
      "people actually open.",
      ""),
+
+    ("a successful paid build reported a failure after the installer was made",
+     "MEDIUM", "packaging", ["build_paid_only.py"], "VERIFIED_FIXED",
+     "build() logged where it had kept the installer with "
+     "kept.relative_to(Path.cwd()). When the job runs from a different working "
+     "directory than the repository, which is how CI invokes it, the installer "
+     "is not under the cwd and relative_to raises ValueError. The exception "
+     "came after the installer had been built and copied, so a finished build "
+     "was reported as a crash and the release was abandoned with a valid "
+     "installer sitting on disk.",
+     "python build_paid_only build() from a different cwd raised ValueError: "
+     "'paid\\password-manager\\Offline password manager-Setup.exe' is not in "
+     "the subpath of the current directory, after printing 'installer built "
+     "(19.6 MB)'.",
+     "run the paid build with a working directory outside the repository",
+     "The path is shown relative to the repository when it is inside it, and "
+     "as an absolute path when it is not, with no exception either way.",
+     "paidbuild_selftest.py builds a paid edition and checks it is kept",
+     "paidbuild_selftest.py: FAILURES: none.",
+     ""),
 ]
 
 

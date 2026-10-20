@@ -190,7 +190,15 @@ def build(stage: dict, paid: Path) -> Path | None:
     kept = paid / setup.name
     if kept.resolve() != setup:
         shutil.copy2(setup, kept)
-        log(f"kept at {kept.relative_to(Path.cwd())}")
+        # kept.relative_to() raised ValueError when the installer job ran from a
+        # different working directory than the repository, which is exactly how
+        # CI runs it, and the exception came after a successful build so it read
+        # as a build failure.
+        try:
+            where = kept.relative_to(Path.cwd())
+        except ValueError:
+            where = kept
+        log(f"kept at {where}")
     return kept
 
 

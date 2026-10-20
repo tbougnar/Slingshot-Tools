@@ -97,7 +97,15 @@ check("it names a concrete blocker rather than claiming success",
           "could not log in",
           "no paid build",
           "nothing to publish",
-          "no installer was found")),
+          "no installer was found",
+          # When a paid build happens to exist (a developer who ran a build
+          # locally, or the installer job), the run reaches butler and fails
+          # there instead. That is still a concrete blocker and still not a
+          # publication, so both outcomes are accepted; the point of the check
+          # is that something specific is named.
+          "butler failed",
+          "invalid target",
+          "the upload did not finish")),
       combined.strip()[-140:])
 # The claim that must never appear is the one the old code produced.
 check("it never says a product is on itch.io when it did not get there",
@@ -166,7 +174,9 @@ if "no paid build" not in _out:
           "unnecessary")
     check("and it names the step that actually stopped it",
           any(m in _out for m in ("no installer was found", "no project",
-                                  "not publicly reachable")),
+                                  "not publicly reachable",
+                                  "butler failed", "invalid target",
+                                  "the upload did not finish")),
           _out.strip()[-140:])
 else:
     print("skip  no paid build here, so it never reached the project check")
