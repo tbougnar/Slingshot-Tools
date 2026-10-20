@@ -726,28 +726,48 @@ def remember(slug: str, url: str) -> None:
 
 # -------------------------------------------------------------------- main
 
-def find_installer(slug: str) -> Path | None:
+def find_installer(slug: str, title: str = "",
+                   dist: Path | None = None) -> Path | None:
     """The installer for one product, and only that product.
 
     The dist/ folder is shared between builds, so a name match is required:
     taking whatever .exe happens to be there would upload one tool's installer
     under another tool's page, and nobody would notice until a customer
     installed the wrong thing.
+
+    There are two builders and they name their output differently:
+    build_installer_app.py writes '<title>-Setup.exe' and make_app.py writes
+    '<slug>-Setup.exe'. The store is selling the titles - 'Base64 and URL
+    encoding tool-Setup.exe', 'Offline password manager-Setup.exe' - so a
+    slug-only match returns nothing for exactly the products that are live.
+    Both forms are accepted, each still as an exact match, so a product is
+    found under the name it actually shipped with and a foreign installer is
+    never substituted.
     """
     own = PAID / slug
     if own.exists():
         for exe in sorted(own.glob("**/*Setup.exe")):
             return exe
 
-    needle = slug.lower().replace("-", "").replace("_", "").replace("slingshottool", "")
-    candidates = sorted((ROOT / "dist").glob("**/*Setup.exe"))
+    def norm(text: str) -> str:
+        s = text.lower().replace("-", "").replace("_", "")
+        s = s.replace(" ", "").replace("slingshottool", "")
+        return s.replace("setup.exe", "").replace("setup", "")
+
+    needles = {norm(slug)}
+    if not title:
+        title = _title_for_slug(slug)
+    if title:
+        needles.add(norm(title))
+    needles.discard("")
+
+    folder = dist if dist is not None else (ROOT / "dist")
+    candidates = sorted(folder.glob("**/*Setup.exe"))
 
     # an exact stem match first, so a leftover file from an older naming
     # cannot win over the one this build actually produced
     for exe in candidates:
-        stem = exe.name.lower().replace("-", "").replace("_", "")
-        stem = stem.replace("slingshottool", "").replace("setup.exe", "")
-        if stem == needle:
+        if norm(exe.name) in needles:
             return exe
     # Anything less than an exact match is refused. This used to fall back to
     # `needle in stem or stem in needle`, which is a substring test in both
@@ -755,6 +775,31 @@ def find_installer(slug: str) -> Path | None:
     # installer for another product entirely. A missing installer stops the
     # release, which is recoverable. Shipping the wrong tool is not.
     return None
+
+
+def _title_for_slug(slug: str) -> str:
+    """The product's title, from its build or from the catalogue.
+
+    build_installer_app.py names the installer after the title, so the title is
+    what the file on the store is called. Prefer the concept.json that travelled
+    with the artifact; fall back to the catalogue the site serves.
+    """
+    try:
+        meta = json.loads((PAID / slug / "concept.json").read_text(encoding="utf-8"))
+        if isinstance(meta, dict) and meta.get("title"):
+            return str(meta["title"]).strip()
+    except (OSError, ValueError):
+        pass
+    try:
+        apps = json.loads((ROOT / "site" / "apps.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return ""
+    if not isinstance(apps, list):
+        return ""
+    for e in apps:
+        if (e.get("base_slug") or e.get("slug")) == slug and e.get("tier") == "full":
+            return str(e.get("title") or "").strip()
+    return ""
 
 
 def publish(slug: str, title: str, price: float, version: str = "") -> bool:
@@ -833,7 +878,7 @@ def publish(slug: str, title: str, price: float, version: str = "") -> bool:
     log("2. the page is live")
 
     # 3. the file
-    installer = find_installer(slug)
+    installer = find_installer(slug, title=title)
     if not installer:
         log(f"3. no installer was found for {slug}, in {PAID / slug} "
             f"or dist/")

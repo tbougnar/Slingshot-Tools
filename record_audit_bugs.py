@@ -755,6 +755,69 @@ FOUND = [
      "prove_everything.py: EXECUTED, rc=0 in 554.6s.",
      "The report is still a heavy thing to generate because it genuinely runs "
      "the suite; --quick is the fast path."),
+
+    ("a product's own installer could not be found under the name it shipped as",
+     "HIGH", "packaging", ["itch_publish.py", "build_paid_only.py",
+                            "itchpublish_selftest.py"], "VERIFIED_FIXED",
+     "Two builders name their output differently: make_app.py writes "
+     "'<slug>-Setup.exe' and build_installer_app.py writes '<title>-Setup.exe'. "
+     "find_installer matched only the slug and find_existing matched only "
+     "paid.name, so neither recognised a title-named installer - which is the "
+     "form actually on the store. find_installer('base64-tool') and "
+     "find_installer('password-manager') both returned None while the store was "
+     "selling 'Base64 and URL encoding tool-Setup.exe' and 'Offline password "
+     "manager-Setup.exe'. The knock-on effect is worse than a failed lookup: "
+     "rebuild_paid.py asks find_installer for the file it just built, so it "
+     "would have reported that a live product 'cannot be reconstructed' and "
+     "left it off the shelf indefinitely.",
+     "find_installer('password-manager') returned None next to a dist/ folder "
+     "holding 'Offline password manager-Setup.exe', its live build.",
+     "ask find_installer and find_existing for a product whose installer is "
+     "named after its title",
+     "Both now match the slug and the title, derived from paid/<slug>/"
+     "concept.json and the catalogue, each still as an exact match so a foreign "
+     "installer cannot be substituted. find_existing also had to normalise the "
+     "whole file name rather than Path.stem, because _norm strips 'setup.exe' "
+     "and the stem had already removed the '.exe', leaving a trailing 'setup' "
+     "that matched nothing.",
+     "itchpublish_selftest.py checks a title-named installer is found for its "
+     "own product and that a foreign one beside it is not",
+     "itchpublish_selftest.py: FAILURES: none.",
+     ""),
+
+    ("the paid edition could be unlocked by adding ?paid to the free app's URL",
+     "CRITICAL", "revenue", ["site/apps/*/app/index.html",
+                             "tier_gate_selftest.py"], "VERIFIED_FIXED",
+     "Twenty-five free editions were generated with "
+     "`const PAID = new URLSearchParams(location.search).has('paid')` feeding "
+     "the limit table, so the paid edition was the same file with nothing else "
+     "standing between a visitor and the full product except a query string. "
+     "Adding ?paid to the free app's own URL unlocked it. Every one of those "
+     "twenty-five apps is a paid product and two of them, password-manager and "
+     "base64-tool, are on the store for $3, so the bypass was live and free to "
+     "anyone who guessed the parameter. The current generator bakes the "
+     "edition in as TIER at build time instead, and rebuild_paid.py produces "
+     "the full edition by flipping that one constant, so there is no runtime "
+     "switch to reach.",
+     "the live free app at .../apps/password-manager-basic/ contained "
+     "`const PAID=new URLSearchParams(location.search).has('paid');const "
+     "LIM=PAID?{max:Infinity,export:true}:...`, so ?paid was the whole lock.",
+     "append ?paid to a free edition's URL and read its limit table",
+     "All twenty-five were rewritten to decide from TIER, not from the URL: "
+     "`const LIM=TIER==='full'?{unlimited}:{basic}`. Flipping TIER to full "
+     "still yields the paid edition, so rebuild_paid.py is unaffected, and the "
+     "free edition is now genuinely limited with no way to reach the full one "
+     "from the address bar.",
+     "tier_gate_selftest.py reads every free edition and fails if any gates on "
+     "the query string, or is labelled basic without a real limit table, or "
+     "does not flip to a different full edition",
+     "tier_gate_selftest.py: 34 free editions, FAILURES: none. Injecting the "
+     "exploit back into one app makes it fail, so the test bites. The "
+     "standalone copy at site/apps/<name>/index.html, which is the file served "
+     "at the catalogue's URL, carried the same gate and is checked as well; "
+     "fixing only app/index.html would have left the live exploit in the file "
+     "people actually open.",
+     ""),
 ]
 
 

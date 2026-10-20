@@ -61,7 +61,8 @@ def _norm(text: str) -> str:
     return s.replace("slingshottool", "").replace("setup.exe", "")
 
 
-def find_existing(paid: Path) -> Path | None:
+def find_existing(paid: Path, dist: Path | None = None,
+                  slug: str = "", title: str = "") -> Path | None:
     """An installer for THIS product that already exists and is worth keeping.
 
     It used to return the first plausible *-Setup.exe anywhere in dist/. dist/
@@ -70,17 +71,34 @@ def find_existing(paid: Path) -> Path | None:
     would have paid for one tool and been sent another. The name has to match
     the product being built.
 
+    The match is against the slug and the title, because the two builders name
+    their output differently - make_app.py writes '<slug>-Setup.exe' and
+    build_installer_app.py writes '<title>-Setup.exe' - and the store sells the
+    titles. Matching only the slug meant a product's own installer was not
+    recognised and the release looked like it needed building again.
+
     A stub is reported rather than silently skipped, because a run of these is
     the clearest evidence that something upstream is building empty installers.
     """
-    want = _norm(paid.name)
+    slug = slug or paid.name
+    if not title:
+        title = _title_from_build(paid)
+    want = {_norm(slug)}
+    if title:
+        want.add(_norm(title))
+    want.discard("")
+
+    folder = dist if dist is not None else Path("dist")
     candidates = sorted(paid.rglob("*Setup.exe"))
-    for exe in sorted(Path("dist").glob("*-Setup.exe")) \
-            if Path("dist").exists() else []:
-        # another product's installer sitting in the shared folder is not a
-        # candidate for this product, however plausible the binary is
-        if _norm(exe.stem) == want:
-            candidates.append(exe)
+    if folder.exists():
+        for exe in sorted(folder.glob("*-Setup.exe")):
+            # another product's installer sitting in the shared folder is not a
+            # candidate for this product, however plausible the binary is.
+            # Matched on the whole file name, not the stem: _norm removes
+            # 'setup.exe', and Path.stem has already removed the '.exe', which
+            # would leave a trailing 'setup' and match nothing.
+            if _norm(exe.name) in want:
+                candidates.append(exe)
 
     stubs = []
     for c in candidates:

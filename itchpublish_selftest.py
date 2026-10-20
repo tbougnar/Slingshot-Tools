@@ -310,7 +310,7 @@ try:
         {"base_slug": "thing", "itch_url": "https://slingshot-tools.itch.io/thing"}]
     ip.page_is_live = lambda url: url.endswith("/thing")
     ip.working_session = _no_session
-    ip.find_installer = lambda slug: pathlib.Path(__file__)
+    ip.find_installer = lambda slug, title="", dist=None: pathlib.Path(__file__)
     ip.upload = lambda installer, slug, version, project="": True
     ip.log = lambda *a, **k: None
     # publish() reaches record() once the upload succeeds, and record() writes
@@ -355,7 +355,7 @@ try:
     ip.load_catalog = lambda: []          # the catalogue has never seen it
     ip.page_is_live = lambda url: url == "https://slingshot-tools.itch.io/store"
     ip.working_session = lambda: _tried2.append(1) or ""
-    ip.find_installer = lambda slug: pathlib.Path(__file__)
+    ip.find_installer = lambda slug, title="", dist=None: pathlib.Path(__file__)
     ip.upload = lambda installer, slug, version, project="": True
     ip.log = lambda *a, **k: None
     ip.save_catalog = lambda apps: None
@@ -424,7 +424,7 @@ try:
     ip.load_catalog = lambda: []
     ip.page_is_live = lambda url: True
     ip.working_session = lambda: ""
-    ip.find_installer = lambda slug: pathlib.Path(__file__)
+    ip.find_installer = lambda slug, title="", dist=None: pathlib.Path(__file__)
     ip.upload = _capture
     ip.log = lambda *a, **k: None
     ip.save_catalog = lambda apps: None
@@ -603,6 +603,48 @@ finally:
     shutil.rmtree(_tmp, ignore_errors=True)
     for _f in ("invoice-maker-Setup.exe", "chess-clock-Setup.exe"):
         (ROOT / "dist" / _f).unlink(missing_ok=True)
+
+print("\nA PRODUCT'S OWN INSTALLER IS FOUND, WHATEVER IT IS NAMED\n")
+# build_installer_app.py names its output '<title>-Setup.exe' and make_app.py
+# names its '<slug>-Setup.exe'. The store is selling 'Base64 and URL encoding
+# tool-Setup.exe' and 'Offline password manager-Setup.exe' - titles, not slugs.
+# find_installer only accepted a slug match, so it returned None for exactly
+# the products that are live: rebuild_paid.py, which asks it, could never
+# rebuild them, and would have reported "cannot be reconstructed" for a product
+# sitting on the shelf. Matching the title too is what makes it work; it is
+# still an exact match, so a foreign installer cannot slip through.
+_tmp2 = pathlib.Path(tempfile.mkdtemp())
+try:
+    import itch_publish as ip
+    import build_paid_only as bpo
+    _mk(_tmp2 / "dist" / "Base64 and URL encoding tool-Setup.exe", 3_000_000)
+    _mk(_tmp2 / "dist" / "Offline password manager-Setup.exe", 3_000_000)
+    _mk(_tmp2 / "dist" / "Unrelated thing-Setup.exe", 3_000_000)
+    _real_dist = ip.ROOT
+    found = ip.find_installer("base64-tool", title="Base64 and URL encoding tool",
+                              dist=_tmp2 / "dist")
+    check("the publisher finds its own installer by title",
+          found is not None and found.name == "Base64 and URL encoding tool-Setup.exe",
+          f"find_installer returned {found.name if found else None} for "
+          "base64-tool, whose installer is on the store under its title")
+    found2 = ip.find_installer("password-manager",
+                               title="Offline password manager",
+                               dist=_tmp2 / "dist")
+    check("and for the other title-named product",
+          found2 is not None and found2.name == "Offline password manager-Setup.exe",
+          f"got {found2.name if found2 else None}")
+    found3 = ip.find_installer("base64-tool", title="Base64 and URL encoding tool",
+                               dist=_tmp2 / "dist")
+    check("but never a foreign installer that merely sits beside it",
+          found3 is None or "Base64" in found3.name,
+          f"it returned {found3.name if found3 else None}")
+    got4 = bpo.find_existing(_tmp2 / "dist", slug="base64-tool",
+                             title="Base64 and URL encoding tool")
+    check("the builder finds its own installer by title too",
+          got4 is not None and got4.name == "Base64 and URL encoding tool-Setup.exe",
+          f"find_existing returned {got4.name if got4 else None}")
+finally:
+    shutil.rmtree(_tmp2, ignore_errors=True)
 
 print("\nTHE CATALOGUE IS VALID JSON AND SAYS WHAT IT MEANS\n")
 # site/apps.json is read by the live site. A rebase conflict left '<<<<<<<' in
