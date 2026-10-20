@@ -172,10 +172,18 @@ def next_major_date(state: dict) -> date | None:
 
 
 def days_until(state: dict, when: date | None = None) -> int | None:
+    # Date arithmetic here uses the local calendar day, the same one
+    # _empty() stamps into "updated" and the same one every other function in
+    # this module reads. It used to use now().date(), which is UTC, so for one
+    # hour a night in any positive-offset timezone the countdown was a day out
+    # and phase() disagreed with the banner: on the release day itself phase
+    # returned "announced" instead of "live", because the target was seen as one
+    # day away. property_selftest.py caught it and could not pass on a clean
+    # checkout for that hour.
     target = when or next_major_date(state)
     if target is None:
         return None
-    return (target - now().date()).days
+    return (target - date.today()).days
 
 
 def phase(state: dict, when: date | None = None) -> str:

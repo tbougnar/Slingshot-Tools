@@ -838,6 +838,34 @@ FOUND = [
      "paidbuild_selftest.py builds a paid edition and checks it is kept",
      "paidbuild_selftest.py: FAILURES: none.",
      ""),
+
+    ("the release countdown was a day out for part of every day",
+     "HIGH", "product", ["update_state.py", "property_selftest.py"],
+     "VERIFIED_FIXED",
+     "days_until, which phase() and therefore the banner, the Discord event and "
+     "the trailer all read, computed its answer with now().date(). now() is "
+     "UTC, while _empty() stamps date.today() and every other function in "
+     "update_state reads the local calendar day. In any positive-offset "
+     "timezone there is an hour each night where the two dates differ, and in "
+     "that hour the countdown was one day long and the phase was wrong: on the "
+     "release day itself phase returned 'announced' instead of 'live', so the "
+     "countdown would not read zero on the day and the Discord event and the "
+     "trailer would disagree about whether it had shipped. The suite could not "
+     "pass on a clean checkout during that hour, which is how it was found.",
+     "property_selftest.py failed five date checks on a clean checkout at "
+     "2026-10-21 00:19 local, when UTC was still 2026-10-20: 'a date 100 days "
+     "out is idle and 100 days away' reported 'idle / 101' and 'the day itself "
+     "is live' reported 'announced'.",
+     "run the date checks at a moment when the local date and the UTC date "
+     "differ",
+     "days_until uses date.today(), the same calendar day the rest of the "
+     "module uses, so the countdown, the phase, the banner and the state's own "
+     "timestamp agree at every hour.",
+     "property_selftest.py now pins the two clocks together: a release 30 days "
+     "out must report 30, whatever the hour",
+     "property_selftest.py: FAILURES: none. Restoring now().date() makes the "
+     "new check fail along with the five originals, so it bites.",
+     ""),
 ]
 
 

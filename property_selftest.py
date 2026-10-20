@@ -114,6 +114,21 @@ check("the phase is idle far in the future",
 check("the phase counts down in between",
       all(phases[o] == "countdown" for o in (8, 12, 21)))
 
+# The countdown and the state's own idea of "today" must be the same clock.
+# days_until used now().date(), which is UTC, while _empty() stamps
+# date.today() and every other function in update_state reads the local day.
+# For one hour a night in any positive-offset timezone the two disagreed by a
+# day: a release 100 days out reported 101, and on the release day itself phase
+# returned "announced" instead of "live". This check pins the two clocks
+# together so the suite does not depend on the hour it is run.
+st = us._empty()
+st["next_major"] = (date.today() + timedelta(days=30)).isoformat() + \
+    "T18:00:00+00:00"
+check("the countdown uses the same calendar day the state does",
+      us.days_until(st) == 30,
+      f"days_until said {us.days_until(st)} for a date 30 days out, so it is "
+      "reading a different clock than date.today()")
+
 print("\nPLANNING NEVER RETURNS A PAST DATE\n")
 bad_dates = []
 for month in range(1, 13):
