@@ -759,6 +759,14 @@ def write_app(concept, html, tier="full"):
     published tree, and is released solely to a buyer who has paid.
     """
     slug = concept["slug"] if tier == "full" else f"{concept['slug']}-basic"
+    # The suffix is added once and only once. Three callers write the free
+    # edition and two of them pass the plain slug, because the suffix is
+    # added here; the third passed an already-suffixed slug and produced a
+    # folder called "<slug>-basic-basic", which published a duplicated slug
+    # and left the copy the catalogue links to stale. Accepting both forms
+    # means the result no longer depends on which caller it was.
+    if tier == "basic" and str(concept["slug"]).endswith("-basic"):
+        slug = str(concept["slug"])
     out = (APPS_DIR / slug) if tier == "basic" else (PAID_DIR / slug)
     if tier == "full" and out.exists():
         shutil.rmtree(out)
@@ -1367,11 +1375,23 @@ def main():
                              free_blurb=free_blurb, paid_blurb=paid_blurb,
                              published=ok_full and already_listed(concept["slug"]))
 
-        basic_meta = {**concept, "brand": brand,
-                      "slug": f"{concept['slug']}-basic"}
+        # write_app adds the "-basic" suffix itself, so the slug it is given
+        # is the product's own slug and not one that already ends in
+        # "-basic". Passing an already-suffixed slug produced a folder
+        # called "<slug>-basic-basic": the inner app file landed there while
+        # the published copy the catalogue links to stayed stale, a
+        # duplicated slug was published to GitHub Pages, and the release gate
+        # refused the build. stage_app.py and verify_app.py already pass the
+        # plain slug for the same reason.
+        basic_meta = {**concept, "brand": brand}
         basic_dir = write_app(basic_meta, html, tier="basic")
         ok_basic = True
-        basic_entry = publish({**basic_meta, "base_slug": concept["slug"]}, basic_dir,
+        # The catalogue entry for the free edition is still "<slug>-basic";
+        # that is the slug the site links to and the family is keyed on the
+        # plain one. write_app named the folder, publish names the entry.
+        basic_entry = publish({**basic_meta,
+                               "slug": f"{concept['slug']}-basic",
+                               "base_slug": concept["slug"]}, basic_dir,
                               None, tier="basic", brand=brand, differences=diffs,
                               free_blurb=free_blurb, paid_blurb=paid_blurb,
                               published=ok_basic)

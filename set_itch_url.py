@@ -84,6 +84,17 @@ def set_url(apps: list, slug: str, url: str) -> int:
     for entry in apps:
         if (entry.get("base_slug") or entry.get("slug")) != slug:
             continue
+        # Only the paid edition gets a store URL. The free edition is a
+        # download from this site, and giving it a store URL puts a buy
+        # button on a product that is free, which is the state the audit
+        # closed: a free edition advertising itself as something to buy.
+        # set_all() and itch_publish.record() both strip it from the free
+        # tier, and this command is the one the release instructions tell
+        # the operator to run, so it has to agree with them.
+        if (entry.get("tier") or "") == "basic":
+            entry.pop("itch_url", None)
+            touched.append("basic (cleared)")
+            continue
         entry["itch_url"] = url
         touched.append(entry.get("tier") or "?")
 

@@ -115,31 +115,55 @@ def main() -> int:
         log("not uploading, because --no-upload was given")
         return 0
 
-    import build_exe
+    # Build the installer. build_paid_only.build() is the path the Friday
+    # installer job uses, and it is the one that has been exercised: it
+    # compiles the app with PyInstaller, wraps it in an NSIS installer and
+    # keeps the result beside the paid app, which is where itch_publish looks
+    # first.
+    #
+    # This used to call build_exe.main(), which does not exist. build_exe
+    # exposes make_ico() and build_app() and nothing else, so the call raised
+    # AttributeError after the product had already been reconstructed, and
+    # the tool that exists to bring a dead product back on sale died with a
+    # traceback instead of saying the installer did not build.
+    import build_paid_only
 
-    rc = build_exe.main()
-    if rc != 0:
+    built = build_paid_only.build({}, out)
+    if not built:
         log("the installer did not build, so this product stays off sale")
-        return rc
+        return 1
+    installer = Path(built)
 
     # Prove the file being offered is this product's, before anything is sent
     # to a customer. A shared dist/ folder holds other products' installers.
     import itch_publish as ip
-    installer = ip.find_installer(slug)
-    if not installer:
+    found = ip.find_installer(slug, title=concept.get("title"))
+    if not found:
         log(f"no installer for {slug} could be identified after building, so "
             "nothing is uploaded. dist/ holds other products' installers and "
             "one of them will not be passed off as this one.")
         return 1
-    got = slug.lower().replace("-", "").replace("_", "")
-    stem = installer.name.lower().replace("-", "").replace("_", "")
-    if got not in stem:
+    # The installer is named after the product's title, not its slug, so
+    # "password-manager" is "Offline password manager-Setup.exe". Comparing
+    # the slug against the file name therefore refused the correct installer
+    # for every product, and no product could ever be brought back on sale.
+    # The name is compared the way itch_publish and build_paid_only compare
+    # it, and the title is checked as well as the slug.
+    def _norm(text: str) -> str:
+        return "".join(ch for ch in str(text or "").lower()
+                       if ch.isalnum())
+
+    stem = _norm(installer.name)
+    if _norm(slug) not in stem and _norm(concept.get("title")) not in stem:
         log(f"refusing: the installer found is {installer.name}, which is not "
             f"{slug}'s. Uploading it would sell one tool as another.")
         return 1
     log(f"verified the installer is this product's: {installer.name}")
 
-    if not ip.upload(installer, slug, "", project=STORE_PROJECT):
+    # butler wants the project's slug, not its URL. The target is
+    # user/project:channel, and a URL in the project part is not a project.
+    project = STORE_PROJECT.rstrip("/").rsplit("/", 1)[-1] or slug
+    if not ip.upload(installer, slug, "", project=project):
         log("the upload did not finish, so this product stays off sale")
         return 1
     log(f"{slug} is uploaded. itch_publish advertises it only once its own "

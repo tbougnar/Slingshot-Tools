@@ -122,6 +122,12 @@ check("it names a concrete blocker rather than claiming success",
           "no paid build",
           "nothing to publish",
           "no installer was found",
+          # More than one paid build on the machine. The publisher refuses
+          # to guess which one to publish, which is a concrete blocker and
+          # certainly not a publication. This is what a developer who has
+          # run a build sees, so the check has to accept it or the test
+          # depends on what happens to be in paid/ that day.
+          "refusing to guess",
           # When a paid build happens to exist (a developer who ran a build
           # locally, or the installer job), the run reaches butler and fails
           # there instead. That is still a concrete blocker and still not a
@@ -202,7 +208,8 @@ if "no paid build" not in _out:
           any(m in _out for m in ("no installer was found", "no project",
                                   "not publicly reachable",
                                   "butler failed", "invalid target",
-                                  "the upload did not finish")),
+                                  "the upload did not finish",
+                                  "refusing to guess")),
           _out.strip()[-140:])
 else:
     print("skip  no paid build here, so it never reached the project check")
@@ -650,18 +657,25 @@ try:
     import build_paid_only as bpo
     _paid = _tmp / "chess-clock"
     _mk(_paid / "app" / "x.txt")
-    _mk(ROOT / "dist" / "invoice-maker-Setup.exe")
-    _mk(ROOT / "dist" / "chess-clock-Setup.exe")
-    got = bpo.find_existing(_paid)
+    # The shared dist/ folder holds the real installers of every product, so
+    # the test uses its own. It used to write into the real one and delete
+    # the files afterwards, which would have removed a real installer that
+    # happened to have the same name, and it made the result depend on what
+    # the machine happened to have built.
+    _dist = _tmp / "dist"
+    _mk(_dist / "invoice-maker-Setup.exe")
+    _mk(_dist / "chess-clock-Setup.exe")
+    got = bpo.find_existing(_paid, _dist, "chess-clock", "Chess clock")
+    _norm = (lambda s: s.lower().replace("-", "").replace("_", "")
+             .replace("slingshottool", "").replace(" ", "")
+             .replace("setup", ""))
     check("the builder ignores another product's installer in dist/",
-          got is None or got.stem == "Chess-clock",
+          got is None or _norm(got.stem) == "chessclock",
           f"building chess-clock would reuse {got.name if got else None}, "
           "so a customer would be sent invoice-maker's tool")
 
     import itch_publish as ip
-    found = ip.find_installer("chess-clock")
-    _norm = (lambda s: s.lower().replace("-", "").replace("_", "")
-             .replace("slingshottool", "").replace("setup", ""))
+    found = ip.find_installer("chess-clock", title="Chess clock", dist=_dist)
     check("and the publisher will not pick up someone else's either",
           found is None or _norm(found.stem) == "chessclock",
           f"find_installer returned {found.name if found else None} for "
@@ -669,8 +683,6 @@ try:
 finally:
     import shutil
     shutil.rmtree(_tmp, ignore_errors=True)
-    for _f in ("invoice-maker-Setup.exe", "chess-clock-Setup.exe"):
-        (ROOT / "dist" / _f).unlink(missing_ok=True)
 
 print("\nA PRODUCT'S OWN INSTALLER IS FOUND, WHATEVER IT IS NAMED\n")
 # build_installer_app.py names its output '<title>-Setup.exe' and make_app.py

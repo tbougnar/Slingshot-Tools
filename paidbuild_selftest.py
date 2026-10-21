@@ -13,6 +13,7 @@ out loud. Two or more is ambiguous and must be refused rather than guessed.
 import json
 import pathlib
 import re
+import shutil
 import sys
 import tempfile
 
@@ -142,6 +143,65 @@ if stage.exists():
 else:
     print("skip  published.json is untracked and absent, which is correct "
           "between runs")
+
+print("\nTHE FREE EDITION'S FOLDER IS NAMED ONCE\n")
+# The free edition lives in site/apps/<slug>-basic, and that is the folder the
+# catalogue links to. write_app adds the "-basic" suffix, so the slug it is
+# given is the product's own slug. One caller passed an already-suffixed slug
+# and produced "<slug>-basic-basic": the inner app file landed there, the
+# published copy stayed stale, a duplicated slug went to GitHub Pages, and the
+# release gate refused the build. Both forms have to give the same folder.
+_html = ("<html><body><script>const TIER=\"basic\";</script></body></html>"
+         * 30)
+_tmp3 = pathlib.Path(tempfile.mkdtemp())
+_real_apps, _real_paid = make_app.APPS_DIR, make_app.PAID_DIR
+try:
+    make_app.APPS_DIR = _tmp3 / "site" / "apps"
+    make_app.PAID_DIR = _tmp3 / "paid"
+    _concept = {"slug": "widget", "title": "Widget"}
+    _plain = make_app.write_app({**_concept, "brand": "Widget"},
+                                 _html, tier="basic")
+    _suffixed = make_app.write_app({**_concept, "brand": "Widget",
+                                    "slug": "widget-basic"},
+                                   _html, tier="basic")
+    check("the free edition's folder ends in -basic exactly once",
+          _plain.name == "widget-basic" and _suffixed.name == "widget-basic",
+          f"got {_plain.name!r} and {_suffixed.name!r}")
+    check("and the app file is inside it",
+          (_plain / "app" / "index.html").exists(),
+          "the published copy the catalogue links to would be stale")
+    check("the recorded slug matches the folder",
+          json.loads((_plain / "concept.json").read_text(
+              encoding="utf-8")).get("slug") == "widget-basic",
+          "the catalogue would name a folder that does not exist")
+finally:
+    make_app.APPS_DIR, make_app.PAID_DIR = _real_apps, _real_paid
+    shutil.rmtree(_tmp3, ignore_errors=True)
+
+print("\nTHE REBUILD TOOL CAN ACTUALLY REBUILD\n")
+# rebuild_paid.py exists to bring a product whose paid build is missing back
+# on sale. It called build_exe.main(), which does not exist, so it died with
+# an AttributeError after it had already written the product out, and the
+# installer it could not build left the product off sale with a traceback
+# instead of a sentence.
+_rp = (ROOT / "rebuild_paid.py").read_text(encoding="utf-8")
+# the comment in the file explains the mistake, so only the code is read
+_rp_code = "\n".join(ln for ln in _rp.splitlines()
+                     if not ln.strip().startswith("#"))
+check("it does not call a function that does not exist",
+      "build_exe.main()" not in _rp_code,
+      "it calls build_exe.main(), and build_exe has no main()")
+check("it builds the installer the way the Friday job does",
+      "build_paid_only.build(" in _rp_code,
+      "it does not use the build path that has been exercised")
+check("and it accepts an installer named after the title",
+      "concept.get(\"title\")" in _rp_code or "concept.get('title')" in _rp_code,
+      "it compares the slug against the file name, and the installer is "
+      "named after the title, so it refuses the correct one")
+check("butler is given a project slug and not a URL",
+      "STORE_PROJECT.rstrip(\"/\").rsplit(\"/\", 1)[-1]" in _rp_code,
+      "the target is user/project:channel, and a URL in the project part "
+      "is not a project")
 
 print("\nSECOND PASS: STATE, PACKAGING, CAPTIONS AND FRAMES\n")
 # Found by an independent audit pass, all reproduced before being fixed.

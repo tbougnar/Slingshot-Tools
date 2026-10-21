@@ -916,5 +916,139 @@
   "verification": "the tests pass, and the real data directory is unchanged afterwards",
   "uncertainty": "",
   "opened": "2026-10-21T18:01:34+00:00"
+ },
+ {
+  "id": "BUG-050",
+  "symptom": "the shop sold thirty-two products as a Full edition for nothing",
+  "severity": "HIGH",
+  "component": "site",
+  "files": [
+   "site/index.html",
+   "site_js_selftest.py"
+  ],
+  "status": "VERIFIED_FIXED",
+  "root_cause": "groupProducts dropped every catalogue entry marked published:false before grouping it with its family. For a product whose paid edition is not on sale yet, the entry that is marked false is the paid one, so the family was left holding only the free edition and `full` fell back to it. The card then read 'Full edition' and took the free edition's price, which is zero. The dialog offered a 'Get the full edition' button that charged nothing, and the checkout link carried the free edition's slug because it read item.base_slug, a property groupProducts never set. On the live site that was thirty-two of the thirty-four products; only the two that are actually on sale were right.",
+  "evidence": "running the live page's own groupProducts and render against the live apps.json gave 34 cards, 32 of them labelled 'Full edition' and priced $0.00, with the title still carrying the '(Basic)' suffix",
+  "repro": "load the page and read what the cards say",
+  "fix": "groupProducts keeps both editions and records whether the paid one is on sale. A product that is not for sale yet is shown as the free edition it actually is, at its real price, and the dialog offers the free download and says the paid edition is still being prepared.",
+  "regression_test": "site_js_selftest.py checks the grouping in a real browser: a product with an unsold paid edition is still listed, is not treated as on sale, and shows the free edition",
+  "verification": "the old grouping fails all three of the new checks; the new one renders 34 cards of which 0 claim to be a Full edition at a free price",
+  "uncertainty": "",
+  "opened": "2026-10-21T19:32:15+00:00"
+ },
+ {
+  "id": "BUG-051",
+  "symptom": "a paid app did nothing at all, on the live site",
+  "severity": "HIGH",
+  "component": "app",
+  "files": [
+   "site/apps/chess-board-basic/index.html",
+   "make_app.py",
+   "tier_gate_selftest.py"
+  ],
+  "status": "VERIFIED_FIXED",
+  "root_cause": "One stray brace in the script block that had been appended to the chess-board app made the whole file fail to parse, so the app showed no board, no buttons and no error the visitor could see. It was in the catalogue that whole time. The validator that refuses a broken app could not see it, because it could not read a template literal: it reported eleven perfectly good apps as unparseable instead.",
+  "evidence": "loading the file in a real browser gave 'SyntaxError: missing ) after argument list' and an empty page, in both the free and the paid edition",
+  "repro": "load the app in a browser and look for a board",
+  "fix": "the stray brace is gone, the validator reads template literals properly, and tier_gate_selftest.py checks that every app's script parses",
+  "regression_test": "the validator reports the broken file as 'a } closes the wrong bracket' and none of the thirty-four apps as unparseable; the selftest fails when the brace is put back",
+  "verification": "the app now renders its 64 squares in both editions, and the free one has no export control while the paid one does",
+  "uncertainty": "",
+  "opened": "2026-10-21T19:32:15+00:00"
+ },
+ {
+  "id": "BUG-052",
+  "symptom": "the paid features were not gated, or were gated the wrong way round",
+  "severity": "HIGH",
+  "component": "app",
+  "files": [
+   "site/apps/",
+   "tier_gate_selftest.py"
+  ],
+  "status": "VERIFIED_FIXED",
+  "root_cause": "Ten apps had a paid feature that the free edition could use, a paid feature the paid edition could not use, or a limit that was never applied. The chess-board export control was created only in the free edition, because the gate asked whether the limit was unlimited. The split-bill import button was hidden in both editions, because LIM never defined the key it asked for. The dev-converter data section was never shown. The regex-tester limit check compared !TIER with 'full', which can never be true. Nine apps offered import with no cap, so the free edition could import more than the limit it advertises. Two apps declared a limit they never used, so the limit was not a limit.",
+  "evidence": "checked in a real browser: the free edition of dev-converter has no data section, the split-bill import button is hidden with the paid edition, and speed-typing-test never applies its limit of three",
+  "repro": "look at each app's gate in the free edition and the paid one",
+  "fix": "each gate now asks whether the capability exists rather than whether the limit is unlimited, every limit key LIM uses is defined, and every import is capped at the edition's limit",
+  "regression_test": "tier_gate_selftest.py checks that no tier comparison can never be true, that every LIM key used is defined, and that no feature is gated on the limit instead of the capability",
+  "verification": "re-introducing the broken comparison, the undefined key and the wrong gate each makes the selftest fail",
+  "uncertainty": "",
+  "opened": "2026-10-21T19:32:15+00:00"
+ },
+ {
+  "id": "BUG-053",
+  "symptom": "the command that puts a product on the store also put it on the free edition",
+  "severity": "MEDIUM",
+  "component": "catalogue",
+  "files": [
+   "set_itch_url.py",
+   "itchurl_selftest.py"
+  ],
+  "status": "VERIFIED_FIXED",
+  "root_cause": "set_itch_url.set_url() wrote the store URL onto both editions of a product. The free edition is a download from this site and has never been uploaded to itch.io, so a store URL on it is a claim that is not true, and the site then offers a buy button for something that is free. set_all() and itch_publish.record() both strip it from the free tier, and the release instructions tell the operator to run this command, so running them as written produced exactly the state the audit had closed.",
+  "evidence": "the docstring of set_all() says the free editions are deliberately not given a store URL, and set_url() did the opposite",
+  "repro": "run set_itch_url.py with a product and look at both of its entries",
+  "fix": "set_url() clears the store URL from the free edition and sets it on the paid one, which is what the other two writers do",
+  "regression_test": "itchurl_selftest.py checks that no free edition in the catalogue carries a store URL, and that the command itself does not put one there",
+  "verification": "the check fails when the guard is removed from set_url()",
+  "uncertainty": "",
+  "opened": "2026-10-21T19:32:15+00:00"
+ },
+ {
+  "id": "BUG-054",
+  "symptom": "one environment variable put a buy button on every free product",
+  "severity": "MEDIUM",
+  "component": "catalogue",
+  "files": [
+   "pricing.py",
+   "itchurl_selftest.py"
+  ],
+  "status": "VERIFIED_FIXED",
+  "root_cause": "pricing.py filled in every catalogue entry without an itch_url from the ITCH_PAGE_URL environment variable, including the free editions. The comment above it says there is no fallback and that an empty value means 'not for sale yet', but the line was still there. The test that guards this could not see it, because it looks for a literal URL and this is a value read at run time, so setting the variable put a store URL on all thirty-four free editions at once.",
+  "evidence": "the comment and the code disagreed, which is how it survived the audit that removed the hardcoded version of the same thing",
+  "repro": "set ITCH_PAGE_URL and run pricing.py",
+  "fix": "the fallback is only used for a paid edition, and only when the value is a real product page and not the account's front page",
+  "regression_test": "itchurl_selftest.py reads the syntax tree and fails if any module fills itch_url from the environment",
+  "verification": "the check fails when the environment read is put back",
+  "uncertainty": "",
+  "opened": "2026-10-21T19:32:15+00:00"
+ },
+ {
+  "id": "BUG-055",
+  "symptom": "the tool that brings a dead product back on sale could not",
+  "severity": "MEDIUM",
+  "component": "tooling",
+  "files": [
+   "rebuild_paid.py",
+   "paidbuild_selftest.py"
+  ],
+  "status": "VERIFIED_FIXED",
+  "root_cause": "rebuild_paid.py existed to reconstruct a product whose paid build is missing and put it back on sale. It called build_exe.main(), and build_exe has make_ico() and build_app() and no main(), so it died with an AttributeError after it had already written the product out. It also compared the slug against the installer's file name, and the installer is named after the product's title, so it refused the correct installer for every product. And it handed butler the store's URL where butler wants the project's slug, so the target could not have worked even if the build had.",
+  "evidence": "build_exe.main() does not exist; 'password-manager' would be 'Offline password manager-Setup.exe' and the slug is not a substring of the file name once the dashes are removed",
+  "repro": "run rebuild_paid.py for a product and watch it fail",
+  "fix": "it builds the installer the way the Friday job does, compares the installer by slug or title the way the publisher does, and gives butler the project slug",
+  "regression_test": "paidbuild_selftest.py checks all three, and the full path was run: the installer built, was verified as this product's, and the upload was refused because there was no itch.io user",
+  "verification": "removing any one of the three makes the selftest fail",
+  "uncertainty": "",
+  "opened": "2026-10-21T19:32:15+00:00"
+ },
+ {
+  "id": "BUG-056",
+  "symptom": "the free edition's folder was named twice over",
+  "severity": "MEDIUM",
+  "component": "tooling",
+  "files": [
+   "make_app.py",
+   "paidbuild_selftest.py"
+  ],
+  "status": "VERIFIED_FIXED",
+  "root_cause": "make_app.main() passed an already-suffixed slug to write_app, which appends '-basic' itself, so the free edition was written to '<slug>-basic-basic'. The published copy the catalogue links to stayed stale, a duplicated slug was published to GitHub Pages, and the release gate refused the build. The other two callers already passed the plain slug for exactly this reason.",
+  "evidence": "stage_app.py and verify_app.py both carry a comment saying the suffix is added by write_app, and main() did the opposite",
+  "repro": "call write_app with a suffixed slug and look at the folder name",
+  "fix": "main() passes the plain slug, and write_app accepts either form and adds the suffix once",
+  "regression_test": "paidbuild_selftest.py writes both editions into a temporary directory and checks that both are called '<slug>-basic'",
+  "verification": "removing the guard from write_app makes the selftest fail",
+  "uncertainty": "",
+  "opened": "2026-10-21T19:32:15+00:00"
  }
 ]

@@ -125,6 +125,17 @@ account_only = [a["slug"] for a in catalog
 check("no catalog entry holds an itch_url that is not a product page",
       not account_only, str(account_only))
 
+# The other direction, which is the one that matters for a free edition. A
+# free edition is a download from this site; it has never been uploaded to
+# itch.io, so a store URL on it is a claim that is not true, and the site
+# then offers a buy button for something that is free. set_all() and
+# itch_publish.record() both strip it, but set_url() did not, and that is
+# the command the release instructions tell the operator to run.
+free_with_store = [a["slug"] for a in catalog
+                   if a.get("tier") == "basic" and a.get("itch_url")]
+check("no free edition carries a store URL", not free_with_store,
+      str(free_with_store[:4]))
+
 print("\nNO CODE SUBSTITUTES AN ACCOUNT PAGE FOR A PRODUCT\n")
 # pricing.py filled every entry without an itch_url with the account front page
 # on every run, which put the dead end back within one cycle of it being fixed.
@@ -156,6 +167,35 @@ for f in sorted(ROOT.glob("*.py")):
 
 check("no module assigns an account front page to itch_url", not problems,
       "; ".join(problems[:3]))
+
+# A store URL read from the environment is the same claim, and the test
+# above cannot see it, because it looks for a literal URL and this is a
+# value read at run time. pricing.py had one, and it applied to every entry
+# including the free editions, so a single variable put a buy button on
+# every free product in the catalogue.
+env_fill = []
+for f in sorted(ROOT.glob("*.py")):
+    if f.name.endswith("_selftest.py"):
+        continue
+    try:
+        tree = ast.parse(f.read_text(encoding="utf-8", errors="replace"))
+    except SyntaxError:
+        continue
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Assign):
+            continue
+        targets = [ast.unparse(t) for t in node.targets]
+        if not any("itch_url" in t for t in targets):
+            continue
+        for sub in ast.walk(node.value):
+            if isinstance(sub, ast.Call) and isinstance(sub.func, ast.Attribute) \
+                    and sub.func.attr in ("get", "getenv"):
+                if isinstance(sub.func.value, ast.Attribute) \
+                        and sub.func.value.attr == "environ":
+                    env_fill.append(f"{f.name}:{getattr(sub, 'lineno', '?')}")
+
+check("no module fills itch_url from the environment", not env_fill,
+      "; ".join(env_fill[:3]))
 
 pricing_src = sources_of("pricing.py")
 check("pricing.py has no hardcoded itch.io URL at all",

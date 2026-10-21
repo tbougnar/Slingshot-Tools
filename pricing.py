@@ -16,6 +16,8 @@ import urllib.request
 from datetime import date
 from pathlib import Path
 
+import set_itch_url
+
 ROOT = Path(__file__).resolve().parent
 DATA = ROOT / "data"
 PRICES = DATA / "prices.json"
@@ -290,8 +292,22 @@ def main():
         # dead end the audit had just fixed, on every run, and check_exposure
         # then failed the release. An empty value means "not for sale yet",
         # which is true and is what publish_paid.py needs to see.
-        a["itch_url"] = a.get("itch_url") or os.environ.get(
-            "ITCH_PAGE_URL", "")
+        #
+        # The environment variable was the same fallback with the page
+        # hidden, and it was worse: it applied to the free editions as well,
+        # so one variable put a buy button on every free product in the
+        # catalogue, and no test could see it, because they look for a
+        # literal URL and not for a value read from the environment. It is
+        # only used for a paid edition, and only when it is a real product
+        # page and not the account's front page.
+        if a.get("tier") == "basic":
+            a.pop("itch_url", None)
+        else:
+            _fallback = os.environ.get("ITCH_PAGE_URL", "").strip()
+            if _fallback and set_itch_url.valid(_fallback):
+                a["itch_url"] = a.get("itch_url") or _fallback
+            else:
+                a["itch_url"] = a.get("itch_url") or ""
 
     PRICES.write_text(json.dumps(prices, indent=2), encoding="utf-8")
     LOG.write_text(json.dumps(history[-200:], indent=2), encoding="utf-8")
