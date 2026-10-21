@@ -115,9 +115,19 @@ def run(cmd: list[str], cwd: Path = ROOT, timeout: int = 300) -> tuple[int, str]
 def collect(attempt: int) -> dict:
     """Gather the evidence: the failing job's log tail and the last commits."""
     log = ""
-    for p in ("selfheal/last_run.log", "selfheal/failure.txt"):
+    # The log is looked for in several places, because where it lands depends
+    # on how it was fetched. It used to look only in selfheal/, a directory
+    # nothing in this repository ever wrote, so the repair lane found no
+    # evidence on any run and gave up before it asked anything. The generate
+    # job now keeps its output as an artifact and the workflow downloads it
+    # into data/.
+    for p in ("selfheal/last_run.log", "selfheal/failure.txt",
+              "data/generate-log.txt"):
         f = ROOT / p
         if f.exists():
+            log += f.read_text(encoding="utf-8", errors="replace") + "\n"
+    for pattern in ("data/generate-log/*.txt", "data/*.log", "data/*.txt"):
+        for f in sorted(ROOT.glob(pattern)):
             log += f.read_text(encoding="utf-8", errors="replace") + "\n"
     tail = log[-12000:]
     _, recent = run(["git", "log", "--oneline", "-8"])

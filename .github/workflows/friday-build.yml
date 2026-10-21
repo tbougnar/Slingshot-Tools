@@ -108,7 +108,23 @@ jobs:
         run: python selftest_audit.py
 
       - name: Generate the app and stage it for verification
-        run: python stage_app.py
+        run: |
+          New-Item -ItemType Directory -Force -Path data | Out-Null
+          python stage_app.py 2>&1 | Tee-Object -FilePath data/generate-log.txt
+          $code = $LASTEXITCODE
+          if ($code -ne 0) { exit $code }
+
+      - name: Keep the generate log for the repair lane
+        # The repair lane is handed the failure log. It used to look for an
+        # artifact that no workflow ever uploaded, so it found nothing on
+        # every run and gave up, and the repair-after-a-failed-generation
+        # capability had never worked.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: generate-log
+          path: data/generate-log.txt
+          if-no-files-found: warn
 
       - name: Decide the price
         run: python pricing.py
@@ -153,8 +169,11 @@ jobs:
         continue-on-error: true
         run: |
           mkdir -p data
-          gh run download --name generate-log --dir data || echo "no log"
-          ls -la data || true
+          # The run id is given, because "gh run download" cannot work out
+          # which run to look at on its own, and the artifact is uploaded by
+          # the generate job in this same run.
+          gh run download "${{ github.run_id }}" --name generate-log --dir data || echo "no log"
+          find data -type f | head -20 || true
 
       - name: Let the model diagnose and patch
         run: python selfheal.py

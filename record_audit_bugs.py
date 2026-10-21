@@ -1593,6 +1593,25 @@ FOUND = [
      "check_repo_hygiene.py is run by five lanes",
      "the placeholder is still treated as a secret",
      ""),
+
+    ("the repair lane could never run, because there was nothing to read",
+     "MEDIUM", "pipeline", ["selfheal.py", ".github/workflows/friday-build.yml"],
+     "VERIFIED_FIXED",
+     "The repair lane was handed the failure log to diagnose, and it looked "
+     "for it in a directory that nothing in this repository ever wrote, and "
+     "for an artifact that no workflow ever uploaded. So it found nothing on "
+     "every run, said so and gave up before it asked anything, and the "
+     "repair-after-a-failed-generation capability had never existed.",
+     "there is no selfheal/ directory, nothing writes the two files it "
+     "looked for, and the only artifacts uploaded are named paid-build and "
+     "slingshot-installer",
+     "run the repair lane and see that it finds no log",
+     "the generate job keeps its output as an artifact, the workflow "
+     "downloads it, and the repair lane looks in the places the log can "
+     "land",
+     "the lane's own log handling",
+     "removing the new places makes the lane find nothing again",
+     ""),
 ]
 
 

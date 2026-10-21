@@ -1425,5 +1425,24 @@
   "verification": "the placeholder is still treated as a secret",
   "uncertainty": "",
   "opened": "2026-10-21T22:36:24+00:00"
+ },
+ {
+  "id": "BUG-077",
+  "symptom": "the repair lane could never run, because there was nothing to read",
+  "severity": "MEDIUM",
+  "component": "pipeline",
+  "files": [
+   "selfheal.py",
+   ".github/workflows/friday-build.yml"
+  ],
+  "status": "VERIFIED_FIXED",
+  "root_cause": "The repair lane was handed the failure log to diagnose, and it looked for it in a directory that nothing in this repository ever wrote, and for an artifact that no workflow ever uploaded. So it found nothing on every run, said so and gave up before it asked anything, and the repair-after-a-failed-generation capability had never existed.",
+  "evidence": "there is no selfheal/ directory, nothing writes the two files it looked for, and the only artifacts uploaded are named paid-build and slingshot-installer",
+  "repro": "run the repair lane and see that it finds no log",
+  "fix": "the generate job keeps its output as an artifact, the workflow downloads it, and the repair lane looks in the places the log can land",
+  "regression_test": "the lane's own log handling",
+  "verification": "removing the new places makes the lane find nothing again",
+  "uncertainty": "",
+  "opened": "2026-10-21T23:06:14+00:00"
  }
 ]
