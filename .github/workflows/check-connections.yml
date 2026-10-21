@@ -33,6 +33,10 @@ jobs:
       YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # the hygiene check reads the whole log, because a secret
+          # that was committed and then deleted is still readable there
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:

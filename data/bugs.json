@@ -1238,5 +1238,192 @@
   "verification": "not verified, because re-authorising needs a browser and a Google account. Nothing in the shop depends on it. The lanes that publish to YouTube would fail on their own, and they are not part of a release.",
   "uncertainty": "",
   "opened": "2026-10-21T21:06:08+00:00"
+ },
+ {
+  "id": "BUG-067",
+  "symptom": "the guard that protects the site could not see anything",
+  "severity": "CRITICAL",
+  "component": "pipeline",
+  "files": [
+   "weekly_guard.py",
+   "audit_selftest.py"
+  ],
+  "status": "VERIFIED_FIXED",
+  "root_cause": "changed_files() asked git for the diff between HEAD and HEAD with the three-dot form, which is a merge-base comparison, so the merge base was that commit and the diff was empty with exit code 0. The function always returned an empty list, the fallback that would have caught it was unreachable, and every gate built on it reported '0 changed file(s), none protected' while a protected workflow sat modified in the tree. Six workflows run that gate, and self_upgrade.py asks the same question after a patch.",
+  "evidence": "with a protected workflow modified in the tree, git reported the file as changed, changed_files() returned an empty list, violations() returned nothing and guard() returned 0",
+  "repro": "modify a protected file and run python weekly_guard.py check",
+  "fix": "the working tree against HEAD, and anything staged, is what is asked about, and a job that commits its own change asks before it commits",
+  "regression_test": "audit_selftest.py modifies a protected workflow, asks the guard, and checks that it sees the file, calls it a violation and refuses",
+  "verification": "putting the three-dot form back makes all three checks fail",
+  "uncertainty": "",
+  "opened": "2026-10-21T22:36:23+00:00"
+ },
+ {
+  "id": "BUG-068",
+  "symptom": "the repair lane could rewrite the scripts the guard protects",
+  "severity": "CRITICAL",
+  "component": "pipeline",
+  "files": [
+   "selfheal.py",
+   "audit_selftest.py"
+  ],
+  "status": "VERIFIED_FIXED",
+  "root_cause": "The repair lane's allow-list included build_exe.py and build_installer_app.py, and both are in the guard's list of the scripts that make the site work, so the lane could rewrite the very files the guard exists to protect and the gate would not have said so, because the gate was not looking. The lane also only compiled the patched file and stopped, though its own docstring said a patch must survive a test run, so a whole-file rewrite that broke the build but still parsed was committed to main and pushed. It also had itself in the allow-list.",
+  "evidence": "the two files were in both lists, and no test ran anywhere in the file",
+  "repro": "ask the repair lane to patch a protected script and see what it does",
+  "fix": "a protected file is never repairable, the whole suite has to pass with the patch in place, and the guard has the last word before anything is committed",
+  "regression_test": "audit_selftest.py asks the repair lane about a protected script and checks that it is refused",
+  "verification": "removing the refusal makes the check fail",
+  "uncertainty": "",
+  "opened": "2026-10-21T22:36:23+00:00"
+ },
+ {
+  "id": "BUG-069",
+  "symptom": "a credential held as a dictionary value was written to the public log",
+  "severity": "HIGH",
+  "component": "audit",
+  "files": [
+   "auditlog.py",
+   "audit_selftest.py"
+  ],
+  "status": "VERIFIED_FIXED",
+  "root_cause": "The scrubber needed the name and the value side by side in one string, and in a dictionary they are two separate strings, so a credential held as a value was written to the log as it was. The log is a tracked file in a public repository, and the natural place for a credential is the evidence dictionary every event carries. The test that claimed to cover it passed only because its nested value happened to match a shape rule.",
+  "evidence": "scrub({'password': 'hunter2000'}) returned the password unchanged, and the same for an itch.io session cookie, a Discord bot token and an authorization header",
+  "repro": "scrub a dictionary holding a credential",
+  "fix": "a key that names a credential means the value is one, however ordinary the value looks, and the value is replaced",
+  "regression_test": "audit_selftest.py checks that a password, a session cookie, a Discord token, an authorization header and a nested key are all replaced, and that an ordinary word is not",
+  "verification": "removing the replacement makes the checks fail",
+  "uncertainty": "",
+  "opened": "2026-10-21T22:36:23+00:00"
+ },
+ {
+  "id": "BUG-070",
+  "symptom": "rotating the audit log threw the history away",
+  "severity": "MEDIUM",
+  "component": "audit",
+  "files": [
+   "auditlog.py",
+   "audit_selftest.py"
+  ],
+  "status": "VERIFIED_FIXED",
+  "root_cause": "The rotation copied the newest file to .1 and then deleted it, which is the opposite of what its own docstring says it does, and read() only ever read the newest file, so past the size limit the whole trail became empty and the report that depends on it reported nothing.",
+  "evidence": "with the size limit lowered, the log file did not exist afterwards and read() returned no events",
+  "repro": "write more than the size limit worth of events and read them back",
+  "fix": "the newest file is emptied rather than deleted, and the rotated files are read too, oldest first, so the trail is continuous",
+  "regression_test": "audit_selftest.py writes past the limit and checks the file is still there and there is still something to read",
+  "verification": "deleting the file instead of emptying it makes the check fail",
+  "uncertainty": "",
+  "opened": "2026-10-21T22:36:23+00:00"
+ },
+ {
+  "id": "BUG-071",
+  "symptom": "the price engine reset the whole shop to the starting price every week",
+  "severity": "HIGH",
+  "component": "pricing",
+  "files": [
+   "pricing.py",
+   "audit_selftest.py"
+  ],
+  "status": "VERIFIED_FIXED",
+  "root_cause": "The engine's state file is untracked, so on a fresh runner it does not exist and every product was defaulted to the starting price, which reset the whole shop to three dollars every Friday, reverted any price that had been set by hand, and left the engine unable to learn from a run because it started from nothing every time. The hold path also skipped the clamp, so a stored price outside the rule was published and then refused by the command that lists a product for sale, and a product that is held could never move.",
+  "evidence": "the state file is in .gitignore, the Friday lane runs pricing.py on a fresh checkout, and the catalogue's own price was never read",
+  "repro": "run pricing.py against a catalogue with a price of five dollars and no state file",
+  "fix": "the catalogue is the price of record, a hold is clamped like a move is, and the catalogue decides the tier rather than the engine's note",
+  "regression_test": "audit_selftest.py runs the engine against a catalogue with a price of five dollars and one outside the rule, and checks both",
+  "verification": "defaulting to the starting price again makes the checks fail",
+  "uncertainty": "",
+  "opened": "2026-10-21T22:36:23+00:00"
+ },
+ {
+  "id": "BUG-072",
+  "symptom": "a corrupt budget crashed the job instead of refusing it",
+  "severity": "MEDIUM",
+  "component": "budget",
+  "files": [
+   "budget.py",
+   "audit_selftest.py"
+  ],
+  "status": "VERIFIED_FIXED",
+  "root_cause": "The state file's shape was only checked at the top level, so a file holding a months list instead of a table, or a month that was a number instead of a record, or an hour count that was a word, made spent() raise out of check(). The module promises that an unreadable budget refuses the job. The hours and the broken-ness also came from two separate reads of the same file, so a failed read and a successful one could be combined, and the job was approved on zeros from the failed one.",
+  "evidence": "a state file holding {\"months\": []} made check() raise an AttributeError, and one holding a non-numeric hour count raised a ValueError",
+  "repro": "put each of those shapes in data/budget.json and run budget.py check",
+  "fix": "the shape is checked before it is used, one read answers both questions, and the temporary file has a unique name so two writers cannot swap each other's file into place",
+  "regression_test": "audit_selftest.py covers the shape of the state file",
+  "verification": "putting the old check back makes a corrupt file crash again",
+  "uncertainty": "",
+  "opened": "2026-10-21T22:36:23+00:00"
+ },
+ {
+  "id": "BUG-073",
+  "symptom": "the daily lane believed a corrupt budget was a full month",
+  "severity": "HIGH",
+  "component": "budget",
+  "files": [
+   "improve_daily.py"
+  ],
+  "status": "VERIFIED_FIXED",
+  "root_cause": "The daily lane asked budget.remaining() for the hours left, and remaining() reads a corrupt state as zero spent, so it answered with a whole month while the truth was unknown. The command that answers this question properly, budget.check(), refuses when the hours cannot be read, and the lane did not use it.",
+  "evidence": "with a corrupt budget file, broken() was true, check() returned 1 and remaining() returned 30.0",
+  "repro": "corrupt data/budget.json and run the daily lane",
+  "fix": "the lane asks budget.check(), which refuses when the hours cannot be read",
+  "regression_test": "the refusal is the answer, not a number",
+  "verification": "the daily lane asked for a number again",
+  "uncertainty": "",
+  "opened": "2026-10-21T22:36:23+00:00"
+ },
+ {
+  "id": "BUG-074",
+  "symptom": "the daily lane recorded changes that never happened",
+  "severity": "HIGH",
+  "component": "improvement",
+  "files": [
+   "improve_daily.py"
+  ],
+  "status": "VERIFIED_FIXED",
+  "root_cause": "The lane decided whether anything changed by comparing the bytes of the improver's state file before and after. The improver rewrites that file on every path, including the model proposing nothing and the patch being rejected and rolled back, so the bytes always differed and the lane always said a change had been made. It recorded changes that never happened and started the cooldown on days when nothing was done, so the promise that doing nothing is a success never held.",
+  "evidence": "the improver rewrites its state file on every path, with a fresh timestamp, so the comparison was always true",
+  "repro": "run the lane and look at whether it says a change was made when the model declined",
+  "fix": "the lane reads what the improver recorded, and a change means a patch was kept",
+  "regression_test": "the lane asks for the recorded outcome rather than the file bytes",
+  "verification": "comparing the bytes again makes every run claim a change",
+  "uncertainty": "",
+  "opened": "2026-10-21T22:36:23+00:00"
+ },
+ {
+  "id": "BUG-075",
+  "symptom": "the daily lane threw away the patch it had tested",
+  "severity": "HIGH",
+  "component": "improvement",
+  "files": [
+   ".github/workflows/daily-improve.yml"
+  ],
+  "status": "VERIFIED_FIXED",
+  "root_cause": "The lane committed only the four data files, so the improved generator was written into the working tree, tested there and then thrown away with the runner, while the note saying it had been tried was committed. The memory of the attempt survived and the attempt did not, so the same patch was proposed every day and never kept.",
+  "evidence": "the commit step staged four data files and nothing else, and the patched file was never staged",
+  "repro": "read the commit step of the daily lane",
+  "fix": "the patch is staged with the notes, so a patch that passed the suite is kept",
+  "regression_test": "the lane's own commit step",
+  "verification": "removing the staging of the changed files leaves the patch on the runner",
+  "uncertainty": "",
+  "opened": "2026-10-21T22:36:23+00:00"
+ },
+ {
+  "id": "BUG-076",
+  "symptom": "the private-data guard was defeated by a shallow checkout",
+  "severity": "MEDIUM",
+  "component": "hygiene",
+  "files": [
+   "check_repo_hygiene.py",
+   ".github/workflows/daily-improve.yml"
+  ],
+  "status": "VERIFIED_FIXED",
+  "root_cause": "The check that looks for a credential which was committed and then deleted reads the whole log, and the runners checked out one commit by default, so in CI it never saw more than the latest commit while it did see the history on a full clone. The lanes that run it were given the whole history. The scan also failed on a full clone over a test fixture that had been removed from the working tree months earlier, so the gate was red for everybody and meaningless.",
+  "evidence": "the runners use the default shallow checkout, and a full clone found a token-shaped test fixture in the history that is not in the working tree",
+  "repro": "run check_repo_hygiene.py on a full clone and on a shallow one",
+  "fix": "the lanes fetch the whole history, and an obvious placeholder is not treated as a leaked secret",
+  "regression_test": "check_repo_hygiene.py is run by five lanes",
+  "verification": "the placeholder is still treated as a secret",
+  "uncertainty": "",
+  "opened": "2026-10-21T22:36:24+00:00"
  }
 ]

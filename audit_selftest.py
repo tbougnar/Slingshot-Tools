@@ -8,6 +8,7 @@ written, a module that was gitignored, a scratch file swept into a commit.
 """
 from __future__ import annotations
 
+import importlib
 import json
 import os
 import shutil
@@ -434,6 +435,156 @@ check("a paid installer anywhere under the site is caught",
       _exposure_run("binary") != 0,
       "the junk list had no binary extensions, and the installer IS the "
       "paid product")
+
+# ---- 12. the guard that protects the site has to be able to see
+# weekly_guard.changed_files() asked git for the diff between HEAD and HEAD
+# with the three-dot form, which is a merge-base comparison, so the merge
+# base was that commit and the diff was empty with exit code 0. The function
+# always returned an empty list, and every gate built on it reported "0
+# changed file(s), none protected" while a protected workflow sat modified
+# in the tree.
+print("\nTHE GUARD CAN ACTUALLY SEE A CHANGE\n")
+import weekly_guard as _wg
+
+import shutil as _shutil
+import subprocess as _subprocess
+
+_target = ROOT / ".github" / "workflows" / "pages.yml"
+_keep = _target.read_text(encoding="utf-8")
+try:
+    _target.write_text(_keep + "\n# a change\n", encoding="utf-8")
+    _seen = _wg.changed_files()
+    check("a modified protected file is seen",
+          ".github/workflows/pages.yml" in _seen,
+          f"the guard saw {_seen[:4]} and the protected file was not among "
+          "them")
+    check("and it is called a violation",
+          ".github/workflows/pages.yml" in _wg.violations(_seen),
+          "the guard saw the file and did not call it a violation")
+    check("and the gate refuses",
+          _wg.guard() != 0,
+          "the gate said it was fine")
+finally:
+    _target.write_text(_keep, encoding="utf-8")
+    importlib.reload(_wg)
+
+# ---- 13. the audit trail must not hold a credential
+# The log is a tracked file in a public repository. The scrubber needed the
+# name and the value side by side in one string, and in a dict they are two
+# separate strings, so a credential held as a dict value was written out as
+# it was.
+print("\nTHE AUDIT TRAIL DOES NOT HOLD A CREDENTIAL\n")
+import auditlog as _al
+
+for _label, _value in (("password", "hunter2000"),
+                        ("itch_session_cookie", "s%3Aabcdefghijklmnop"),
+                        ("discord_token", "MTIz.Gh1jkl.abcdefghijklmnop"),
+                        ("Authorization", "Basic dXNlcjpwYXNzd29yZA==")):
+    _got = _al.scrub({_label: _value})
+    check(f"a {_label} held as a dict value is redacted",
+          _got.get(_label) == "<redacted>",
+          f"it was written out as {_got.get(_label)!r}")
+_got = _al.scrub({"nested": {"api_key": "sk-abcdefghijklmnopqrst"}})
+check("and one nested inside another",
+      _got["nested"]["api_key"] == "<redacted>",
+      f"got {_got}")
+check("an ordinary word is not redacted",
+      _al.scrub({"action": "started"})["action"] == "started")
+
+# ---- 14. rotating the log must not throw the history away
+# _rotate() copied the newest file to .1 and then deleted it, so the file
+# the reader looks at was gone and read() returned nothing. The docstring
+# says the opposite of what the code did.
+print("\nROTATING THE LOG KEEPS THE HISTORY\n")
+import json as _json
+import tempfile as _tempfile
+
+_tmp = Path(_tempfile.mkdtemp())
+_real_root, _real_log, _real_max = _al.ROOT, _al.LOG, _al.MAX_BYTES
+try:
+    _al.ROOT = _tmp
+    _al.LOG = _tmp / "events.jsonl"
+    _al.MAX_BYTES = 400
+    for _i in range(10):
+        _al.write("STARTED", stage="x", job=f"job{_i}", evidence={"n": _i})
+    check("the log file still exists after a rotation",
+          _al.LOG.exists(),
+          "the newest file was deleted, so the trail was thrown away")
+    check("and there is still something to read",
+          len(_al.read()) > 0,
+          "read() returned nothing, so the report had nothing to report")
+finally:
+    _al.ROOT, _al.LOG, _al.MAX_BYTES = _real_root, _real_log, _real_max
+    _shutil.rmtree(_tmp, ignore_errors=True)
+
+# ---- 15. the price engine must not reset the shop
+# The engine's state file is untracked, so on a fresh runner it does not
+# exist and every product was defaulted to the starting price, which reset
+# the whole shop to $3.00 every Friday and reverted any price set by hand.
+print("\nTHE PRICE ENGINE DOES NOT RESET THE SHOP\n")
+import pricing as _pricing
+
+_tmp = Path(_tempfile.mkdtemp())
+_cat = _tmp / "apps.json"
+_cat.write_text(_json.dumps([
+    {"slug": "a", "base_slug": "a", "tier": "full", "title": "A",
+     "price": 5.0, "itch_url": "https://x.itch.io/y"},
+    {"slug": "b", "base_slug": "b", "tier": "full", "title": "B",
+     "price": 99.0, "itch_url": "https://x.itch.io/z"},
+    {"slug": "a-basic", "base_slug": "a", "tier": "basic",
+     "title": "A (Basic)", "price": 0.0},
+    {"slug": "b-basic", "base_slug": "b", "tier": "basic",
+     "title": "B (Basic)", "price": 0.0}]), encoding="utf-8")
+_rc, _ro, _rp, _rl = (_pricing.CATALOG, _pricing.PRICES, _pricing.PRICES,
+                       _pricing.LOG)
+_real_cat, _real_prices, _real_log = (_pricing.CATALOG, _pricing.PRICES,
+                                      _pricing.LOG)
+try:
+    _pricing.CATALOG = _cat
+    _pricing.PRICES = _tmp / "prices.json"
+    _pricing.LOG = _tmp / "price_log.json"
+    _pricing.main()
+    _out = _json.loads(_cat.read_text(encoding="utf-8"))
+    _paid = next(e for e in _out if e.get("slug") == "a")
+    _free = next(e for e in _out if e.get("slug") == "a-basic")
+    _wild = next(e for e in _out if e.get("slug") == "b")
+    check("a price that is already set is kept",
+          float(_paid.get("price") or 0) == 5.0,
+          f"it was reset to {_paid.get('price')}")
+    check("the free edition is still free",
+          float(_free.get("price") or 0) == 0.0,
+          f"it became {_free.get('price')}")
+    check("a price outside the rule is brought back inside it",
+          _pricing.FLOOR <= float(_wild.get("price") or 0) <= _pricing.CEILING,
+          f"it stayed at {_wild.get('price')}, and publish_paid.py refuses to "
+          "list a product outside the rule, so it could never be sold")
+finally:
+    _pricing.CATALOG, _pricing.PRICES, _pricing.LOG = (_real_cat,
+                                                        _real_prices,
+                                                        _real_log)
+    _shutil.rmtree(_tmp, ignore_errors=True)
+
+check("a hold is clamped like a move is",
+      _pricing.clamp(0.0) >= _pricing.FLOOR
+      and _pricing.clamp(99.0) <= _pricing.CEILING,
+      "a held price was written back unclamped and could never be listed")
+
+# ---- 16. the repair lane may not rewrite a protected file
+print("\nTHE REPAIR LANE MAY NOT REWRITE A PROTECTED FILE\n")
+import selfheal as _sh
+
+_kept = _sh.safe({"fixes": [
+    {"file": "build_exe.py", "note": "x",
+     "content": "one\ntwo\nthree\nfour\nfive\nsix\n"},
+    {"file": "make_app.py", "note": "y",
+     "content": "one\ntwo\nthree\nfour\nfive\nsix\n"}]})
+_names = [k["file"] for k in _kept]
+check("a protected script is refused",
+      "build_exe.py" not in _names,
+      "the repair lane may rewrite a script the guard protects")
+check("and an ordinary file is not",
+      "make_app.py" in _names,
+      "the repair lane can no longer repair anything")
 
 print()
 print("FAILURES:", fails if fails else "none")

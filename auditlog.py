@@ -80,6 +80,15 @@ _PATTERNS = [
 
 _cid = ""
 
+# A key that names a credential means the value is one, however ordinary the
+# value looks. The patterns above need the name and the value side by side in
+# one string, and in a dict they are two separate strings, so a credential
+# held as a dict value was written to the log as it was. The log is a tracked
+# file in a public repository, so that is a secret in plain sight.
+_CRED_NAME = re.compile(
+    r"(?i)(api[_-]?key|token|secret|password|passwd|cookie|session"
+    r"|authorization|credential|bearer|refresh)")
+
 
 def correlation_id() -> str:
     """The id shared by everything one job does.
@@ -103,7 +112,13 @@ def scrub(value):
             value = pattern.sub(repl, value)
         return value
     if isinstance(value, dict):
-        return {k: scrub(v) for k, v in value.items()}
+        out = {}
+        for k, v in value.items():
+            if isinstance(k, str) and _CRED_NAME.search(k):
+                out[scrub(k)] = "<redacted>"
+                continue
+            out[scrub(k)] = scrub(v)
+        return out
     if isinstance(value, (list, tuple)):
         return [scrub(v) for v in value]
     return value
@@ -127,11 +142,53 @@ def _rotate() -> None:
                 if older.exists():
                     older.unlink()
                 older.write_bytes(newer.read_bytes())
-        LOG.unlink()
+        # The newest file has just been copied to .1, so it is emptied
+        # rather than deleted. It used to be deleted, which is the opposite
+        # of what this function says it does: read() only ever read the
+        # newest file, so past the size limit the whole audit trail became
+        # empty and the report that depends on it reported nothing.
+        LOG.write_bytes(b"")
     except OSError:
         # Rotation is housekeeping. Failing to do it must never lose the event
         # that is being written right now.
         pass
+
+
+def _read_one(path: Path) -> list[dict]:
+    """Every event in one log file, skipping a torn last line."""
+    out = []
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return out
+    for ln in text.splitlines():
+        ln = ln.strip()
+        if not ln:
+            continue
+        try:
+            out.append(json.loads(ln))
+        except json.JSONDecodeError:
+            # A torn final line after a kill is expected and must not hide the
+            # events before it.
+            continue
+    return out
+
+
+def read(limit: int = 0) -> list[dict]:
+    """Read events back, newest last. Used by the tests and by tooling.
+
+    The rotated files are read too, oldest first, so the trail is continuous
+    across a rotation instead of starting again from nothing.
+    """
+    out = []
+    for path in reversed(sorted(ROOT.glob("events.jsonl.*"),
+                                key=lambda p: p.name)):
+        if not path.is_file():
+            continue
+        out += _read_one(path)
+    if LOG.exists():
+        out += _read_one(LOG)
+    return out[-limit:] if limit else out
 
 
 def write(event: str, stage: str = "", job: str = "", action: str = "",
@@ -213,24 +270,6 @@ def blocked(stage: str, reason: str = "", **kw):
 
 def not_verified(stage: str, reason: str = "", **kw):
     return write("NOT_VERIFIED", stage=stage, reason=reason, **kw)
-
-
-def read(limit: int = 0) -> list[dict]:
-    """Read events back, newest last. Used by the tests and by tooling."""
-    if not LOG.exists():
-        return []
-    out = []
-    for ln in LOG.read_text(encoding="utf-8", errors="replace").splitlines():
-        ln = ln.strip()
-        if not ln:
-            continue
-        try:
-            out.append(json.loads(ln))
-        except json.JSONDecodeError:
-            # A torn final line after a kill is expected and must not hide the
-            # events before it.
-            continue
-    return out[-limit:] if limit else out
 
 
 if __name__ == "__main__":

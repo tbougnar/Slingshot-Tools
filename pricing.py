@@ -242,7 +242,14 @@ def main():
 
     for a in apps:
         entry = prices.setdefault(a["slug"], {})
-        entry.setdefault("price", START_PRICE)
+        # The price the catalogue already carries is the price of record. The
+        # engine's own state file is untracked, so on a fresh runner it does
+        # not exist, and the old code defaulted every product to the starting
+        # price. That reset the whole shop to $3.00 every Friday and silently
+        # reverted any price that had been set by hand, and the engine could
+        # never learn from a run because it started from nothing every time.
+        # The catalogue is tracked, so it is what the price is read from.
+        entry.setdefault("price", a.get("price", START_PRICE))
         entry.setdefault("tier", a.get("tier") or "full")
         s = sales.get(a["slug"]) or {}
         entry["sales"] = s.get("sales", entry.get("sales", 0))
@@ -267,7 +274,13 @@ def main():
         # per run for ever. Clamp after charm, never before, or charm(clamp(x))
         # can land below the hard floor and the product could never be listed.
         if round(new - cur, 2) == 0.0:
-            entry["price"] = cur          # held; leave it exactly as it was
+            # A hold is still a price, and it still has to be a legal one. The
+            # clamp was applied only to a move, so a stored price of zero or
+            # of ninety-nine was written back unchanged, published, and then
+            # refused by publish_paid.py, which cannot list a product outside
+            # the rule. A product that is held can never move, because decide
+            # holds it for want of sales, so it would be stuck for ever.
+            entry["price"] = clamp(cur)
             continue
         new = clamp(charm(new))
         if abs(round(new - cur, 2)) >= 0.01:
@@ -283,7 +296,11 @@ def main():
 
     for a in apps:
         entry = prices.get(a["slug"], {})
-        a["tier"] = entry.get("tier", "full")
+        # The catalogue decides the tier. The engine's state file is a note
+        # about the price, and letting a stale note override the catalogue
+        # meant a price engine could move a product between the free and the
+        # paid tier, from a file nobody reviews.
+        a["tier"] = a.get("tier") or entry.get("tier") or "full"
         a["free"] = a["tier"] == "basic"
         a["price"] = 0 if a["free"] else entry.get("price", START_PRICE)
         # No fallback. This line used to fill every entry without an

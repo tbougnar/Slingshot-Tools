@@ -38,6 +38,10 @@ jobs:
       SLINGSHOT_EMERGENCY_HOURS: "3"
     steps:
       - uses: actions/checkout@v4
+        with:
+          # the hygiene check reads the whole log, because a secret
+          # that was committed and then deleted is still readable there
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:

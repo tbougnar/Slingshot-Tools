@@ -30,6 +30,10 @@ jobs:
       SLINGSHOT_RETIRE_MIN_DAYS: "365"
     steps:
       - uses: actions/checkout@v4
+        with:
+          # the hygiene check reads the whole log, because a secret
+          # that was committed and then deleted is still readable there
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
@@ -93,6 +97,10 @@ jobs:
       SLINGSHOT_MONTHLY_HOURS: "30"
     steps:
       - uses: actions/checkout@v4
+        with:
+          # the hygiene check reads the whole log, because a secret
+          # that was committed and then deleted is still readable there
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:

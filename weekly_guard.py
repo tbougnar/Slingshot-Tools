@@ -44,6 +44,13 @@ PROTECTED_WORKFLOWS = [
     # thing deciding what counts as an improvement could edit its own
     # standard.
     "daily-improve.yml",
+    # The two that were missing, and they are the two that hold the most
+    # credentials. shorts-publish.yml holds the model key, the voice key and
+    # the YouTube credentials; check-connections.yml holds the itch.io key,
+    # the session cookie, the Discord bot token and the model key. A job that
+    # could edit its own schedule could read them.
+    "shorts-publish.yml",
+    "check-connections.yml",
 ]
 
 # The scripts that make the site work. Editing these changes what customers get
@@ -123,22 +130,46 @@ def all_protected() -> set[str]:
     return out
 
 
-def changed_files(base: str = "HEAD", head: str = "HEAD") -> list[str]:
-    """Files this working tree differs in, newest first."""
-    args = ["diff", "--name-only", f"{base}...{head}"]
-    try:
-        r = subprocess.run(["git", *args], cwd=ROOT, capture_output=True,
-                           text=True, timeout=60)
-    except (OSError, subprocess.SubprocessError):
-        return []
-    if r.returncode != 0:
-        r = subprocess.run(["git", "diff", "--name-only", "HEAD"],
-                           cwd=ROOT, capture_output=True, text=True,
-                           timeout=60)
+def changed_files(base: str = "", head: str = "") -> list[str]:
+    """Every file that is different from where the repository used to be.
+
+    The working tree against HEAD, and anything staged, which is what a job
+    is about to commit. That is the right question for a gate that runs
+    before a job commits, and it is the question every lane asks.
+
+    The diff used to be written as "git diff --name-only HEAD...HEAD", and
+    the three-dot form is a merge-base comparison. With the same commit on
+    both sides the merge base is that commit and the diff is empty, with
+    exit code 0, so the function always returned an empty list and every gate
+    built on it was decorative. It reported "0 changed file(s), none
+    protected" while a protected workflow sat modified in the tree.
+
+    A job that commits before it asks is the other shape: the change is in
+    history and the working tree is clean. That job has to ask about the
+    commit it made, which it does by passing the range, or by asking before
+    it commits, which is better still because nothing is committed until the
+    answer is known.
+    """
+    out: list[str] = []
+
+    def _run(*args: str) -> list[str]:
+        try:
+            r = subprocess.run(["git", *args], cwd=ROOT, capture_output=True,
+                               text=True, timeout=60)
+        except (OSError, subprocess.SubprocessError):
+            return []
         if r.returncode != 0:
             return []
         return [ln.strip() for ln in r.stdout.splitlines() if ln.strip()]
-    return [ln.strip() for ln in r.stdout.splitlines() if ln.strip()]
+
+    if base and head:
+        out += _run("diff", "--name-only", f"{base}...{head}")
+    else:
+        out += _run("diff", "--name-only", "HEAD")
+        out += _run("diff", "--name-only", "--cached")
+
+    seen: set[str] = set()
+    return [p for p in out if not (p in seen or seen.add(p))]
 
 
 def is_protected(path: str) -> bool:

@@ -73,8 +73,15 @@ def load() -> dict:
     global _broken
     if STATE.exists():
         try:
-            data = json.loads(STATE.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError) as e:
+            raw = STATE.read_bytes()
+        except OSError as e:
+            warn(f"cannot read {STATE.name} ({e}). Treating this month's hours "
+                 "as unknown rather than as zero, so jobs will not start on a "
+                 "budget that may already be spent.")
+            return {"months": {}, "runs": []}
+        try:
+            data = json.loads(raw.decode("utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError, ValueError) as e:
             warn(f"cannot read {STATE.name} ({e}). Treating this month's hours "
                  "as unknown rather than as zero, so jobs will not start on a "
                  "budget that may already be spent.")
@@ -83,8 +90,31 @@ def load() -> dict:
             warn(f"{STATE.name} is not an object. Same treatment: the hours "
                  "are unknown, not zero.")
             return {"months": {}, "runs": []}
-        data.setdefault("months", {})
-        data.setdefault("runs", [])
+        # The shape has to be checked, not just the top level. A file holding
+        # {"months": []} made spent() raise an AttributeError out of check(),
+        # so a job crashed instead of being refused, and the module promises
+        # that an unreadable budget refuses the job.
+        months = data.get("months")
+        if not isinstance(months, dict):
+            warn(f"{STATE.name} has no usable months table. Same treatment: "
+                 "the hours are unknown, not zero.")
+            return {"months": {}, "runs": []}
+        for _month, _entry in months.items():
+            if not isinstance(_entry, dict):
+                warn(f"{STATE.name} holds a month that is not a record. Same "
+                     "treatment: the hours are unknown, not zero.")
+                return {"months": {}, "runs": []}
+            for _bucket in ("normal", "emergency"):
+                if _bucket in _entry and not isinstance(
+                        _entry[_bucket], (int, float)):
+                    warn(f"{STATE.name} holds a non-numeric {_bucket} for "
+                         f"{_month}. Same treatment: the hours are unknown, "
+                         "not zero.")
+                    return {"months": {}, "runs": []}
+        runs = data.get("runs")
+        data["months"] = {str(k): (v if isinstance(v, dict) else {})
+                          for k, v in months.items()}
+        data["runs"] = runs if isinstance(runs, list) else []
         _broken = ""
         return data
     # no file at all is a first run, which is legitimately zero
@@ -101,7 +131,11 @@ def save(data: dict) -> bool:
     """
     try:
         STATE.parent.mkdir(parents=True, exist_ok=True)
-        tmp = STATE.with_suffix(".json.tmp")
+        # The temporary name is unique, so two writers cannot swap each
+        # other's file into place. A shared name meant one writer could
+        # replace the file the other was still writing, which is exactly the
+        # truncated file the atomic swap is there to prevent.
+        tmp = STATE.with_suffix(f".json.tmp.{os.getpid()}")
         tmp.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
         tmp.replace(STATE)
     except OSError as e:
@@ -111,14 +145,21 @@ def save(data: dict) -> bool:
     return True
 
 
+def _spent_from(data: dict, month: str) -> dict:
+    """Hours used in one month, taken from an already-loaded state."""
+    entry = (data.get("months") or {}).get(month, {})
+    if not isinstance(entry, dict):
+        entry = {}
+    normal = float(entry.get("normal", 0.0) or 0.0)
+    emergency = float(entry.get("emergency", 0.0) or 0.0)
+    return {"month": month, "normal": normal, "emergency": emergency,
+            "total": normal + emergency}
+
+
 def spent(month: str | None = None) -> dict:
     """Hours used so far, split into normal and emergency."""
     month = month or month_key()
-    entry = load()["months"].get(month, {})
-    normal = float(entry.get("normal", 0.0))
-    emergency = float(entry.get("emergency", 0.0))
-    return {"month": month, "normal": normal, "emergency": emergency,
-            "total": normal + emergency}
+    return _spent_from(load(), month)
 
 
 def record(label: str, seconds: float, emergency: bool = False) -> bool:
@@ -157,12 +198,18 @@ def check(label: str = "", planned_hours: float = 0.0) -> int:
     month that may already have spent all thirty hours.
     """
     tag = f" ({label})" if label else ""
-    s = spent()
-    if broken():
+    # One read, not two. The hours and the broken-ness used to come from
+    # separate reads of the same file, so a read that failed and a read that
+    # succeeded could be combined: the zeros from the failed read with the
+    # "fine" from the second, and the job was approved on a budget that may
+    # already have been spent.
+    data = load()
+    if _broken:
         log(f"REFUSING{tag or ' (budget)'}: the recorded hours cannot be read, "
             "so there is no way to know what is left. Repair data/budget.json "
             "or set SLINGSHOT_MONTHLY_HOURS deliberately.")
         return 1
+    s = _spent_from(data, month_key())
     need = planned_hours or JOB_CAP_HOURS
 
     log(f"{s['month']}: {s['normal']:.2f}h of {MONTHLY_HOURS:.2f}h used, "

@@ -41,11 +41,15 @@ def main() -> int:
               if (a.get("base_slug") or a.get("slug")) == slug]
     if not family:
         log(f"{slug} is not in the catalog")
+        auditlog.not_verified("publish-paid", job=slug,
+                              reason=f"{slug} is not in the catalog")
         return 1
 
     paid = next((a for a in family if a.get("tier") == "full"), None)
     if paid is None:
         log(f"{slug} has no paid tier")
+        auditlog.not_verified("publish-paid", job=slug,
+                              reason=f"{slug} has no paid tier in the catalog")
         return 1
 
     url = paid.get("itch_url") or ""
@@ -143,8 +147,24 @@ def main() -> int:
         log(f"{slug} is already published")
         return 0
 
-    CATALOG.write_text(json.dumps(apps, indent=2, ensure_ascii=False) + "\n",
-                       encoding="utf-8")
+    # The catalogue write is guarded, and the event is written before it, so
+    # a run that dies in the middle leaves a record of the attempt rather
+    # than neither a sale nor a trace of one. This is the one action in the
+    # repository that puts a product on sale for money.
+    auditlog.started("publish-paid", job=slug,
+                     action=f"publish {slug} at ${price:.2f}",
+                     tool="publish_paid.py",
+                     reason="the paid tier was verified against the store page")
+    try:
+        CATALOG.write_text(json.dumps(apps, indent=2, ensure_ascii=False) + "\n",
+                           encoding="utf-8")
+    except OSError as e:
+        log(f"could not write the catalog: {str(e)[:90]}")
+        log("nothing was marked on sale")
+        auditlog.failed("publish-paid", job=slug,
+                        error=f"could not write the catalog: {str(e)[:120]}",
+                        evidence={"itch_url": url, "build": listed})
+        return 1
     log(f"{slug} is now live at ${price:.2f}")
     log(f"  free : {next((a.get('url') for a in family if a.get('tier') == 'basic'), '(none)')}")
     log(f"  full : {url}")

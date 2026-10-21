@@ -89,8 +89,12 @@ def busy() -> str:
         log(f"could not read the release state: {str(e)[:60]}")
     try:
         import budget
-        # budget.remaining() is hours left this month, not a boolean
-        if budget.remaining() < 0.1:
+        # budget.check() refuses when the recorded hours cannot be read, and
+        # remaining() does not: on a corrupt budget file spent() reads as
+        # zero and remaining() says a whole month is left, so the lane
+        # believed it had thirty hours when the truth was unknown and
+        # started work on it. The refusal is the answer, not a number.
+        if budget.check("daily-improve", planned_hours=0.5) != 0:
             return "the compute budget for this month is gone"
     except Exception as e:  # noqa: BLE001
         log(f"could not read the budget: {str(e)[:60]}")
@@ -122,12 +126,38 @@ def skip(state: dict, why: str) -> int:
     return 0
 
 
+def _last_outcome(path) -> tuple:
+    """What the improver recorded last, as (fingerprint, at, outcome).
+
+    The lane used to decide whether anything changed by comparing the bytes
+    of data/self_upgrade.json before and after. The improver rewrites that
+    file on every path, including "the model proposed nothing" and "the patch
+    was rejected and rolled back", so the bytes always differed and the lane
+    always said a change had been made. It recorded changes that never
+    happened, and it started the cooldown on days when nothing was done.
+    """
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return ()
+    if not isinstance(data, dict):
+        return ()
+    tried = data.get("tried")
+    if not isinstance(tried, list) or not tried:
+        return ()
+    last = tried[-1]
+    if not isinstance(last, dict):
+        return ()
+    return (str(last.get("fingerprint") or ""), last.get("at"),
+            str(last.get("outcome") or ""))
+
+
 def attempt(state: dict) -> int:
     """Ask self_upgrade for one patch and let it decide whether to keep it."""
     import self_upgrade as su
 
     before = (ROOT / "data" / "self_upgrade.json")
-    was = before.read_text(encoding="utf-8") if before.exists() else ""
+    was = _last_outcome(before)
 
     try:
         rc = su.main()
@@ -147,8 +177,9 @@ def attempt(state: dict) -> int:
         log(f"self_upgrade could not run: {str(e)[:70]}")
         return skip(state, f"the improver failed: {str(e)[:50]}")
 
-    now_state = before.read_text(encoding="utf-8") if before.exists() else ""
-    changed = now_state != was
+    now_state = _last_outcome(before)
+    # a change means a patch was kept, not that a file was rewritten
+    changed = bool(now_state) and now_state != was and now_state[2] == "kept"
 
     if rc == 0 and changed:
         row = {"at": now().isoformat(), "objective": objective()}

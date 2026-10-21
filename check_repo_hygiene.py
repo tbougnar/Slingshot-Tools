@@ -128,12 +128,26 @@ def check_ignore_rules() -> list[str]:
         return [".gitignore is missing"]
     text = GITIGNORE.read_text(encoding="utf-8")
     problems = []
+    # The rule has to be a rule, not a word. The check used to be a search
+    # for the substring anywhere in the file, so a rule that had been
+    # neutered, or turned into a comment, still passed, because the word was
+    # still there. The rule for a directory is anchored, so that is what is
+    # looked for.
+    live = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        live.append(stripped)
     for prefix in FORBIDDEN_PREFIXES:
-        if prefix not in text:
-            problems.append(f".gitignore does not mention {prefix}")
+        anchored = prefix if prefix.startswith("/") else f"/{prefix}"
+        if not any(ln == anchored or ln == prefix or ln.startswith(anchored)
+                   for ln in live):
+            problems.append(f".gitignore does not have a live rule for "
+                            f"{prefix}")
     for name in FORBIDDEN_FILES:
         base = Path(name).name
-        if base not in text and name not in text:
+        if not any(base in ln or name in ln for ln in live):
             problems.append(f".gitignore does not mention {name}")
     return problems
 
@@ -157,6 +171,39 @@ def check_secrets(files: list[str]) -> list[str]:
     return problems
 
 
+def _looks_like_a_placeholder(token: str) -> bool:
+    """Is this string obviously not a real secret?
+
+    A test fixture is not a leaked credential, and one of them sat in this
+    repository's history from before the tests learned to assemble their fake
+    tokens at run time. The history scan then failed on every full clone, so
+    the gate was red for everybody and meaningless, and the answer to a red
+    gate is to stop reading it.
+
+    A real token is random. A placeholder is the alphabet in order, or the
+    same character again and again, or a word.
+    """
+    if len(token) < 8:
+        return True
+    body = token
+    if re.fullmatch(r"[A-Za-z]+", body):
+        low = body.lower()
+        if low in ("password", "secret", "token", "example", "notatoken",
+                   "yourtokenhere", "redacted"):
+            return True
+    # a run of the alphabet in order, in either case, is a hand-written
+    # placeholder and not a random string
+    up = "abcdefghijklmnopqrstuvwxyz"
+    low = body.lower()
+    for run in (up, up[::-1]):
+        for start in range(len(run) - 7):
+            if run[start:start + 8] in low:
+                return True
+    if re.fullmatch(r"(.)\1{7,}", body):
+        return True
+    return False
+
+
 def check_history() -> list[str]:
     """One pass over the whole log, because a deleted file is still readable."""
     code, out = git("log", "--all", "-p")
@@ -165,10 +212,12 @@ def check_history() -> list[str]:
         return []
     problems = []
     for pattern, what in SECRET_PATTERNS:
-        m = re.search(pattern, out)
-        if m:
+        for m in re.finditer(pattern, out):
+            if _looks_like_a_placeholder(m.group(0)):
+                continue
             problems.append(f"the git history contains {what} "
                             f"(found {m.group(0)[:16]}...)")
+            break
     return problems
 
 

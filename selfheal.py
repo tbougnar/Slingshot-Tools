@@ -56,6 +56,19 @@ ALLOWED = {
     "selfheal.py",
 }
 
+# The scripts that make the site work are protected by weekly_guard, and two
+# of them were in the list above, so the repair lane could rewrite the very
+# scripts the guard exists to protect and the gate would not have said so,
+# because the gate was not looking. A file that is protected is not
+# repairable, whatever else says so.
+try:
+    import weekly_guard as _guard
+    _PROTECTED = set(_guard.all_protected()) | {
+        p for p in _guard.MONEY_AND_DEATH}
+except Exception:  # noqa: BLE001
+    _guard = None
+    _PROTECTED = set()
+
 FORBIDDEN = [
     r"itch_url",              # where a product is sold
     r"publish_paid",
@@ -180,6 +193,14 @@ def safe(plan: dict) -> list[dict]:
         name = str(fix.get("file", "")).replace("\\", "/").strip()
         if name not in ALLOWED:
             continue
+        # A protected file is never repairable, whatever the list says. The
+        # guard is what stands between the lane and the scripts that decide
+        # what a customer gets, and a file the guard protects cannot be in
+        # the repairable set as well.
+        if _PROTECTED and (name in _PROTECTED
+                            or _guard.is_protected(name)):
+            print(f"[selfheal] refused {name}: it is protected")
+            continue
         content = fix.get("content")
         if not isinstance(content, str) or not content.strip():
             continue
@@ -225,6 +246,7 @@ def apply(fixes: list[dict], attempt: int, diagnosis: str) -> bool:
     if not fixes:
         print("[selfheal] no changes proposed - stopping here")
         return False
+    backups: dict[str, str] = {}
     for f in fixes:
         target = ROOT / f["file"]
         content = f.get("content")
@@ -235,13 +257,47 @@ def apply(fixes: list[dict], attempt: int, diagnosis: str) -> bool:
             remember(diagnosis, f)
             return False
         backup = target.read_text(encoding="utf-8", errors="replace")
+        backups[f["file"]] = backup
         target.write_text(content, encoding="utf-8")
         rc, out = run([sys.executable, "-m", "py_compile", f["file"]], timeout=180)
         if rc != 0:
             print(f"[selfheal] {f['file']} did not compile - reverting")
             target.write_text(backup, encoding="utf-8")
             return False
-    run(["git", "add", "-A"])
+
+    def _revert() -> None:
+        for name, text in backups.items():
+            (ROOT / name).write_text(text, encoding="utf-8")
+
+    # A patch that parses is not a patch that works. The suite is the only
+    # thing that says the pipeline still works, and this lane used to compile
+    # the file and stop, so a whole-file rewrite that broke the build but
+    # still parsed was committed to main and pushed.
+    rc, out = run([sys.executable, "run_selftests.py", "--quiet"], timeout=3600)
+    if rc != 0:
+        print("[selfheal] the suite fails with the patch in place - reverting")
+        for line in out.splitlines():
+            if "FAIL" in line or "failing" in line:
+                print("   ", line.strip()[:110])
+        _revert()
+        return False
+
+    # The guard has the last word, and it has it before anything is
+    # committed. The workflow asks the guard as well, but by then the patch
+    # is already in history and the working tree is clean.
+    if _guard is not None:
+        bad = _guard.violations([f["file"] for f in fixes])
+        if bad:
+            print("[selfheal] refusing to commit: these are protected")
+            for p in bad:
+                print("  -", p)
+            return False
+
+    # Only the patched file is staged. "git add -A" committed whatever else
+    # happened to be in the tree, so the commit mixed the patch with
+    # unrelated files and the patch was not visible on its own.
+    for f in fixes:
+        run(["git", "add", "--", f["file"]])
     msg = f"fix(attempt {attempt}): {diagnosis[:120]}"
     rc, out = run(["git", "-c", "user.name=slingshot-bot",
                    "-c", "user.email=bot@users.noreply.github.com",
