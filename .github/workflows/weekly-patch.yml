@@ -38,7 +38,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install deps
-        run: pip install --quiet requests
+        run: pip install --quiet requests pillow pyyaml
 
       - name: Is there budget left this month
         run: python budget.py check --label weekly-patch --need 0.2

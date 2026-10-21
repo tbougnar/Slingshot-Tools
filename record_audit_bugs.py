@@ -866,6 +866,40 @@ FOUND = [
      "property_selftest.py: FAILURES: none. Restoring now().date() makes the "
      "new check fail along with the five originals, so it bites.",
      ""),
+
+    ("the scheduled lanes died on a missing dependency before doing any work",
+     "HIGH", "pipeline", [".github/workflows/daily-improve.yml",
+                          ".github/workflows/weekly-patch.yml",
+                          ".github/workflows/wednesday-review.yml",
+                          ".github/workflows/check-connections.yml",
+                          ".github/workflows/monthly-update.yml",
+                          "selftest.py", "tracked_selftest.py"],
+     "VERIFIED_FIXED",
+     "selftest.py imports every project module to prove they load, and one of "
+     "them, update_trailer_render, imports pillow at module level; the same "
+     "selftest parses every workflow with yaml. Five scheduled lanes installed "
+     "requests alone, so they crashed on 'No module named PIL' and then 'No "
+     "module named yaml' before running a single real check. The daily "
+     "self-improvement lane, the weekly patch lane, the Wednesday review and "
+     "the connections check had all been failing that way in every retained "
+     "run, so the production pipeline was dead while the suite it could not "
+     "reach stayed green on a developer machine that happened to have the "
+     "libraries installed.",
+     "gh run list showed daily-improve failing every retained run back to "
+     "2026-10-13, each in about 13 seconds; gh run view --log-failed showed "
+     "'FAIL modules import ModuleNotFoundError: No module named PIL' and 'FAIL "
+     "workflows parse ModuleNotFoundError: No module named yaml'.",
+     "install requests alone in a fresh venv and run selftest.py, which is what "
+     "the lanes did: 11/13 pass, both failures are the missing modules",
+     "the five lanes install pillow and pyyaml alongside requests, the set the "
+     "tests actually import.",
+     "tracked_selftest.py now reads each workflow's install step and fails if a "
+     "workflow that runs selftest.py does not install pillow and pyyaml",
+     "a fresh venv with requests alone reproduces 11/13; adding pillow and "
+     "pyyaml makes selftest.py and every other script the lanes run exit 0. "
+     "Removing a dependency from a workflow makes the new check fail, so it "
+     "bites.",
+     ""),
 ]
 
 

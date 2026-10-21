@@ -39,7 +39,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install deps
-        run: pip install --quiet requests
+        run: pip install --quiet requests pillow pyyaml
 
       - name: Find a working ElevenLabs endpoint
         if: env.ELEVENLABS_API_KEY != ''

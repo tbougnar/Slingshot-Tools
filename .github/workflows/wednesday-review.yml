@@ -36,7 +36,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install deps
-        run: pip install --quiet requests
+        run: pip install --quiet requests pillow pyyaml
 
       - name: Show what is protected
         run: python weekly_guard.py
@@ -99,7 +99,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install deps
-        run: pip install --quiet requests
+        run: pip install --quiet requests pillow pyyaml
 
       - name: Is there budget left this month
         run: python budget.py check --label improve --need 0.4

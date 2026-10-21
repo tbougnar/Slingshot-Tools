@@ -158,6 +158,33 @@ def main() -> int:
         check(f"{wf.name} only calls scripts that exist", not bad,
               "; ".join(sorted(set(bad))[:3]))
 
+    # The install step has to cover what the tests import, not just what the
+    # pipeline ships. selftest.py imports every project module, and some of
+    # those (update_trailer_render) import pillow at module level, and it parses
+    # the workflows with yaml. The scheduled lanes installed requests alone, so
+    # every run for at least a week failed on `No module named 'PIL'` before it
+    # did any work. This checks the install line rather than trusting it.
+    print("\nTHE INSTALL STEP COVERS THE TESTS\n")
+    for wf in sorted((ROOT / ".github" / "workflows").glob("*.yml")):
+        try:
+            import yaml
+            doc = yaml.safe_load(wf.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001
+            continue
+        text = wf.read_text(encoding="utf-8")
+        if "selftest.py" not in text:
+            continue
+        installs = " ".join(str(step.get("run") or "")
+                            for body in (doc.get("jobs") or {}).values()
+                            for step in (body.get("steps") or []))
+        for dep in ("pillow", "pyyaml"):
+            has = dep in installs
+            check(f"{wf.name} installs {dep}, which its tests import",
+                  has,
+                  "" if has else
+                  f"{wf.name} runs selftest.py but its install step does not "
+                  f"include {dep}, so the run dies before it does any work")
+
     print()
     print("FAILURES:", fails if fails else "none")
     return 1 if fails else 0
