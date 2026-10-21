@@ -5,7 +5,7 @@
     "title": "Offline password manager",
     "tier": "full",
     "tag": "password",
-    "blurb": "A small, focused password tool. Offline password manager does one job properly, runs offline, and keeps your data on your device.",
+    "blurb": "Everything the free edition does, and unlimited items, export and import your data.",
     "tags": [
       "password",
       "manager"
@@ -14,7 +14,10 @@
     "download": "",
     "price": 3.0,
     "free": false,
-    "differences": [],
+    "differences": [
+      "Unlimited items",
+      "Export and import your data"
+    ],
     "published": true,
     "badge": "New",
     "date": "2026-10-16",
@@ -47,7 +50,7 @@
     "title": "Lap stopwatch",
     "tier": "full",
     "tag": "stopwatch",
-    "blurb": "A small, focused stopwatch tool. Lap stopwatch does one job properly, runs offline, and keeps your data on your device.",
+    "blurb": "Everything the free edition does, and unlimited items, export and import your data, every theme.",
     "tags": [
       "stopwatch",
       "lap"
@@ -56,7 +59,11 @@
     "download": "",
     "price": 3.0,
     "free": false,
-    "differences": [],
+    "differences": [
+      "Unlimited items",
+      "Export and import your data",
+      "Every theme"
+    ],
     "published": false,
     "badge": "New",
     "date": "2026-10-16",
@@ -89,7 +96,7 @@
     "title": "Base64 and URL encoding tool",
     "tier": "full",
     "tag": "base64",
-    "blurb": "A small, focused base64 tool. Base64 and URL encoding tool does one job properly, runs offline, and keeps your data on your device.",
+    "blurb": "Everything the free edition does, and unlimited items, export and import your data, every theme.",
     "tags": [
       "base64",
       "url",
@@ -99,7 +106,11 @@
     "download": "",
     "price": 3.0,
     "free": false,
-    "differences": [],
+    "differences": [
+      "Unlimited items",
+      "Export and import your data",
+      "Every theme"
+    ],
     "published": true,
     "badge": "New",
     "date": "2026-10-16",
@@ -135,7 +146,7 @@
     "title": "Markdown editor",
     "tier": "full",
     "tag": "markdown",
-    "blurb": "A small, focused markdown tool. Markdown editor does one job properly, runs offline, and keeps your data on your device.",
+    "blurb": "Everything the free edition does, and export and import your data, every theme.",
     "tags": [
       "markdown",
       "editor"
@@ -144,7 +155,10 @@
     "download": "",
     "price": 3.0,
     "free": false,
-    "differences": [],
+    "differences": [
+      "Export and import your data",
+      "Every theme"
+    ],
     "published": false,
     "badge": "New",
     "date": "2026-10-16",
@@ -178,7 +192,7 @@
     "title": "Chess clock",
     "tier": "full",
     "tag": "chess",
-    "blurb": "A small, focused chess tool. Chess clock does one job properly, runs offline, and keeps your data on your device.",
+    "blurb": "Everything the free edition does, and unlimited items, export and import your data, every theme, keeps a history.",
     "tags": [
       "chess",
       "clock"
@@ -187,7 +201,12 @@
     "download": "",
     "price": 3.0,
     "free": false,
-    "differences": [],
+    "differences": [
+      "Unlimited items",
+      "Export and import your data",
+      "Every theme",
+      "Keeps a history"
+    ],
     "published": false,
     "badge": "New",
     "date": "2026-10-15",
@@ -221,7 +240,7 @@
     "title": "Calendar",
     "tier": "full",
     "tag": "calendar",
-    "blurb": "A small, focused calendar tool. Calendar does one job properly, runs offline, and keeps your data on your device.",
+    "blurb": "Everything the free edition does, and unlimited items, export and import your data, every theme, keeps a history.",
     "tags": [
       "calendar"
     ],
@@ -229,7 +248,12 @@
     "download": "",
     "price": 3.0,
     "free": false,
-    "differences": [],
+    "differences": [
+      "Unlimited items",
+      "Export and import your data",
+      "Every theme",
+      "Keeps a history"
+    ],
     "published": false,
     "badge": "New",
     "date": "2026-10-15",
@@ -261,7 +285,7 @@
     "title": "Chess board viewer",
     "tier": "full",
     "tag": "chess",
-    "blurb": "A small, focused chess tool. Chess board viewer does one job properly, runs offline, and keeps your data on your device.",
+    "blurb": "Everything the free edition does, and unlimited items, every theme.",
     "tags": [
       "chess",
       "board",
@@ -271,7 +295,10 @@
     "download": "",
     "price": 3.0,
     "free": false,
-    "differences": [],
+    "differences": [
+      "Unlimited items",
+      "Every theme"
+    ],
     "published": false,
     "badge": "New",
     "date": "2026-10-15",
@@ -305,7 +332,7 @@
     "title": "Quick note taker",
     "tier": "full",
     "tag": "note",
-    "blurb": "A small, focused note tool. Quick note taker does one job properly, runs offline, and keeps your data on your device.",
+    "blurb": "Everything the free edition does, and unlimited items, export and import your data, every theme.",
     "tags": [
       "note",
       "quick",
@@ -315,7 +342,11 @@
     "download": "",
     "price": 3.0,
     "free": false,
-    "differences": [],
+    "differences": [
+      "Unlimited items",
+      "Export and import your data",
+      "Every theme"
+    ],
     "published": false,
     "badge": "New",
     "date": "2026-10-15",
@@ -349,7 +380,7 @@
     "title": "Unix timestamp to human date and back",
     "tier": "full",
     "tag": "timestamp",
-    "blurb": "A small, focused timestamp tool. Unix timestamp to human date and back does one job properly, runs offline, and keeps your data on your device.",
+    "blurb": "Everything the free edition does, and unlimited items, export and import your data, every theme, keeps a history.",
     "tags": [
       "timestamp",
       "unix",
@@ -360,7 +391,12 @@
     "download": "",
     "price": 3.0,
     "free": false,
-    "differences": [],
+    "differences": [
+      "Unlimited items",
+      "Export and import your data",
+      "Every theme",
+      "Keeps a history"
+    ],
     "published": false,
     "badge": "New",
     "date": "2026-10-15",
@@ -395,7 +431,7 @@
     "title": "Typing speed test",
     "tier": "full",
     "tag": "speed",
-    "blurb": "A small, focused speed tool. Typing speed test does one job properly, runs offline, and keeps your data on your device.",
+    "blurb": "Everything the free edition does, and unlimited items, export and import your data, every theme.",
     "tags": [
       "speed",
       "typing",
@@ -405,7 +441,11 @@
     "download": "",
     "price": 3.0,
     "free": false,
-    "differences": [],
+    "differences": [
+      "Unlimited items",
+      "Export and import your data",
+      "Every theme"
+    ],
     "published": false,
     "badge": "New",
     "date": "2026-10-14",
@@ -439,7 +479,7 @@
     "title": "Shared shopping list",
     "tier": "full",
     "tag": "split",
-    "blurb": "A small, focused split tool. Shared shopping list does one job properly, runs offline, and keeps your data on your device.",
+    "blurb": "Everything the free edition does, and unlimited items, export and import your data, import your data, every theme.",
     "tags": [
       "split",
       "shared",
@@ -450,7 +490,12 @@
     "download": "",
     "price": 3.0,
     "free": false,
-    "differences": [],
+    "differences": [
+      "Unlimited items",
+      "Export and import your data",
+      "Import your data",
+      "Every theme"
+    ],
     "published": false,
     "badge": "New",
     "date": "2026-10-14",
@@ -485,7 +530,7 @@
     "title": "Word, character and reading time counter",
     "tier": "full",
     "tag": "text",
-    "blurb": "A small, focused text tool. Word, character and reading time counter does one job properly, runs offline, and keeps your data on your device.",
+    "blurb": "Everything the free edition does, and unlimited items, export and import your data, every theme.",
     "tags": [
       "text",
       "word",
@@ -496,7 +541,11 @@
     "download": "",
     "price": 3.0,
     "free": false,
-    "differences": [],
+    "differences": [
+      "Unlimited items",
+      "Export and import your data",
+      "Every theme"
+    ],
     "published": false,
     "badge": "New",
     "date": "2026-10-14",
@@ -531,7 +580,7 @@
     "title": "Random team and shuffle picker",
     "tier": "full",
     "tag": "random",
-    "blurb": "A small, focused random tool. Random team and shuffle picker does one job properly, runs offline, and keeps your data on your device.",
+    "blurb": "Everything the free edition does, and unlimited items, export and import your data.",
     "tags": [
       "random",
       "team",
@@ -542,7 +591,10 @@
     "download": "",
     "price": 3.0,
     "free": false,
-    "differences": [],
+    "differences": [
+      "Unlimited items",
+      "Export and import your data"
+    ],
     "published": false,
     "badge": "New",
     "date": "2026-10-14",
@@ -577,7 +629,7 @@
     "title": "Tiny pixel art editor",
     "tier": "full",
     "tag": "pixel",
-    "blurb": "A small, focused pixel tool. Tiny pixel art editor does one job properly, runs offline, and keeps your data on your device.",
+    "blurb": "Everything the free edition does, and unlimited items, export and import your data, every theme.",
     "tags": [
       "pixel",
       "art",
@@ -587,7 +639,11 @@
     "download": "",
     "price": 3.0,
     "free": false,
-    "differences": [],
+    "differences": [
+      "Unlimited items",
+      "Export and import your data",
+      "Every theme"
+    ],
     "published": false,
     "badge": "New",
     "date": "2026-10-14",
@@ -621,7 +677,7 @@
     "title": "QR code generator",
     "tier": "full",
     "tag": "qr",
-    "blurb": "A small, focused qr tool. QR code generator does one job properly, runs offline, and keeps your data on your device.",
+    "blurb": "Everything the free edition does, and unlimited items, export and import your data, every theme.",
     "tags": [
       "qr",
       "code",
@@ -631,7 +687,11 @@
     "download": "",
     "price": 3.0,
     "free": false,
-    "differences": [],
+    "differences": [
+      "Unlimited items",
+      "Export and import your data",
+      "Every theme"
+    ],
     "published": false,
     "badge": "New",
     "date": "2026-10-14",
@@ -665,7 +725,7 @@
     "title": "Fitness calculator",
     "tier": "full",
     "tag": "bmi",
-    "blurb": "A small, focused bmi tool. Fitness calculator does one job properly, runs offline, and keeps your data on your device.",
+    "blurb": "Everything the free edition does, and unlimited items, export and import your data, every theme.",
     "tags": [
       "bmi",
       "fitness",
@@ -675,7 +735,11 @@
     "download": "",
     "price": 3.0,
     "free": false,
-    "differences": [],
+    "differences": [
+      "Unlimited items",
+      "Export and import your data",
+      "Every theme"
+    ],
     "published": false,
     "badge": "New",
     "date": "2026-10-14",
@@ -709,7 +773,7 @@
     "title": "Offline IP and subnet helper",
     "tier": "full",
     "tag": "ip",
-    "blurb": "A small, focused ip tool. Offline IP and subnet helper does one job properly, runs offline, and keeps your data on your device.",
+    "blurb": "Everything the free edition does, and unlimited items, export and import your data, keeps a history.",
     "tags": [
       "ip",
       "subnet",
@@ -719,7 +783,11 @@
     "download": "",
     "price": 3.0,
     "free": false,
-    "differences": [],
+    "differences": [
+      "Unlimited items",
+      "Export and import your data",
+      "Keeps a history"
+    ],
     "published": false,
     "badge": "New",
     "date": "2026-10-14",
@@ -753,7 +821,7 @@
     "title": "Breathing exercise guide",
     "tier": "full",
     "tag": "breathing",
-    "blurb": "A small, focused breathing tool. Breathing exercise guide does one job properly, runs offline, and keeps your data on your device.",
+    "blurb": "Everything the free edition does, and unlimited items, export and import your data, every theme.",
     "tags": [
       "breathing",
       "exercise",
@@ -763,7 +831,11 @@
     "download": "",
     "price": 3.0,
     "free": false,
-    "differences": [],
+    "differences": [
+      "Unlimited items",
+      "Export and import your data",
+      "Every theme"
+    ],
     "published": false,
     "badge": "New",
     "date": "2026-10-14",
@@ -797,7 +869,7 @@
     "title": "String permutation and combination generator",
     "tier": "full",
     "tag": "permutation",
-    "blurb": "A small, focused permutation tool. String permutation and combination generator does one job properly, runs offline, and keeps your data on your device.",
+    "blurb": "Everything the free edition does, and unlimited items, export and import your data.",
     "tags": [
       "permutation",
       "string",
@@ -808,7 +880,10 @@
     "download": "",
     "price": 3.0,
     "free": false,
-    "differences": [],
+    "differences": [
+      "Unlimited items",
+      "Export and import your data"
+    ],
     "published": false,
     "badge": "New",
     "date": "2026-10-14",
@@ -843,7 +918,7 @@
     "title": "Coin flip and dice roller",
     "tier": "full",
     "tag": "coin",
-    "blurb": "A small, focused coin tool. Coin flip and dice roller does one job properly, runs offline, and keeps your data on your device.",
+    "blurb": "Everything the free edition does, and unlimited items, export and import your data, every theme, keeps a history.",
     "tags": [
       "coin",
       "flip",
@@ -854,7 +929,12 @@
     "download": "",
     "price": 3.0,
     "free": false,
-    "differences": [],
+    "differences": [
+      "Unlimited items",
+      "Export and import your data",
+      "Every theme",
+      "Keeps a history"
+    ],
     "published": false,
     "badge": "New",
     "date": "2026-10-14",
@@ -889,7 +969,7 @@
     "title": "Regex tester",
     "tier": "full",
     "tag": "regex",
-    "blurb": "A small, focused regex tool. Regex tester does one job properly, runs offline, and keeps your data on your device.",
+    "blurb": "Everything the free edition does, and unlimited items, export and import your data.",
     "tags": [
       "regex",
       "tester"
@@ -898,7 +978,10 @@
     "download": "",
     "price": 3.0,
     "free": false,
-    "differences": [],
+    "differences": [
+      "Unlimited items",
+      "Export and import your data"
+    ],
     "published": false,
     "badge": "New",
     "date": "2026-10-14",
@@ -931,7 +1014,7 @@
     "title": "Placeholder text generator",
     "tier": "full",
     "tag": "lorem",
-    "blurb": "A small, focused lorem tool. Placeholder text generator does one job properly, runs offline, and keeps your data on your device.",
+    "blurb": "Everything the free edition does, and unlimited items, export and import your data, every theme.",
     "tags": [
       "lorem",
       "placeholder",
@@ -942,7 +1025,11 @@
     "download": "",
     "price": 3.0,
     "free": false,
-    "differences": [],
+    "differences": [
+      "Unlimited items",
+      "Export and import your data",
+      "Every theme"
+    ],
     "published": false,
     "badge": "New",
     "date": "2026-10-14",
@@ -977,7 +1064,7 @@
     "title": "Focus timer",
     "tier": "full",
     "tag": "pomodoro",
-    "blurb": "A small, focused pomodoro tool. Focus timer does one job properly, runs offline, and keeps your data on your device.",
+    "blurb": "Everything the free edition does, and unlimited items, export and import your data, every theme.",
     "tags": [
       "pomodoro",
       "focus",
@@ -987,7 +1074,11 @@
     "download": "",
     "price": 3.0,
     "free": false,
-    "differences": [],
+    "differences": [
+      "Unlimited items",
+      "Export and import your data",
+      "Every theme"
+    ],
     "published": false,
     "badge": "New",
     "date": "2026-10-14",
@@ -1021,7 +1112,7 @@
     "title": "Text diff tool showing what changed line by line",
     "tier": "full",
     "tag": "text",
-    "blurb": "A small, focused text tool. Text diff tool showing what changed line by line does one job properly, runs offline, and keeps your data on your device.",
+    "blurb": "Everything the free edition does, and unlimited items, export and import your data, every theme.",
     "tags": [
       "text",
       "diff",
@@ -1032,7 +1123,11 @@
     "download": "",
     "price": 3.0,
     "free": false,
-    "differences": [],
+    "differences": [
+      "Unlimited items",
+      "Export and import your data",
+      "Every theme"
+    ],
     "published": false,
     "badge": "New",
     "date": "2026-10-14",
@@ -1067,7 +1162,7 @@
     "title": "JSON viewer and formatter",
     "tier": "full",
     "tag": "json",
-    "blurb": "A small, focused json tool. JSON viewer and formatter does one job properly, runs offline, and keeps your data on your device.",
+    "blurb": "Everything the free edition does, and unlimited items, export and import your data, every theme.",
     "tags": [
       "json",
       "viewer",
@@ -1077,7 +1172,11 @@
     "download": "",
     "price": 3.0,
     "free": false,
-    "differences": [],
+    "differences": [
+      "Unlimited items",
+      "Export and import your data",
+      "Every theme"
+    ],
     "published": false,
     "badge": "New",
     "date": "2026-10-14",
@@ -1111,7 +1210,7 @@
     "title": "Password strength auditor",
     "tier": "full",
     "tag": "password",
-    "blurb": "A small, focused password tool. Password strength auditor does one job properly, runs offline, and keeps your data on your device.",
+    "blurb": "Everything the free edition does, and unlimited items, export and import your data, every theme.",
     "tags": [
       "password",
       "strength",
@@ -1121,7 +1220,11 @@
     "download": "",
     "price": 3.0,
     "free": false,
-    "differences": [],
+    "differences": [
+      "Unlimited items",
+      "Export and import your data",
+      "Every theme"
+    ],
     "published": false,
     "badge": "New",
     "date": "2026-10-13",
@@ -1155,7 +1258,7 @@
     "title": "CSV viewer",
     "tier": "full",
     "tag": "csv",
-    "blurb": "A small, focused csv tool. CSV viewer does one job properly, runs offline, and keeps your data on your device.",
+    "blurb": "Everything the free edition does, and unlimited items, export and import your data.",
     "tags": [
       "csv",
       "viewer"
@@ -1164,7 +1267,10 @@
     "download": "",
     "price": 3.0,
     "free": false,
-    "differences": [],
+    "differences": [
+      "Unlimited items",
+      "Export and import your data"
+    ],
     "published": false,
     "badge": "New",
     "date": "2026-10-13",
@@ -1197,7 +1303,7 @@
     "title": "Data transfer calculator",
     "tier": "full",
     "tag": "bandwidth",
-    "blurb": "A small, focused bandwidth tool. Data transfer calculator does one job properly, runs offline, and keeps your data on your device.",
+    "blurb": "Everything the free edition does, and unlimited items, export and import your data.",
     "tags": [
       "bandwidth",
       "data",
@@ -1208,7 +1314,10 @@
     "download": "",
     "price": 3.0,
     "free": false,
-    "differences": [],
+    "differences": [
+      "Unlimited items",
+      "Export and import your data"
+    ],
     "published": false,
     "badge": "New",
     "date": "2026-10-13",
@@ -1243,7 +1352,7 @@
     "title": "Bookmark cleaner",
     "tier": "full",
     "tag": "bookmark",
-    "blurb": "A small, focused bookmark tool. Bookmark cleaner does one job properly, runs offline, and keeps your data on your device.",
+    "blurb": "Everything the free edition does, and unlimited items, export and import your data, every theme.",
     "tags": [
       "bookmark",
       "cleaner"
@@ -1252,7 +1361,11 @@
     "download": "",
     "price": 3.0,
     "free": false,
-    "differences": [],
+    "differences": [
+      "Unlimited items",
+      "Export and import your data",
+      "Every theme"
+    ],
     "published": false,
     "badge": "New",
     "date": "2026-10-13",
@@ -1285,7 +1398,7 @@
     "title": "Color picker",
     "tier": "full",
     "tag": "color",
-    "blurb": "A small, focused color tool. Color picker does one job properly, runs offline, and keeps your data on your device.",
+    "blurb": "Everything the free edition does, and unlimited items, export and import your data, every theme.",
     "tags": [
       "color",
       "picker"
@@ -1294,7 +1407,11 @@
     "download": "",
     "price": 3.0,
     "free": false,
-    "differences": [],
+    "differences": [
+      "Unlimited items",
+      "Export and import your data",
+      "Every theme"
+    ],
     "published": false,
     "badge": "New",
     "date": "2026-10-13",
@@ -1327,7 +1444,7 @@
     "title": "Glasses prescription converter",
     "tier": "full",
     "tag": "glasses",
-    "blurb": "A small, focused glasses tool. Glasses prescription converter does one job properly, runs offline, and keeps your data on your device.",
+    "blurb": "Everything the free edition does, and unlimited items, export and import your data, every theme.",
     "tags": [
       "glasses",
       "prescription",
@@ -1337,7 +1454,11 @@
     "download": "",
     "price": 3.0,
     "free": false,
-    "differences": [],
+    "differences": [
+      "Unlimited items",
+      "Export and import your data",
+      "Every theme"
+    ],
     "published": false,
     "badge": "New",
     "date": "2026-10-13",
@@ -1371,7 +1492,7 @@
     "title": "Unit converter",
     "tier": "full",
     "tag": "unit",
-    "blurb": "A small, focused unit tool. Unit converter does one job properly, runs offline, and keeps your data on your device.",
+    "blurb": "Everything the free edition does, and unlimited items, export and import your data, every theme, keeps a history.",
     "tags": [
       "unit",
       "converter"
@@ -1380,7 +1501,12 @@
     "download": "",
     "price": 3.0,
     "free": false,
-    "differences": [],
+    "differences": [
+      "Unlimited items",
+      "Export and import your data",
+      "Every theme",
+      "Keeps a history"
+    ],
     "published": false,
     "badge": "New",
     "date": "2026-10-13",
@@ -1413,7 +1539,7 @@
     "title": "Developer unit converter",
     "tier": "full",
     "tag": "dev",
-    "blurb": "A small, focused dev tool. Developer unit converter does one job properly, runs offline, and keeps your data on your device.",
+    "blurb": "Everything the free edition does, and unlimited items, export and import your data, keeps a history.",
     "tags": [
       "dev",
       "developer",
@@ -1424,7 +1550,11 @@
     "download": "",
     "price": 3.0,
     "free": false,
-    "differences": [],
+    "differences": [
+      "Unlimited items",
+      "Export and import your data",
+      "Keeps a history"
+    ],
     "published": false,
     "badge": "New",
     "date": "2026-10-13",
@@ -1459,7 +1589,7 @@
     "title": "Reading notes organizer",
     "tier": "full",
     "tag": "ebook",
-    "blurb": "A small, focused ebook tool. Reading notes organizer does one job properly, runs offline, and keeps your data on your device.",
+    "blurb": "Everything the free edition does, and unlimited items, export and import your data, every theme.",
     "tags": [
       "ebook",
       "reading",
@@ -1470,7 +1600,11 @@
     "download": "",
     "price": 3.0,
     "free": false,
-    "differences": [],
+    "differences": [
+      "Unlimited items",
+      "Export and import your data",
+      "Every theme"
+    ],
     "published": false,
     "badge": "New",
     "date": "2026-10-14",

@@ -187,6 +187,39 @@ check("every product's paid edition has something the free one does not",
       not no_features,
       f"{len(no_features)} have none: {no_features[:5]}")
 
+# The catalogue has to agree with the apps, or the shop describes a product
+# that is not the one being sold.
+import json as _json
+
+try:
+    _cat = _json.loads((ROOT / "site" / "apps.json").read_text(encoding="utf-8"))
+except (OSError, ValueError) as _e:
+    _cat = []
+    check("the catalogue can be read", False, str(_e)[:60])
+if _cat:
+    _fams = {}
+    for _e in _cat:
+        _fams.setdefault(_e.get("base_slug") or _e.get("slug"), {})[
+            _e.get("tier")] = _e
+    _drift = []
+    for _base, _pair in _fams.items():
+        _full, _basic = _pair.get("full"), _pair.get("basic")
+        if not _full or not _basic:
+            _drift.append(f"{_base}: an edition is missing")
+            continue
+        _src = APPS / f"{_base}-basic" / "app" / "index.html"
+        if not _src.exists():
+            continue
+        _real = make_app.paid_features(_src.read_text(encoding="utf-8"))
+        if _full.get("differences") != _real:
+            _drift.append(f"{_base}: says {_full.get('differences')} and the "
+                          f"app has {_real}")
+        if _full.get("blurb") == _basic.get("blurb"):
+            _drift.append(f"{_base}: both editions say the same thing")
+    check("the catalogue says what each paid edition really adds",
+          not _drift,
+          f"{len(_drift)} disagree: {_drift[:3]}")
+
 print(f"\nchecked {len(SOURCES)} free editions for a paid-tier bypass")
 print("FAILURES:", fails if fails else "none")
 sys.exit(1 if fails else 0)
