@@ -1107,6 +1107,14 @@ the change that fixed it. Check here before proposing anything.
 - **Check for recurrence:** checked by hand: a blanket git add -A in a copy of the tree leaves no token_usage.json staged, verified by cleanroom_selftest.py
 - **Status:** PROVEN
 
+## B139 - weekly review 2026-W43: 0 order(s), $0.00, 0 star(s), 0 vote(s) on the open ballot
+
+- **Cause:** ## What happened
+- **Fix:** read data/weekly_reviews.json before the next build; it carries this week's numbers and what to change
+- **Files:** data/weekly_reviews.json, weekly_review.py
+- **Check for recurrence:** recurs every Wednesday; one entry per week is expected
+- **Status:** UNTESTED
+
 ## How to use this
 
 1. If the symptom matches an entry, use that fix. Do not invent a new one.
