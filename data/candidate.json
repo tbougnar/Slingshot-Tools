@@ -1,0 +1,11 @@
+{
+ "slug": "password-manager",
+ "brand": "Offline password manager",
+ "title": "Offline password manager",
+ "tag": "password",
+ "differences": [],
+ "free_blurb": "",
+ "paid_blurb": "",
+ "candidate": "site/apps/password-manager-basic/app/index.html",
+ "paid_dir": "paid/password-manager"
+}

@@ -1,0 +1,8 @@
+choosing from 44 unused concepts (built: 45)
+concept: Offline password manager (password-manager) [chosen locally, no model call]
+concept: Offline password manager (password-manager)
+attempt 1 ok (5521 bytes, brand='Offline password manager')
+[pyi] app built: D:\a\Slingshot-Tools\Slingshot-Tools\dist\Offline password manager\Offline password manager\Offline password manager.exe (4 MB, one folder)
+[nsis] installer built: Offline password manager-Setup.exe (13 MB)
+installer ready: D:\a\Slingshot-Tools\Slingshot-Tools\dist\Offline password manager-Setup.exe
+candidate staged for verification: D:\a\Slingshot-Tools\Slingshot-Tools\data\candidate.json
