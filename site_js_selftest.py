@@ -52,11 +52,12 @@ check("groupProducts does not use a forEach-only variable",
       "key:k is out of scope in the map callback")
 
 # every identifier used in the map callback must be bound there or outside
-m = re.search(r"\.map\(pair=>\{(.*?)\}\);", body, re.S)
+m = re.search(r"\.map\(pair=>\{(.*?)\}\)", body, re.S)
 inside = m.group(1) if m else ""
 check("the map callback binds what it uses",
-      bool(inside) and "full.base_slug||full.slug" in inside
-      or "pair[0].base_slug" in inside,
+      bool(inside) and ("full.base_slug||full.slug" in inside
+                        or "lead.base_slug||lead.slug" in inside
+                        or "pair[0].base_slug" in inside),
       "the family key has to be read from the pair itself")
 
 # The real check is whether it runs. node is not installed everywhere, but a
@@ -75,18 +76,51 @@ try:
         got = _pg.evaluate(
             """() => {
                 const d = [
-                  {slug:'a', base_slug:'a', tier:'full', published:true},
-                  {slug:'a-basic', base_slug:'a', tier:'basic', published:true}];
+                  {slug:'a', base_slug:'a', tier:'full', price:3,
+                   published:true, itch_url:'https://x.itch.io/y'},
+                  {slug:'a-basic', base_slug:'a', tier:'basic',
+                   published:true, url:'/apps/a-basic/'}];
                 const out = groupProducts(d);
                 return {n: out.length, key: out[0] && out[0].key,
+                        onSale: out[0] && out[0].onSale,
                         hasFull: !!(out[0] && out[0].full),
                         hasBasic: !!(out[0] && out[0].basic)};
+            }""")
+        # The bug this fixes: a product whose paid edition is not on sale yet
+        # still has a full entry in the catalogue, marked published:false. The
+        # grouping dropped it, so the pair held only the basic entry and
+        # `full` fell back to it. The card then said "Full edition" and priced
+        # it at $0.00, and the dialog offered a Full edition that was free. On
+        # the live site that was thirty-two of the thirty-four products.
+        got2 = _pg.evaluate(
+            """() => {
+                const d = [
+                  {slug:'a', base_slug:'a', tier:'full', title:'Thing',
+                   price:3, published:false, itch_url:''},
+                  {slug:'a-basic', base_slug:'a', tier:'basic', title:'Thing (Basic)',
+                   price:0, published:true, url:'/apps/a-basic/'}];
+                const out = groupProducts(d);
+                return {n: out.length, onSale: out[0] && out[0].onSale,
+                        lead: out[0] && out[0].lead && out[0].lead.tier,
+                        full: out[0] && out[0].full};
             }""")
         _b.close()
     check("groupProducts runs in a browser", got.get("n") == 1, str(got))
     check("it groups both tiers into one product",
           bool(got.get("hasFull")) and bool(got.get("hasBasic")))
     check("the family key is the base slug", got.get("key") == "a")
+    check("a product with a store page is on sale", got.get("onSale") is True,
+          "it is not offered for sale even though it has an itch.io page")
+
+    check("a product with an unsold paid edition is still listed",
+          got2.get("n") == 1, str(got2))
+    check("and it is not treated as being on sale",
+          got2.get("onSale") is False,
+          "the group claims the paid edition is on sale")
+    check("the card shows the free edition, not the unsold one",
+          got2.get("lead") == "basic" and not got2.get("full"),
+          f"lead={got2.get('lead')} full={got2.get('full')}")
+
     # fetch() from file:// is blocked by CORS, so apps.json legitimately does
     # not load here; a ReferenceError from groupProducts would still show up.
     check("no script error on load",

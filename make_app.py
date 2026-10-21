@@ -883,7 +883,7 @@ def _unbalanced_delimiters(js: str) -> str:
         if c == "\\":
             i += 2
             continue
-        if c in "\"'`":
+        if c in "\"'":
             quote = c
             i += 1
             closed = False
@@ -894,15 +894,56 @@ def _unbalanced_delimiters(js: str) -> str:
                 if js[i] == quote:
                     closed = True
                     break
-                # a newline can never appear in a plain string literal, and a
-                # different quote type ends it in a template literal
-                if js[i] == "\n" and quote != "`":
-                    break
-                if js[i] in "'\"" and quote == "`":
+                # a newline can never appear in a plain string literal
+                if js[i] == "\n":
                     break
                 i += 1
             if not closed:
                 return f"a {quote} string is never closed"
+            i += 1
+            continue
+        if c == "`":
+            # A template literal ends at its own backtick. The other quote
+            # characters are ordinary text inside it, which is why
+            # '<td class="${colour}">' is a template and not a broken string.
+            # Reading it that way used to report eleven perfectly good apps as
+            # unparseable, and the gate that refuses a broken app would have
+            # refused them.
+            #
+            # ${...} inside it may hold any expression, including strings, so
+            # that part is read with the same rules as the rest.
+            i += 1
+            closed = False
+            while i < n:
+                if js[i] == "\\":
+                    i += 2
+                    continue
+                if js[i] == "`":
+                    closed = True
+                    break
+                if js[i] == "$" and i + 1 < n and js[i + 1] == "{":
+                    depth = 1
+                    i += 2
+                    while i < n and depth:
+                        ch = js[i]
+                        if ch in "\"'":
+                            q = ch
+                            i += 1
+                            while i < n and js[i] != q:
+                                i += 2 if js[i] == "\\" else 1
+                        elif ch == "`":
+                            i += 1
+                            while i < n and js[i] != "`":
+                                i += 2 if js[i] == "\\" else 1
+                        elif ch == "{":
+                            depth += 1
+                        elif ch == "}":
+                            depth -= 1
+                        i += 1
+                    continue
+                i += 1
+            if not closed:
+                return "a ` string is never closed"
             i += 1
             continue
         if c in "([{":

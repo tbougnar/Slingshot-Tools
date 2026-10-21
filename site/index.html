@@ -72,6 +72,7 @@
       font-size:28px;cursor:pointer;line-height:1}
     .dlgBox h3{margin:0 0 6px;font-size:22px}
     .dlgBlurb{color:var(--muted);margin:0 0 18px}
+    .dlgSoon{color:var(--muted);font-size:13.5px;margin:0 0 16px;padding:11px 13px;border-radius:9px;background:var(--bg-2);border:1px solid var(--line)}
     .dlgOpts{display:grid;gap:12px;grid-template-columns:1fr 1fr}
     @media(max-width:640px){.dlgOpts{grid-template-columns:1fr}}
     .opt{text-align:left;background:var(--bg-2);border:1px solid var(--line);border-radius:14px;
@@ -134,6 +135,12 @@
       <button class="dlgX" onclick="closeDialog()" aria-label="Close">&times;</button>
       <h3 id="dlgTitle"></h3>
       <p id="dlgBlurb" class="dlgBlurb"></p>
+      <p id="dlgSoon" class="dlgSoon" style="display:none">
+        The Full edition of this tool is still being prepared for the
+        store. The free edition is available now, and you will get a
+        message in the Discord server when the Full edition is ready
+        to buy.
+      </p>
       <div id="dlgOpts" class="dlgOpts"></div>
     </div>
   </div>
@@ -183,8 +190,16 @@
     const appsEl=document.getElementById("apps"), filtersEl=document.getElementById("filters");
     const CHECKOUT="./checkout.html"; let APPS=[], active="all", VIEW=[];
     function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
-    function groupProducts(list){const byBase={}; list.forEach(a=>{if(a.published===false)return; const k=a.base_slug||a.slug; (byBase[k]=byBase[k]||[]).push(a);}); return Object.values(byBase).map(pair=>{const full=pair.find(x=>x.tier!=="basic")||pair[0]; const basic=pair.find(x=>x.tier==="basic"); return{full,basic,key:(full.base_slug||full.slug),diffs:full.differences||[]};});}
-    function render(){const products=groupProducts(APPS); const list=active==="all"?products:products.filter(p=>(p.full.tag||"")==active); if(!APPS.length){appsEl.innerHTML='<div class="empty"><strong>Nothing here yet.</strong><br>New tools land here soon.</div>'; return;} appsEl.innerHTML=list.map((item,idx)=>{const f=item.full; const p=f.price!=null?'$'+Number(f.price).toFixed(2):''; return '<article class="card full"><span class="pill">Full edition</span><h3>'+esc(f.title)+'</h3><p>'+esc(f.blurb)+'</p><div class="tags">'+(f.tags||[]).slice(0,4).map(t=>'<span class="tag">'+esc(t)+'</span>').join('')+'</div><div class="row"><span class="price">'+p+'</span><button class="btn primary" onclick="openDialogByIndex('+idx+')">See options</button></div></article>';}).join(''); VIEW=list;}
+    // The family keeps both editions even when one of them is not on sale
+    // yet. Dropping the unpublished one left the pair holding only the
+    // basic edition, so `full` fell back to it and the card claimed to be
+    // a "Full edition" priced at $0.00 for thirty-two of the thirty-four
+    // products. Whether the paid edition is on sale is recorded here
+    // instead of being thrown away.
+    function groupProducts(list){const byBase={}; list.forEach(a=>{const k=a.base_slug||a.slug; (byBase[k]=byBase[k]||[]).push(a);}); return Object.values(byBase).map(pair=>{const full=pair.find(x=>x.tier!=="basic")||null; const basic=pair.find(x=>x.tier==="basic")||null; // A product is only advertised if something about it can actually be used: a free download, or a paid edition that is on sale.
+const freeLive=!!(basic&&basic.published!==false); const paidLive=!!(full&&full.published!==false&&full.itch_url); if(!freeLive&&!paidLive)return null; const lead=paidLive?full:(basic||full); return{full:paidLive?full:null,basic:freeLive?basic:null,lead:lead,onSale:paidLive,key:(lead.base_slug||lead.slug),diffs:(full&&full.differences)||[]};}).filter(Boolean);}
+    function render(){const products=groupProducts(APPS); const list=active==="all"?products:products.filter(p=>(p.lead.tag||"")==active); if(!APPS.length){appsEl.innerHTML='<div class="empty"><strong>Nothing here yet.</strong><br>New tools land here soon.</div>'; return;} appsEl.innerHTML=list.map((item,idx)=>{const f=item.lead; // A product that is not on sale yet is shown as free, with its real name. Labelling it 'Full edition' and pricing it at $0.00 said the paid edition was free, which it is not.
+const onSale=item.onSale; const price=onSale?'$'+Number(f.price||0).toFixed(2):'Free'; const pill=onSale?'Full edition':'Free'; const cta=onSale?'See options':'Download free'; return '<article class="card'+(onSale?' full':' basic')+'"><span class="pill basic">'+pill+'</span><h3>'+esc(f.title.replace(/\s*\(basic\)\s*$/i,''))+'</h3><p>'+esc(f.blurb)+'</p><div class="tags">'+(f.tags||[]).slice(0,4).map(t=>'<span class="tag">'+esc(t)+'</span>').join('')+'</div><div class="row"><span class="price">'+price+'</span><button class="btn primary" onclick="openDialogByIndex('+idx+')">'+cta+'</button></div></article>';}).join(''); VIEW=list;}
     // Cards pass an index, not their own JSON. Serialising the product into
     // the onclick attribute put double quotes inside a double-quoted attribute,
     // which ended the attribute early and left every "See options" button
@@ -194,8 +209,13 @@
     function openDialogByIndex(i){const item=VIEW[i]; if(item) openDialog(item);}
     function openDialog(item){const opts=[]; if(item.basic)opts.push({tier:'basic',title:item.basic.title,blurb:item.basic.blurb,price:'Free',href:item.basic.url});
     // checkout.html only forwards to itch.io, so no payment detail touches this site
-    if(item.full){const live=item.full.itch_url||''; opts.push({tier:'full',title:item.full.title,blurb:item.full.blurb,price:'$'+Number(item.full.price||0).toFixed(2),href:CHECKOUT+'?slug='+encodeURIComponent(item.base_slug||item.full.slug)+'&price='+Number(item.full.price||0).toFixed(2)+'&title='+encodeURIComponent(item.full.title)+'&itch='+encodeURIComponent(live)});}
-    document.getElementById('dlgTitle').textContent=item.full.title; document.getElementById('dlgBlurb').textContent=item.full.blurb||''; document.getElementById('dlgOpts').innerHTML=opts.map(o=>'<button class="opt '+o.tier+'" onclick="location.href=\''+esc(o.href)+'\'"><span class="optTier">'+(o.tier==='basic'?'Free basic':'Full edition')+'</span><span class="optTitle">'+esc(o.title)+'</span><span class="optBlurb">'+esc(o.blurb||'')+'</span><span class="optPrice">'+esc(o.price)+'</span><span class="optCta">'+(o.tier==='basic'?'Download free':'Get the full edition')+'</span></button>').join(''); document.getElementById('dlg').classList.add('open');}
+    // The paid edition is only offered when it is actually on sale. A
+    // product whose paid edition is not published yet used to be offered
+    // at $0.00, with the price taken from the free edition, so the shop
+    // asked for no money and said the full edition was free.
+    if(item.onSale&&item.full){const live=item.full.itch_url||''; opts.push({tier:'full',title:item.full.title,blurb:item.full.blurb,price:'$'+Number(item.full.price||0).toFixed(2),href:CHECKOUT+'?slug='+encodeURIComponent(item.key)+'&price='+Number(item.full.price||0).toFixed(2)+'&title='+encodeURIComponent(item.full.title)+'&itch='+encodeURIComponent(live)});}
+    const lead=item.lead||item.full||item.basic; const shown=String(lead.title||'').replace(/\s*\(basic\)\s*$/i,''); document.getElementById('dlgTitle').textContent=shown; document.getElementById('dlgBlurb').textContent=lead.blurb||''; // A product whose paid edition is not on sale yet still says so, so a visitor is not left thinking the free edition is all there will ever be.
+const soon=document.getElementById('dlgSoon'); if(soon)soon.style.display=(item.onSale||!item.full)?'none':'block'; document.getElementById('dlgOpts').innerHTML=opts.map(o=>'<button class="opt '+o.tier+'" onclick="location.href=\''+esc(o.href)+'\'"><span class="optTier">'+(o.tier==='basic'?'Free basic':'Full edition')+'</span><span class="optTitle">'+esc(o.title)+'</span><span class="optBlurb">'+esc(o.blurb||'')+'</span><span class="optPrice">'+esc(o.price)+'</span><span class="optCta">'+(o.tier==='basic'?'Download free':'Get the full edition')+'</span></button>').join(''); document.getElementById('dlg').classList.add('open');}
     function closeDialog(){document.getElementById('dlg').classList.remove('open');}
     fetch("apps.json",{cache:"no-store"}).then(r=>r.json()).then(d=>{APPS=Array.isArray(d)?d:(d.apps||[]); render();}).catch(()=>{appsEl.innerHTML='<div class="empty"><strong>Slingshot Tools</strong><br>The catalog loads on first build.</div>';});
 

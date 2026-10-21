@@ -108,6 +108,69 @@ for p in ALL:
               "flipping TIER changed nothing, so paid equals free")
         continue
 
+# ------------------------------------------------ the script has to parse
+# The chess-board app was served with one stray brace in its script, so the
+# whole file failed to parse and the app did nothing at all: no board, no
+# buttons, no error the visitor could see. It was live for as long as it was
+# in the catalogue, and nothing caught it, because the validator that refuses
+# a broken app could not read a template literal and reported eleven good
+# apps as broken instead.
+unparseable = []
+for p in ALL:
+    s = p.read_text(encoding="utf-8", errors="ignore")
+    errs = make_app.js_syntax_errors(s)
+    if errs:
+        unparseable.append(f"{p.parent.parent.name} ({errs[0][:50]})")
+check("every app's script parses", not unparseable,
+      f"{len(unparseable)} do not: {unparseable[:4]}")
+
+# ------------------------------------------------------- the gate is a gate
+# A paid feature has to be reachable in the paid edition and refused in the
+# free one. The mistakes here are quiet: an export control created only in the
+# free edition, a limit key that LIM never defines, and a comparison that can
+# never be true.
+for p in SOURCES:
+    s = p.read_text(encoding="utf-8", errors="ignore")
+    name = p.parent.parent.name
+    for m in re.finditer(r"!\s*TIER\s*===\s*'full'", s):
+        check(f"{name} has a working tier comparison", False,
+              "'!TIER==='full' can never be true, so the check never fires")
+        break
+    m = re.search(r"const LIM=TIER==='full'\?\{([^}]*)\}", s)
+    if m:
+        defined = {k.split(":")[0].strip()
+                   for k in m.group(1).split(",") if ":" in k}
+        for k in sorted(set(re.findall(r"LIM\.([A-Za-z_]\w*)", s))):
+            if k not in defined:
+                check(f"{name} defines LIM.{k}", False,
+                      f"LIM.{k} is used but LIM never defines it, so it is "
+                      "always undefined and the control it hides is always "
+                      "hidden")
+                break
+    # A feature gated on LIM.max is the mistake: max is the limit, not the
+    # capability, so asking whether it is unlimited decides which edition gets
+    # the feature, and it is the wrong way round. Using LIM.max to limit how
+    # much is produced is correct, so only a block that creates or reveals a
+    # control counts.
+    for m in re.finditer(r"if\(LIM\.max\s*!==\s*Infinity\)\s*\{", s):
+        depth, k = 0, m.end() - 1
+        for k in range(m.end() - 1, len(s)):
+            if s[k] == "{":
+                depth += 1
+            elif s[k] == "}":
+                depth -= 1
+                if depth == 0:
+                    break
+        block = s[m.end():k]
+        if ("createElement('button'" in block or 'createElement("button"' in block
+                or "createElement('input'" in block
+                or 'createElement("input"' in block
+                or "style.display" in block):
+            check(f"{name} gates a feature on the right thing", False,
+                  "a feature is gated on LIM.max, which is the limit and not "
+                  "the capability, so it appears in the wrong edition")
+            break
+
 print(f"\nchecked {len(SOURCES)} free editions for a paid-tier bypass")
 print("FAILURES:", fails if fails else "none")
 sys.exit(1 if fails else 0)
