@@ -1181,5 +1181,62 @@
   "verification": "putting the unlink back leaves it behind on the failure path",
   "uncertainty": "",
   "opened": "2026-10-21T20:20:00+00:00"
+ },
+ {
+  "id": "BUG-064",
+  "symptom": "the paid edition never said what the customer was paying for",
+  "severity": "MEDIUM",
+  "component": "catalogue",
+  "files": [
+   "make_app.py",
+   "stage_app.py",
+   "tier_gate_selftest.py"
+  ],
+  "status": "VERIFIED_FIXED",
+  "root_cause": "The generator's raw path asks the model for the app file and nothing else, and the three things that describe the product to a customer, its name, the list of what the paid edition adds and the two descriptions, were set to empty strings. Every product was published with the same description as its own free edition and an empty differences list, so the shop asked for three dollars and never said what the three dollars were for. The answer was in the app's own limit table, which nobody read.",
+  "evidence": "the live catalogue has an identical blurb and an empty differences list for both editions of all thirty-four products, and the buy dialog shows that blurb",
+  "repro": "look at what the paid option says in the buy dialog",
+  "fix": "the paid features are read out of the app's own limit table, which costs no model call, and a feature is only claimed if the app is seen to have it, so nothing is promised that is not there",
+  "regression_test": "tier_gate_selftest.py checks that every product's paid edition has something the free one does not",
+  "verification": "all thirty-four products now list real differences, and a limit key with no matching control is not claimed",
+  "uncertainty": "",
+  "opened": "2026-10-21T21:05:15+00:00"
+ },
+ {
+  "id": "BUG-065",
+  "symptom": "the bot cannot read the server's channels",
+  "severity": "MEDIUM",
+  "component": "discord",
+  "files": [
+   "check_connections.py"
+  ],
+  "status": "BLOCKED",
+  "root_cause": "The Discord guild routes answer 403 for this bot: the member record, the channel list and the role list all return 'internal network error' with code 40333, which is Discord's Unknown Member. The token itself is good, it is in the guild, and the webhook posts fine, so this is on Discord's side of the connection rather than in the code. It needs a person with access to the server.",
+  "evidence": "run 39674190056: 'discord bot - Slingshot Tools#2486' and 'discord server - Slingshot Tools' both PASS, the webhook PASSES, and only the guild-scoped routes answer 403 with code 40333",
+  "repro": "run check-connections.yml and read the discord channels row",
+  "fix": "not a code change. A person with access to the server should check the bot's permissions and re-invite it if the membership record is stale. The posting path is unaffected, because the webhook is tried first and it works.",
+  "regression_test": "check_connections.py already reports what Discord actually returned, so the failure is actionable as it stands",
+  "verification": "not verified, because it cannot be fixed from here and the fix needs access to the Discord server. It may also be a Discord-side outage, in which case it clears itself. Until then the connections lane stays red on this one row, and only on this one row.",
+  "uncertainty": "",
+  "opened": "2026-10-21T21:06:08+00:00"
+ },
+ {
+  "id": "BUG-066",
+  "symptom": "the YouTube refresh token was revoked",
+  "severity": "MEDIUM",
+  "component": "youtube",
+  "files": [
+   "check_connections.py",
+   "shorts_auth.py"
+  ],
+  "status": "BLOCKED",
+  "root_cause": "The stored YouTube refresh token no longer exchanges for an access token, which is what happens when a Google account revokes the authorisation, when the app is in testing mode and the refresh token has expired, or when the consent screen is changed. Re-authorising is an interactive browser step with a Google account, so it cannot be done from here.",
+  "evidence": "run 39674190056: 'FAIL youtube - the refresh token was revoked or expired', and the check itself says 'run python shorts_auth.py again'",
+  "repro": "run check-connections.yml and read the youtube row",
+  "fix": "not a code change. A person has to run python shorts_auth.py and complete the Google consent screen, then put the new refresh token in the YOUTUBE_REFRESH_TOKEN secret.",
+  "regression_test": "check_connections.py says exactly what to do, so the failure is actionable as it stands",
+  "verification": "not verified, because re-authorising needs a browser and a Google account. Nothing in the shop depends on it. The lanes that publish to YouTube would fail on their own, and they are not part of a release.",
+  "uncertainty": "",
+  "opened": "2026-10-21T21:06:08+00:00"
  }
 ]

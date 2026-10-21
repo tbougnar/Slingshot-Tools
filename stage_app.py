@@ -94,8 +94,24 @@ def main() -> int:
         # document in an object, and that parse is the single thing every run
         # has been dying on, even though a working raw path already existed.
         html, mode, _ = make_app.build_html_raw(concept, lessons, attempt=attempt)
-        brand = ""
-        diffs, free_blurb, paid_blurb = "", "", ""
+        # The raw path asks the model for the file and nothing else, so the
+        # product's name, the list of what the paid edition adds, and the two
+        # descriptions all have to come from elsewhere. They used to be
+        # empty strings, which published a paid edition with the same
+        # description as the free one and an empty differences list: the
+        # shop asked for three dollars and never said what the three
+        # dollars were for.
+        #
+        # The app's own limit table says what the paid edition has, so it is
+        # read from the generated file. No model call, which matters because
+        # this path exists to spend as little allowance as possible.
+        brand = str(concept.get("title") or "").strip()
+        diffs = make_app.paid_features(html)
+        free_blurb = ""
+        paid_blurb = ""
+        if diffs:
+            paid_blurb = (f"Everything the free edition does, and "
+                          f"{', '.join(diffs).lower()}.")
         # The model escapes single quotes that are not inside a string, which
         # is not valid javascript, and whether one is an artefact or a real
         # escape cannot be told apart without parsing. So the variants are

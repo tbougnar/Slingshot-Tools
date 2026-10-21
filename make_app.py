@@ -1256,6 +1256,148 @@ def clean_tags(*candidates, tag="", title="", limit=4):
     return ordered[:limit] or ["utility"]
 
 
+def paid_features(html: str) -> list[str]:
+    """What the paid edition has that the free one does not.
+
+    The app's own limit table already says. Every generated app declares the
+    same shape, the full branch being the permissive one:
+
+        const LIM = TIER === 'full'
+          ? {max: Infinity, export: true, themes: "all", ...}
+          : {max: BASIC_LIMITS.maxItems, export: BASIC_LIMITS.export, ...};
+
+    so the difference between the two branches IS the list of what a
+    customer pays for. It was never read, and the paid edition was
+    published with the same description as the free one and an empty
+    differences list, so the shop asked for three dollars and never said
+    what the three dollars were for.
+
+    Reading it here costs no model call, which matters because the raw
+    generation path exists precisely to spend as little allowance as
+    possible.
+    """
+    def _pairs(text: str) -> dict:
+        out = {}
+        for part in text.split(","):
+            if ":" not in part:
+                continue
+            k, v = part.split(":", 1)
+            out[k.strip()] = v.strip()
+        return out
+
+    limits = {}
+    lm = re.search(r"const BASIC_LIMITS\s*=\s*\{([^}]*)\}", html)
+    if lm:
+        limits = _pairs(lm.group(1))
+
+    # The table comes in three shapes. Most apps declare the paid branch
+    # first, "TIER === 'full' ? {paid} : {basic}", some declare the free
+    # branch first with the paid one in an object, "TIER === 'basic' ?
+    # BASIC_LIMITS : {paid}", and some decide one key at a time, "{max:
+    # TIER === 'full' ? Infinity : BASIC_LIMITS.maxItems, ...}". All three
+    # are read the same way.
+    full: dict = {}
+    basic: dict = {}
+    m = re.search(r"const\s+\w+\s*=\s*TIER\s*===\s*['\"](basic|full)['\"]\s*\?\s*"
+                  r"(\{[^}]*\}|\w+)\s*:\s*(\{[^}]*\}|\w+)\s*;", html)
+    if m:
+        cond, first, second = m.group(1), m.group(2), m.group(3)
+        if cond == "full":
+            full_text, basic_text = first, second
+        else:
+            basic_text, full_text = first, second
+
+        def _resolve(text: str) -> dict:
+            text = text.strip()
+            if text.startswith("{"):
+                return _pairs(text.strip("{}"))
+            if text == "BASIC_LIMITS":
+                return dict(limits)
+            return {}
+
+        full, basic = _resolve(full_text), _resolve(basic_text)
+    else:
+        for km in re.finditer(
+                r"(\w+)\s*:\s*TIER\s*===\s*['\"](basic|full)['\"]\s*\?\s*"
+                r"([^,;}]+?)\s*:\s*([^,;}]+?)\s*[,}]", html):
+            key, cond, a, b = km.group(1), km.group(2), km.group(3), km.group(4)
+            if cond == "full":
+                full[key], basic[key] = a, b
+            else:
+                full[key], basic[key] = b, a
+
+    def _value(text: str) -> object:
+        text = text.strip()
+        if text == "true":
+            return True
+        if text == "false":
+            return False
+        if text == "Infinity":
+            return None          # unlimited
+        if text.startswith("BASIC_LIMITS."):
+            raw = limits.get(text.split(".", 1)[1], "")
+            if raw == "true":
+                return True
+            if raw == "false":
+                return False
+            if raw == "Infinity":
+                return None
+            try:
+                return int(raw)
+            except (TypeError, ValueError):
+                return None
+        try:
+            return int(text)
+        except (TypeError, ValueError):
+            return text.strip("'\"")
+
+    labels = {
+        "max": ("Unlimited items",
+                 ("max", "maxItems", "BASIC_LIMITS")),
+        "maxItems": ("Unlimited items",
+                     ("max", "maxItems", "BASIC_LIMITS")),
+        "export": ("Export and import your data",
+                   ("exportBtn", "exportData", "='export'", '="export"')),
+        "import": ("Import your data",
+                   ("importBtn", "importData", "='import'", '="import"')),
+        "themes": ("Every theme",
+                   ("themeToggle", "themeBtn", "themeSelect")),
+        "themeAll": ("Every theme",
+                     ("themeToggle", "themeBtn", "themeSelect")),
+        "bulk": ("Bulk actions",
+                 ("bulkBtn", "selectAll", "bulkSelect", "bulkMode")),
+        "history": ("Keeps a history",
+                    ("historyList", "historySection", "historyItems")),
+    }
+    found: list[str] = []
+    for key, fval in full.items():
+        bval = _value(basic.get(key, "false"))
+        fv = _value(fval)
+        paid = False
+        if fv is None and bval is not None:
+            paid = True                      # unlimited against a limit
+        elif fv is True and bval is not True:
+            paid = True
+        elif fv == "all" and bval != "all":
+            paid = True
+        if not paid:
+            continue
+        entry = labels.get(key)
+        if not entry:
+            continue
+        label, markers = entry
+        # The limit table is the same template in every app, so a key can be
+        # there without the app doing anything about it. Claiming a feature
+        # the app does not have is worse than saying nothing: the customer
+        # pays for it and does not get it. So the app has to be seen to
+        # have it.
+        if not any(marker in html for marker in markers):
+            continue
+        if label not in found:
+            found.append(label)
+    return found
+
+
 def publish(concept, app_dir, installer, tier="full", brand="", differences=None,
              free_blurb="", paid_blurb="", published=False, price_override=None):
     dest = SITE_APPS / concept["slug"]

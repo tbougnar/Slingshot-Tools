@@ -171,6 +171,22 @@ for p in SOURCES:
                   "the capability, so it appears in the wrong edition")
             break
 
+# ------------------------------------------------- what the paid edition has
+# The shop asks for three dollars and has to say what the three dollars are
+# for. The answer is in the app's own limit table, and it was never read:
+# the paid edition was published with the same description as the free one
+# and an empty differences list, so every product looked identical to the
+# one next to it.
+no_features = []
+for p in SOURCES:
+    s = p.read_text(encoding="utf-8", errors="ignore")
+    name = p.parent.parent.name
+    if not make_app.paid_features(s):
+        no_features.append(name)
+check("every product's paid edition has something the free one does not",
+      not no_features,
+      f"{len(no_features)} have none: {no_features[:5]}")
+
 print(f"\nchecked {len(SOURCES)} free editions for a paid-tier bypass")
 print("FAILURES:", fails if fails else "none")
 sys.exit(1 if fails else 0)
