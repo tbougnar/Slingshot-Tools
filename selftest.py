@@ -105,14 +105,23 @@ def t_css_guard():
 
 
 def t_tokenmeter():
+    import tempfile
     import tokenmeter
-    tokenmeter.reset()
-    tokenmeter.add(1000, 500)
-    if tokenmeter.spent() != 1500:
-        raise AssertionError("usage not recorded")
-    if tokenmeter.affordable(8000, 2000) is not True:
-        raise AssertionError("budget check wrong")
-    tokenmeter.reset()
+    from pathlib import Path
+    # The meter is the guard that decides whether the pipeline may spend, and
+    # this check used to reset it, which zeroed the recorded spend and
+    # disarmed the limit for the rest of the month. It works on its own file.
+    real = tokenmeter.STATE
+    tokenmeter.STATE = Path(tempfile.mkdtemp()) / "token_usage.json"
+    try:
+        tokenmeter.reset()
+        tokenmeter.add(1000, 500)
+        if tokenmeter.spent() != 1500:
+            raise AssertionError("usage not recorded")
+        if tokenmeter.affordable(8000, 2000) is not True:
+            raise AssertionError("budget check wrong")
+    finally:
+        tokenmeter.STATE = real
     return "tracks and reports usage"
 
 

@@ -15,11 +15,15 @@ The failures this covers are the ones that would be invisible and expensive:
 from __future__ import annotations
 
 import json
+import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
+
+from testenv import clean_env
 
 import goals
 import signals
@@ -133,7 +137,25 @@ check("progress never goes negative",
       goals._pct(-5, 50) == 0)
 
 # ---- it must not promote itself, and must not demote
+# data/goals.json is tracked on purpose, because a promotion that is thrown
+# away every run is not a decision. The test used to write the real file and
+# put it back afterwards, so a run killed between the write and the restore
+# left the real goal wiped or fabricated, and a git add -A in a job that ran
+# this test would commit that. The test works on its own file; the check that
+# the real path is tracked is made against git directly, further down.
+import tempfile
+
 state_file = goals.STATE
+real_state_file = state_file
+scratch = Path(tempfile.mkdtemp())
+state_file = scratch / "goals.json"
+goals.STATE = state_file
+# The check under test is "an existing goal is not changed", so the copy has
+# to exist and hold the real content before the call. The real file is only
+# read, never written.
+if real_state_file.exists():
+    state_file.write_text(real_state_file.read_text(encoding="utf-8"),
+                          encoding="utf-8")
 existed = state_file.exists()
 old = state_file.read_text(encoding="utf-8") if existed else ""
 try:
@@ -151,10 +173,8 @@ try:
           again["phase"] == "earn")
     check("and says to stay", "stay" in again["recommendation"].lower())
 finally:
-    if existed:
-        state_file.write_text(old, encoding="utf-8")
-    else:
-        state_file.unlink(missing_ok=True)
+    goals.STATE = real_state_file
+    shutil.rmtree(scratch, ignore_errors=True)
 
 # ---- the blockers have to be explainable, because the weekly review reads them
 b = goals.why_not(goals._empty(), {})
@@ -172,8 +192,13 @@ check("the page uses the index, not inlined json",
 
 # ---- the phase has to survive the runner that set it
 # Losing it would reset the company to chasing reach forever, so the file is
-# written on every run and is tracked in git on purpose.
+# written on every run and is tracked in git on purpose. As above, the test
+# writes its own copy so a killed run cannot lose the real goal.
 state_file = goals.STATE
+real_state_file = state_file
+scratch = Path(tempfile.mkdtemp())
+state_file = scratch / "goals.json"
+goals.STATE = state_file
 was_there = state_file.exists()
 kept = state_file.read_text(encoding="utf-8") if was_there else ""
 try:
@@ -186,14 +211,15 @@ try:
         check("and it records the phase",
               saved.get("phase") == "reach", str(saved)[:50])
 finally:
-    if was_there:
-        state_file.write_text(kept, encoding="utf-8")
+    goals.STATE = real_state_file
+    shutil.rmtree(scratch, ignore_errors=True)
 
 # a decision that is thrown away every run is not a decision, so the goal has
 # to be tracked. The name appears in .gitignore inside a comment explaining
 # why it is NOT ignored, so the real test is what git itself says.
 import subprocess
 r = subprocess.run(["git", "check-ignore", "-q", "data/goals.json"],
+                   env=clean_env(),
                    cwd=str(ROOT), capture_output=True)
 check("the goal file is tracked, not ignored", r.returncode != 0,
       "git says it is ignored, so a promotion would not survive")

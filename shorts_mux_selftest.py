@@ -6,7 +6,9 @@ arithmetic is checked here instead.
 """
 import json
 import pathlib
+import shutil
 import sys
+import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parent
 fails = []
@@ -18,15 +20,26 @@ plan = {"bed": True, "seconds": 12.0,
         "cues": [{"name": "hit", "kind": "hit", "at": 0.0},
                  {"name": "whoosh", "kind": "transition", "at": 3.0},
                  {"name": "click", "kind": "ui", "at": 6.0}]}
-d = ROOT / "data"
-(d / "shorts_sfx").mkdir(exist_ok=True)
-(d / "shorts_sfx.json").write_text(json.dumps(plan), encoding="utf-8")
-for c in plan["cues"]:
-    (d / "shorts_sfx" / f"{c['name']}.mp3").write_bytes(b"x" * 32)
-(d / "shorts_sfx" / "bed.mp3").write_bytes(b"x" * 32)
+# The plan and the cue files live in the real data directory, and they are
+# generated audio that took real time to render. This test used to overwrite
+# them with 32 bytes of junk and then delete them, so a run that was killed
+# in the middle left the real sound design gone with no way to get it back.
+# The test works in its own directory instead.
+scratch = pathlib.Path(tempfile.mkdtemp())
+real_root = sm.ROOT
+sm.ROOT = scratch
+try:
+    d = scratch / "data"
+    (d / "shorts_sfx").mkdir(parents=True, exist_ok=True)
+    (d / "shorts_sfx.json").write_text(json.dumps(plan), encoding="utf-8")
+    for c in plan["cues"]:
+        (d / "shorts_sfx" / f"{c['name']}.mp3").write_bytes(b"x" * 32)
+    (d / "shorts_sfx" / "bed.mp3").write_bytes(b"x" * 32)
 
-cues = sm.cue_labels()
-bed = sm.plan_has_bed()
+    cues = sm.cue_labels()
+    bed = sm.plan_has_bed()
+finally:
+    sm.ROOT = real_root
 print(f"  cues={cues} bed={bed}")
 
 ok = bed and len(cues) == 3
@@ -67,10 +80,7 @@ print(("ok   " if ok else "FAIL "), "the first source is input 0")
 if not ok:
     fails.append("off by one")
 
-for f in (d / "shorts_sfx.json",):
-    f.unlink(missing_ok=True)
-for f in (d / "shorts_sfx").glob("*.mp3"):
-    f.unlink()
+shutil.rmtree(scratch, ignore_errors=True)
 
 print()
 print("FAILURES:", fails if fails else "none")

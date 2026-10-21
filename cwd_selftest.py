@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from testenv import clean_env
 
 ROOT = Path(".").resolve()
 fails = []
@@ -48,6 +49,7 @@ print()
 for script in SCRIPTS:
     parts = script.split()
     r = subprocess.run([sys.executable, str(tmp / parts[0]), *parts[1:]],
+                     env=clean_env(),
                        cwd=str(elsewhere), capture_output=True, text=True,
                        timeout=900)
     bad = "Traceback" in (r.stdout or "") + (r.stderr or "")

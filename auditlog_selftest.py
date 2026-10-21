@@ -16,6 +16,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 
+from testenv import clean_env
+
 import auditlog as al
 
 # Every event this suite writes goes to a temporary file, so running the tests
@@ -96,7 +98,11 @@ try:
 
     # A real separate process, killed outright. This is the case the module
     # exists for: a job that dies mid-run must still leave its record.
-    killer = Path(__file__).resolve().parent / "_auditlog_kill_child.py"
+    # The helper was written into the repository root, where a run that was
+    # killed before the cleanup left an _*.py file behind, and both
+    # audit_selftest.py and selftest_audit.py treat an underscore-named file
+    # in the root as a defect. It is written to a temporary directory now.
+    killer = Path(tempfile.mkdtemp()) / "_auditlog_kill_child.py"
     killer.write_text(
         "import sys, os, time\n"
         f"sys.path.insert(0, {str(ROOT)!r})\n"
@@ -107,7 +113,7 @@ try:
     proc = subprocess.Popen([sys.executable, str(killer)],
                             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                             text=True,
-                            env={**os.environ,
+                            env={**clean_env(),
                                  "AUDITLOG_PATH": str(al.LOG)})
     try:
         proc.stdout.readline()          # wait until the event is written
@@ -159,6 +165,7 @@ _REAL = Path(__file__).resolve().parent / "data" / "audit" / "events.jsonl"
 _before = (_REAL.stat().st_size if _REAL.exists() else 0)
 for _suite in ("paidbuild_selftest.py", "itchurl_selftest.py"):
     _r = subprocess.run([sys.executable, str(ROOT / _suite)], cwd=str(ROOT),
+                        env=clean_env(),
                         capture_output=True, text=True, timeout=1800)
     _after = (_REAL.stat().st_size if _REAL.exists() else 0)
     check(f"{_suite} leaves the real log alone", _after == _before,

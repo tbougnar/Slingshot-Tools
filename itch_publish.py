@@ -630,6 +630,16 @@ def upload(installer: Path, slug: str, version: str,
         log("install it from https://itchio.itch.io/butler")
         return False
 
+    # The target is user/project:channel, so without the user there is nothing
+    # to push to. Butler answers an empty user with 'invalid target (bad
+    # user)', which is a remote call that cannot succeed and says less than
+    # the truth. Refuse here instead, before anything leaves the machine.
+    if not USER:
+        log("no itch.io user is set, so there is no project to push the "
+            "build to")
+        log("set it with: gh variable set ITCH_USER <your itch.io user>")
+        return False
+
     target = f"{USER}/{project or slug}:{channel_for(slug)}"
     cmd = [exe, "push", str(installer), target]
     if version:

@@ -900,6 +900,115 @@ FOUND = [
      "Removing a dependency from a workflow makes the new check fail, so it "
      "bites.",
      ""),
+
+    ("the test suite posted a real announcement to the real Discord server",
+     "HIGH", "tests", ["update_selftest.py", "discord_post.py"],
+     "VERIFIED_FIXED",
+     "update_selftest.py called update_discord.upsert() and expected it to "
+     "return False because there are no credentials. The credentials are read "
+     "from the environment when discord_post is imported, and a scheduled "
+     "runner has DISCORD_BOT_TOKEN and DISCORD_GUILD_ID set, so on the runner "
+     "the check created a real scheduled guild event and then failed, because "
+     "the call returned True. The test was testing the ambient environment "
+     "rather than the guard, and it was the only thing standing between the "
+     "suite and the live server. Run 39640947607 is the evidence: the log "
+     "reads 'created event 1562512689769484331' and then 'FAIL upsert without "
+     "credentials is safe'.",
+     "gh run view 39640947607 --log showed '[event] created event "
+     "1562512689769484331 for 2026-10-26T18:00:00+00:00: Major update' "
+     "immediately before the failing check, so the test really did create the "
+     "event rather than merely report that it might.",
+     "run update_selftest.py with DISCORD_BOT_TOKEN and DISCORD_GUILD_ID set",
+     "the test forces dp.TOKEN and dp.GUILD_ID to empty for the duration of "
+     "the check and restores them afterwards, so it tests the guard and "
+     "cannot reach Discord whatever the machine has.",
+     "update_selftest.py now clears both credentials around the check and "
+     "restores them in a finally block, and the check still fails if the "
+     "guard is removed",
+     "with dummy credentials set the test passes and prints no 'created "
+     "event' line, so the server is not touched; without the credentials "
+     "cleared it creates a real event, which is what the old code did.",
+     ""),
+
+    ("the test suite could have pushed a real build to the real store",
+     "HIGH", "tests", ["itchpublish_selftest.py", "itch_publish.py",
+                       "testenv.py"],
+     "VERIFIED_FIXED",
+     "itchpublish_selftest.py starts itch_publish.py as a subprocess with the "
+     "inherited environment and the real repository as its working directory. "
+     "itch_publish reads ITCH_API_KEY and ITCH_USER, so on a runner with "
+     "those set the child found the real paid build, resolved the live store "
+     "page and called butler. It failed here only because the local key was "
+     "not valid, so nothing was uploaded, but the path to a real upload was "
+     "open. The in-process part of the same test cleared ip.USER only, and "
+     "the upload path uses the API key, so that guard did not hold either.",
+     "running the child with the itch.io and butler variables stripped still "
+     "reached butler and printed 'creating build on remote server: itch.io "
+     "API error (400): /wharf/builds: invalid target (bad user)', which is a "
+     "remote call made before the run failed",
+     "start itch_publish.py with no itch.io credentials but with a paid build "
+     "present and watch whether butler is reached",
+     "the test scrubs the credentials from every child it starts, and "
+     "itch_publish.upload() now refuses before running butler when there is "
+     "no itch.io user, naming the variable that is missing",
+     "itchpublish_selftest.py starts every child with the scrubbed "
+     "environment and asserts that upload() starts no process at all when "
+     "there is no user",
+     "with the credentials stripped the child no longer reaches butler; "
+     "removing the guard from upload() makes the new check fail, so it "
+     "bites.",
+     ""),
+
+    ("the test suite could have spent real model money",
+     "HIGH", "tests", ["audit_selftest.py", "testenv.py"],
+     "VERIFIED_FIXED",
+     "audit_selftest.py ran improve_daily.py in a copied directory with the "
+     "inherited environment. A copied directory protects the files, not the "
+     "API: improve_daily calls the model provider, the provider reads "
+     "GROQ_API_KEY from the environment, and the scheduled lane that runs "
+     "audit_selftest.py has a real one. The check that a module survives a "
+     "missing data file was therefore making a real, billable request.",
+     "the sanitised environment was applied to the first improve_daily run "
+     "only; the run at line 81, inside the loop over six modules, inherited "
+     "everything, and the lane that runs this test sets GROQ_API_KEY",
+     "run audit_selftest.py with a GROQ_API_KEY set and watch whether a "
+     "request is made",
+     "every child a test starts now gets the environment from testenv, which "
+     "takes out the provider keys and the service credentials, and the "
+     "runners that start the whole suite scrub the environment for their "
+     "children as well",
+     "selftest_audit.py now reads the source of every selftest and fails "
+     "when one starts a child process with the inherited environment, or "
+     "with an environment copied from os.environ",
+     "a fresh venv with requests alone shows the lane failing on the missing "
+     "module; the static check reports zero problems across 140 files, and "
+     "removing the env= from one call makes it report that one file",
+     ""),
+
+    ("the test suite destroyed the rate limit and the budget that protect it",
+     "MEDIUM", "tests", ["selftest.py", "audit_selftest.py",
+                         "tokenmeter.py", "budget.py"],
+     "VERIFIED_FIXED",
+     "selftest.py and audit_selftest.py tested the token meter by resetting it "
+     "and adding to it, and they did that against the real data "
+     "directory, so the recorded spend was zeroed and the guard that decides "
+     "whether the pipeline may spend was disarmed for the rest of the month. "
+     "audit_selftest.py did the same to the real budget file, writing "
+     "invalid content over it and restoring it afterwards, so a run killed "
+     "in between left the allowance unreadable, which refuses every job. Its "
+     "backup was written next to the real file as data/budget.json.auditbak, "
+     "which nothing ignores, so a git add -A could commit the allowance.",
+     "both tests are run by the scheduled lanes, and tokenmeter.STATE and "
+     "budget.STATE are module-level paths into the real data directory",
+     "run selftest.py and audit_selftest.py and look at whether the real "
+     "token_usage.json and budget.json are touched",
+     "both tests now work on their own files in a temporary directory, and "
+     "the budget backup is written outside the repository",
+     "the meter check in selftest.py points tokenmeter.STATE at a temporary "
+     "file and restores it; the budget check points budget.STATE at a "
+     "temporary file and removes the directory afterwards",
+     "the tests pass, and the real data directory is unchanged afterwards",
+     ""),
 ]
 
 

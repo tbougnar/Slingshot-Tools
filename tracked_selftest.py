@@ -21,6 +21,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 
+from testenv import clean_env
+
 fails: list[str] = []
 
 
@@ -43,7 +45,7 @@ def tracked() -> set[str]:
     exist, and refusing to answer would make the cleanroom run fail for a
     reason that has nothing to do with the pipeline.
     """
-    r = subprocess.run(["git", "ls-files"], cwd=str(ROOT),
+    r = subprocess.run(["git", "ls-files"], cwd=str(ROOT), env=clean_env(),
                        capture_output=True, text=True)
     if r.returncode != 0 or not r.stdout.strip():
         return {p.relative_to(ROOT).as_posix()

@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 
 import app_update as au
+import discord_post as dp
 import update_discord as ud
 import update_plan as up
 import update_state as us
@@ -133,11 +134,22 @@ check("event body has no null date", "None" not in desc)
 check("no stored id means no event", ud.existing(s) is None)
 s["discord_event_id"] = "999"
 check("a stored id is reused", ud.existing(s) == "999")
-# no credentials must mean a clean refusal, never an exception
-check("upsert without credentials is safe",
-      ud.upsert(_state(5)) is False)
-check("announce without a plan is safe",
-      ud.announce(us._empty()) is False)
+# no credentials must mean a clean refusal, never an exception, and above all it
+# must never reach Discord. dp.TOKEN and dp.GUILD_ID are read from the
+# environment at import time, so on a machine that has the real DISCORD_BOT_TOKEN
+# set, which is every scheduled runner, this check used to have credentials and
+# quietly created a real guild event on the production server. The credentials
+# are forced empty here so the check tests the guard rather than the ambient
+# environment, and so a test run cannot touch the server.
+_saved_token, _saved_guild = dp.TOKEN, dp.GUILD_ID
+dp.TOKEN, dp.GUILD_ID = "", ""
+try:
+    check("upsert without credentials is safe",
+          ud.upsert(_state(5)) is False)
+    check("announce without a plan is safe",
+          ud.announce(us._empty()) is False)
+finally:
+    dp.TOKEN, dp.GUILD_ID = _saved_token, _saved_guild
 
 # ------------------------------------------------------------- app updates
 tmp = Path(tempfile.mkdtemp())

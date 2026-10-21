@@ -9,11 +9,13 @@ written, a module that was gitignored, a scratch file swept into a commit.
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from testenv import clean_env
 
 ROOT = Path(__file__).resolve().parent
 fails: list[str] = []
@@ -26,9 +28,33 @@ def check(label: str, ok: bool, detail: str = "") -> None:
         fails.append(label)
 
 
+def clean_env() -> dict:
+    """The environment a child must get so a test cannot spend money.
+
+    improve_daily.py calls the model provider when it has a key, and a
+    scheduled runner has a real GROQ_API_KEY. A child started with the
+    inherited environment therefore makes a real, billable API call, which is
+    the one thing a test must never do. The provider keys and the Discord and
+    itch.io credentials are stripped, so every module under test takes the
+    "no key" path, which is the path that has to be safe anyway.
+    """
+    env = {k: v for k, v in os.environ.items()
+           if not k.endswith("_API_KEY")
+           and k not in ("DISCORD_BOT_TOKEN", "DISCORD_GUILD_ID",
+                         "DISCORD_WEBHOOK_URL", "ITCH_SESSION_COOKIE",
+                         "ITCH_USER", "ITCH_LOGIN", "ITCH_PASSWORD",
+                         "ELEVENLABS_API_KEY", "YOUTUBE_API_KEY",
+                         "BUTLER_API_KEY")}
+    env.setdefault("PATH", "/usr/bin:/bin")
+    env.setdefault("SYSTEMROOT", "C:\\Windows")
+    env.setdefault("HOME", tempfile.gettempdir())
+    return env
+
+
 def run(script: str, cwd: Path) -> tuple[int, str]:
     r = subprocess.run([sys.executable, script], cwd=str(cwd),
-                       capture_output=True, text=True, timeout=600)
+                       capture_output=True, text=True, timeout=600,
+                       env=clean_env())
     return r.returncode, (r.stdout or "") + (r.stderr or "")
 
 
@@ -90,7 +116,8 @@ scratch = sorted(ROOT.glob("_*.py"))
 check("no _*.py scratch file is committed", not scratch,
       ", ".join(p.name for p in scratch))
 r = subprocess.run(["git", "ls-files"], cwd=str(ROOT),
-                   capture_output=True, text=True, timeout=120)
+                   capture_output=True, text=True, timeout=120,
+                   env=clean_env())
 tracked = [ln for ln in (r.stdout or "").splitlines()
            if ln.strip().startswith("_")]
 check("git tracks no underscore-named file", not tracked,
@@ -101,7 +128,7 @@ print("\nEVERY NEEDED MODULE IS TRACKED\n")
 try:
     r = subprocess.run([sys.executable, "tracked_selftest.py"],
                        cwd=str(ROOT), capture_output=True, text=True,
-                       timeout=300)
+                       timeout=300, env=clean_env())
     check("tracked_selftest passes", r.returncode == 0,
           next((ln for ln in r.stdout.splitlines() if ln.startswith("FAIL")),
                ""))
@@ -156,7 +183,7 @@ if victim.exists():
     try:
         r = subprocess.run([sys.executable, "update_state.py"],
                            cwd=str(tmp), capture_output=True, text=True,
-                           timeout=300)
+                           timeout=300, env=clean_env())
         out = (r.stdout or "") + (r.stderr or "")
         check("a read-only state file does not raise", "Traceback" not in out,
               out.strip().splitlines()[-1][:80] if "Traceback" in out else "")
@@ -179,7 +206,12 @@ shutil.rmtree(tmp, ignore_errors=True)
 print("\nAN UNREADABLE METER STOPS SPENDING INSTEAD OF ALLOWING IT\n")
 import tokenmeter as tm
 
+# The meter this test corrupts is the real one, and it is the guard that
+# decides whether the pipeline may spend. Resetting it here zeroed the
+# recorded spend and disarmed the limit for the rest of the month, and the
+# test's closing reset() wiped it again. The test now works on its own file.
 saved_state = tm.STATE
+tm.STATE = Path(tempfile.mkdtemp()) / "token_usage.json"
 try:
     tm.reset()
     tm.add(1000, 500)
@@ -205,7 +237,6 @@ try:
     check("a stale window reads as zero", tm.spent() == 0)
     check("a stale window is affordable again", tm.affordable(8000, 4000))
 finally:
-    tm.reset()
     tm.STATE = saved_state
 
 # stage_app must not sit waiting out a reset that can never happen
@@ -226,31 +257,35 @@ import budget as bg
 
 real_budget = bg.STATE
 backup = None
+# The budget file is the company's remaining allowance. This test used to
+# corrupt the real one in place, and a run killed between the corruption and
+# the restore left the allowance unreadable, which refuses every job. The
+# backup was written next to the real file as data/budget.json.auditbak,
+# which nothing ignores, so a git add -A could commit the allowance. The test
+# now works on its own copy, outside the repository.
+scratch = Path(tempfile.mkdtemp())
+bg.STATE = scratch / "budget.json"
 try:
     if real_budget.exists():
-        backup = real_budget.with_suffix(".json.auditbak")
+        backup = scratch / "budget.real.json"
         shutil.copy2(real_budget, backup)
 
     # a working budget approves, so the refusal below is about the failure only
     if backup:
-        shutil.copy2(backup, real_budget)
+        shutil.copy2(backup, bg.STATE)
     check("a readable budget approves a small job",
           bg.check("audit-probe", planned_hours=0.1) == 0)
 
     for label, body in (("truncated", "{oops"), ("a list", "[1]"),
                         ("a number", "7")):
-        real_budget.write_text(body, encoding="utf-8")
+        bg.STATE.write_text(body, encoding="utf-8")
         check(f"a {label} budget is reported as broken", bg.broken() is True)
         check(f"a {label} budget refuses the job",
               bg.check("audit-probe", planned_hours=0.1) == 1,
               "it approved work with an unknown budget")
 finally:
-    if backup:
-        shutil.copy2(backup, real_budget)
-        backup.unlink(missing_ok=True)
-    else:
-        real_budget.unlink(missing_ok=True)
     bg.STATE = real_budget
+    shutil.rmtree(scratch, ignore_errors=True)
 
 budget_src = (ROOT / "budget.py").read_text(encoding="utf-8")
 check("budget.py does not still claim its state is committed",

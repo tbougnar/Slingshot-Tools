@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import ast
 import importlib
+from testenv import clean_env
 import pathlib
 import sys
 
@@ -188,8 +189,11 @@ def _site_side_effects() -> list[str]:
               "        importlib.import_module(m)\n"
               "    except Exception:\n"
               "        pass\n")
+    # Every module is imported here, and some of them talk to a service at
+    # import time. The child gets the scrubbed environment, so a module with
+    # an import-time side effect cannot reach the real service.
     subprocess.run([sys.executable, "-c", script], cwd=ROOT,
-                   env=dict(os.environ, GROQ_API_KEY="x"),
+                   env=clean_env(),
                    capture_output=True, timeout=180)
     after = {p.name for p in site.iterdir()}
     shutil.rmtree(site / "licenses", ignore_errors=True)

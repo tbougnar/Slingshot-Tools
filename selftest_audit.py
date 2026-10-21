@@ -11,6 +11,7 @@ import json
 import re
 import subprocess
 import sys
+from testenv import clean_env
 from pathlib import Path as _P
 
 HERE = _P(__file__).resolve().parent
@@ -266,7 +267,7 @@ except ImportError:
 # be read as "not ignored", passing for the wrong reason.
 def _ignored(rel: str) -> bool | None:
     r = subprocess.run(["git", "check-ignore", "-q", rel], cwd=str(R),
-                       capture_output=True, timeout=120)
+                       capture_output=True, timeout=120, env=clean_env())
     if r.returncode == 128:
         return None                     # not a repository: cannot answer
     return r.returncode == 0
@@ -304,6 +305,82 @@ _src = (R / "stage_app.py").read_text(encoding="utf-8")
 if "def _rel(" not in _src:
     problems.append(("stage_app.py", "stores paths absolutely, which publishes "
                                      "the build machine's layout"))
+
+# ---- a test must not be able to reach the real world
+# A selftest that starts a child process with the inherited environment gets
+# the runner's real credentials, and a scheduled runner has them. That is how
+# update_selftest.py came to create a real Discord guild event: it called
+# upsert() expecting it to refuse for want of a token, and the token was
+# there. The same shape lets a test spend real model tokens, push a real
+# build to itch.io, or post to the real server.
+#
+# The rule this enforces: a selftest that starts a child process must pass an
+# explicit env=, and that env must not be the ambient one. The check is on
+# the source, because a test that could reach out is wrong even on the day
+# nothing does.
+def _child_calls(path):
+    """Every subprocess.run / Popen call in a file, as ast nodes."""
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8", errors="ignore"))
+    except (SyntaxError, ValueError):
+        return
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        fn = node.func
+        if not isinstance(fn, ast.Attribute):
+            continue
+        if fn.attr not in ("run", "Popen"):
+            continue
+        if not isinstance(fn.value, ast.Name) or fn.value.id != "subprocess":
+            continue
+        yield node
+
+
+def _env_is_ambient(node) -> bool:
+    """Does this env= argument carry the ambient environment through?"""
+    for kw in node.keywords:
+        if kw.arg != "env":
+            continue
+        v = kw.value
+        if isinstance(v, ast.Dict):
+            for k, val in zip(v.keys, v.values):
+                if isinstance(k, ast.Constant) and k.value == "**":
+                    return True
+                if isinstance(k, ast.Constant) and k.value == "**os.environ":
+                    return True
+        if isinstance(v, ast.Call) and isinstance(v.func, ast.Name) \
+                and v.func.id == "dict":
+            for kw2 in v.keywords:
+                if kw2.arg is None and isinstance(kw2.value, ast.Attribute) \
+                        and kw2.value.attr == "environ":
+                    return True
+        if isinstance(v, ast.Name) and v.id == "os.environ":
+            return True
+    return False
+
+
+for _p in py_files:
+    if "selftest" not in _p.name:
+        continue
+    _body = _p.read_text(encoding="utf-8", errors="ignore")
+    if "subprocess.run" not in _body and "subprocess.Popen" not in _body:
+        continue
+    for _node in _child_calls(_p):
+        _has_env = any(kw.arg == "env" for kw in _node.keywords)
+        if not _has_env:
+            problems.append((_p.name, "starts a child process with the "
+                                      "inherited environment, so it can reach "
+                                      "the real service with the runner's "
+                                      "credentials"))
+            break
+    for _node in _child_calls(_p):
+        if _env_is_ambient(_node):
+            problems.append((_p.name, f"line {_node.lineno} copies the "
+                                      "ambient environment into a child "
+                                      "process, so the real credentials are "
+                                      "still reachable"))
+            break
 
 print("== problems ==")
 if not problems:

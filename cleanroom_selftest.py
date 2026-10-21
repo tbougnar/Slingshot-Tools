@@ -13,6 +13,7 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
+from testenv import clean_env
 
 ROOT = Path(__file__).resolve().parent
 
@@ -36,7 +37,7 @@ def main() -> int:
     print(f"building a clean checkout in {tmp}\n")
 
     # exactly what a runner gets
-    r = subprocess.run(["git", "ls-files"], cwd=str(ROOT),
+    r = subprocess.run(["git", "ls-files"], cwd=str(ROOT), env=clean_env(),
                        capture_output=True, text=True)
     for line in r.stdout.splitlines():
         rel = line.strip()
@@ -50,12 +51,14 @@ def main() -> int:
         shutil.copy2(src, dst)
 
     r = subprocess.run(["git", "submodule", "status"], cwd=str(ROOT),
+                       env=clean_env(),
                        capture_output=True, text=True)
     print(f"{len(r.stdout.splitlines())} submodules\n")
 
     bad = 0
     for label, cmd in CHECKS:
         p = subprocess.run(cmd, cwd=str(tmp), capture_output=True, text=True,
+                     env=clean_env(),
                            shell=True, timeout=900)
         if p.returncode == 0:
             print(f"  ok    {label}")

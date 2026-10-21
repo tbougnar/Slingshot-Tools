@@ -11,12 +11,15 @@ important behaviour in the publishing path, so it is tested directly rather
 than through a workflow.
 """
 import json
+import os
 import pathlib
 import sys
 import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
+
+from testenv import clean_env as testenv_clean_env
 
 import itch_publish as ip
 
@@ -29,10 +32,25 @@ def check(label, ok, detail=""):
         fails.append(label)
 
 
+def clean_env():
+    """The environment a subprocess must get so a test cannot publish.
+
+    itch_publish.py reads ITCH_API_KEY, ITCH_SESSION_COOKIE, ITCH_USER,
+    ITCH_LOGIN and ITCH_PASSWORD, and butler reads BUTLER_API_KEY. On a
+    scheduled runner those are real secrets, so a subprocess started with the
+    inherited environment and the real repository as its working directory
+    would find the real paid build, reach the real store page and push a real
+    build. This suite must be unable to touch the store, so the itch.io and
+    butler credentials are stripped from every child it starts.
+    """
+    return testenv_clean_env()
+
+
 def scenario(builds=(), write_stage=False, stage=None):
     """Run itch_publish.main() against a constructed paid/ and data/."""
     tmp = pathlib.Path(tempfile.mkdtemp())
     real_paid, real_user = ip.PAID, ip.USER
+    real_key, real_session = ip.KEY, ip.SESSION
     tmp_paid = tmp / "paid"
     for name in builds:
         (tmp_paid / name / "app").mkdir(parents=True, exist_ok=True)
@@ -45,12 +63,17 @@ def scenario(builds=(), write_stage=False, stage=None):
     if write_stage:
         stage_path.write_text(json.dumps(stage or {}), encoding="utf-8")
     ip.PAID = tmp_paid
-    # no credentials in this environment, so publish() cannot reach the network
+    # no credentials at all, so publish() cannot reach the network. USER alone
+    # was not enough: the upload path uses the API key, and on a runner the key
+    # is set, so the key and the cookie are cleared here too.
     ip.USER = ""
+    ip.KEY = ""
+    ip.SESSION = ""
     try:
         rc = ip.main()
     finally:
         ip.PAID, ip.USER = real_paid, real_user
+        ip.KEY, ip.SESSION = real_key, real_session
     return rc
 
 
@@ -80,7 +103,8 @@ import subprocess
 
 import yaml
 out = subprocess.run([sys.executable, str(ROOT / "itch_publish.py")],
-                     capture_output=True, text=True, cwd=str(ROOT))
+                     capture_output=True, text=True, cwd=str(ROOT),
+                     env=clean_env())
 check("the module still runs and reports its own blocker",
       out.returncode != 0 and "itch" in (out.stdout + out.stderr).lower(),
       f"rc={out.returncode}")
@@ -119,7 +143,8 @@ print("\nA QUIET WEEK MUST NOT STOP THE SITE DEPLOYING\n")
 # not deployed at all. Run 38428458061 is the evidence.
 import subprocess
 r = subprocess.run([sys.executable, "sync_links.py"], cwd=str(ROOT),
-                   capture_output=True, text=True, timeout=900)
+                   capture_output=True, text=True, timeout=900,
+                   env=clean_env())
 combined2 = r.stdout + r.stderr
 check("sync_links exits zero with no product to advertise", r.returncode == 0,
       f"rc={r.returncode}; {combined2.strip()[-120:]}")
@@ -157,7 +182,8 @@ check("a refused cookie leads to a fresh login, not to a failure",
 
 print("\nA MISSING CREDENTIAL SAYS WHAT TO DO, ONCE\n")
 _r = subprocess.run([sys.executable, "itch_publish.py"], cwd=str(ROOT),
-                    capture_output=True, text=True, timeout=900)
+                    capture_output=True, text=True, timeout=900,
+                    env=clean_env())
 _out = (_r.stdout + _r.stderr)
 check("it exits non-zero", _r.returncode != 0, f"rc={_r.returncode}")
 # with no paid build it never reaches the project check, so the blocker is only
@@ -221,6 +247,38 @@ check("the paid build is only uploaded when there is one",
 check("so the whole job is skipped, not just one step of it",
       _wf["jobs"]["installer"].get("if") is not None,
       "gating steps individually is a condition a later step forgets")
+
+print("\nA BUILD IS NEVER PUSHED WITHOUT KNOWING WHERE TO\n")
+# butler's target is user/project:channel, so an empty user cannot be pushed
+# anywhere. Butler answers that with a remote 'invalid target (bad user)'
+# call, which reaches the network before it fails and says less than the
+# truth. upload() now refuses before anything leaves the machine.
+_ip = (ROOT / "itch_publish.py").read_text(encoding="utf-8")
+_useg = _ip.split("def upload", 1)[1].split("def ", 1)[0]
+check("upload refuses when there is no itch.io user",
+      "if not USER:" in _useg and _useg.index("if not USER:") <
+      _useg.index("subprocess.run"),
+      "it still calls butler, which can only fail with a remote error")
+check("and it says which variable is missing",
+      "ITCH_USER" in _useg,
+      "the run stops without saying what to set")
+# The same guard has to hold when the whole module is run, because that is
+# what the test suite above does in a subprocess.
+_real_user = ip.USER
+ip.USER = ""
+try:
+    _reached = []
+    _real_run = ip.subprocess.run
+    ip.subprocess.run = lambda *a, **k: _reached.append(a) or (_reached,
+                                                               None)
+    _made = ip.upload(pathlib.Path(ROOT / "dist" / "nothing-Setup.exe"), "x",
+                      "")
+    ip.subprocess.run = _real_run
+finally:
+    ip.USER = _real_user
+check("and no process is started with no user",
+      not _reached and _made is False,
+      f"it started a process anyway: {_reached[:1]}")
 
 _vs = (ROOT / "verify_app.py").read_text(encoding="utf-8")
 _seg = ""

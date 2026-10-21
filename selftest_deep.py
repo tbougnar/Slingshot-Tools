@@ -12,6 +12,8 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
+from testenv import clean_env
+
 fails = []
 
 
@@ -134,7 +136,7 @@ def fixbook_integrity():
 
 
 def selftest_still_passes():
-    r = subprocess.run([sys.executable, "selftest.py"],
+    r = subprocess.run([sys.executable, "selftest.py"], env=clean_env(),
                        cwd=str(HERE),
                        capture_output=True, text=True)
     assert r.returncode == 0, f"selftest failing: {r.stdout[-300:]}"
