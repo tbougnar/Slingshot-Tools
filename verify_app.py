@@ -43,6 +43,9 @@ def main() -> int:
     candidate = make_app.ROOT / stage["candidate"]
     if not candidate.exists():
         print(f"[verify] staged file is gone: {candidate}")
+        # There is nothing to verify, so the candidate is not left behind for
+        # the next run to pick up again.
+        stage_file.unlink(missing_ok=True)
         return 1
 
     print(f"[verify] checking {stage['title']} ({stage['slug']})")
@@ -77,6 +80,12 @@ def main() -> int:
                     print(f"[verify] {remaining} controls still dead, over the "
                           f"tolerance of {TOLERATED}; publishing nothing")
                     print(json.dumps(history, indent=1)[-1200:])
+                    # The candidate is cleared whether it passed or not.
+                    # It is a tracked file, so leaving it there means the
+                    # next run verifies the same rejected app again, and it
+                    # keeps widening the release gate's exemption for that
+                    # folder name for as long as it exists.
+                    stage_file.unlink(missing_ok=True)
                     return 1
     html = candidate.read_text(encoding="utf-8", errors="replace")
     concept = {"slug": stage["slug"], "brand": stage["brand"],

@@ -359,6 +359,82 @@ if _live.exists():
 else:
     print("skip  no generated app on disk to check")
 
+# ---- 11. the release gate must catch a paid build in the published folder
+# The gate is the last thing between the paid product and the public site,
+# and it had three holes. It looked for a flat index.html, but the paid
+# edition is paid/<slug>/app/index.html, so a copy of the paid folder into
+# site/apps/ was invisible to it. It read the folder check's exemption from
+# data/candidate.json, which allowed the plain paid slug, so the folder was
+# accepted as a known basic edition. And it looked for development files by
+# name, with no binary extensions, so the one file that IS the paid product,
+# the installer, was not on the list.
+print("\nTHE RELEASE GATE CATCHES A PAID BUILD IN THE PUBLIC SITE\n")
+import check_exposure as _ce
+
+_REAL_SITE, _REAL_APPS, _REAL_ROOT = _ce.SITE, _ce.APPS, _ce.ROOT
+
+
+def _exposure_run(kind: str, candidate: str | None = None) -> int:
+    """Build a public site with one leak in it and ask the gate about it."""
+    _tmp = Path(tempfile.mkdtemp())
+    try:
+        _site = _tmp / "site"
+        _apps = _site / "apps"
+        _apps.mkdir(parents=True)
+        _cat = [{"slug": "thing", "base_slug": "thing", "tier": "full",
+                 "title": "Thing", "price": 3.0, "published": False},
+                {"slug": "thing-basic", "base_slug": "thing", "tier": "basic",
+                 "title": "Thing (Basic)", "price": 0.0, "published": True}]
+        (_site / "apps.json").write_text(json.dumps(_cat), encoding="utf-8")
+        _paid_html = '<html><script>const TIER="full";</script></html>'
+        if kind == "app":
+            _d = _apps / "thing" / "app"
+            _d.mkdir(parents=True)
+            (_d / "index.html").write_text(_paid_html, encoding="utf-8")
+        elif kind == "flat":
+            _d = _apps / "thing"
+            _d.mkdir(parents=True)
+            (_d / "index.html").write_text(_paid_html, encoding="utf-8")
+        elif kind == "basic":
+            _d = _apps / "thing-basic" / "app"
+            _d.mkdir(parents=True)
+            (_d / "index.html").write_text(_paid_html, encoding="utf-8")
+        elif kind == "binary":
+            _d = _site / "downloads"
+            _d.mkdir(parents=True)
+            (_d / "Thing-Setup.exe").write_bytes(b"MZ" + b"x" * 2000)
+        if candidate:
+            (_tmp / "data").mkdir(exist_ok=True)
+            (_tmp / "data" / "candidate.json").write_text(
+                json.dumps({"slug": candidate}), encoding="utf-8")
+        _ce.SITE, _ce.APPS, _ce.ROOT = _site, _apps, _tmp
+        try:
+            return _ce.main()
+        except SystemExit as _e:
+            return int(_e.code or 0)
+        finally:
+            _ce.SITE, _ce.APPS, _ce.ROOT = _REAL_SITE, _REAL_APPS, _REAL_ROOT
+    finally:
+        shutil.rmtree(_tmp, ignore_errors=True)
+
+
+check("a paid build at apps/<slug>/app/ is caught",
+      _exposure_run("app") != 0,
+      "the gate only looked for a flat index.html, and the paid edition is "
+      "app/index.html")
+check("even when a candidate makes the folder name legitimate",
+      _exposure_run("app", candidate="thing") != 0,
+      "the exemption allowed the plain paid slug, so the folder was taken "
+      "for a known basic edition")
+check("a flat paid build is caught", _exposure_run("flat") != 0)
+check("a paid edition inside the basic folder is caught",
+      _exposure_run("basic") != 0,
+      "the tier constant says full and the gate did not look at it")
+check("a paid installer anywhere under the site is caught",
+      _exposure_run("binary") != 0,
+      "the junk list had no binary extensions, and the installer IS the "
+      "paid product")
+
 print()
 print("FAILURES:", fails if fails else "none")
 sys.exit(1 if fails else 0)

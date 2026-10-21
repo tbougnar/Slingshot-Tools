@@ -31,6 +31,9 @@ import update_state as us
 
 ROOT = Path(__file__).resolve().parent
 PUBLIC = ROOT / "site" / "update.json"
+# The published copy of the same file, for an installed app that has no
+# site/ folder beside it.
+PUBLISHED = "https://tbougnar.github.io/Slingshot-Tools/update.json"
 
 # The id of the injected element. Kept here and in the markup so the launcher
 # and the HTML cannot drift apart.
@@ -45,35 +48,61 @@ def latest() -> dict:
     """What is published, as the app sees it.
 
     Read from the site copy because that is what a customer would compare
-    against. A missing or broken file is an empty answer, which means no
-    banner, which is the right failure: an app that cannot check must still
-    open.
+    against, and fetched from the public site when there is no local copy.
+    The local copy is what the repository has, and it is what the website
+    itself reads, so it is tried first. The fetch is the part that matters
+    for a customer: an installed app has no site/ folder beside it, and the
+    file was never in the bundle, so without the fetch the answer was always
+    empty and the banner could never appear for anyone.
+
+    Fetching here is allowed and is not a contradiction of the app making no
+    network calls: the app HTML still makes none, and this runs in the
+    launcher, on the machine of someone who installed the app, and only
+    after the install. A missing, slow or broken file is an empty answer,
+    which means no banner, which is the right failure: an app that cannot
+    check must still open.
     """
-    if not PUBLIC.exists():
-        return {}
+    if PUBLIC.exists():
+        try:
+            d = json.loads(PUBLIC.read_text(encoding="utf-8"))
+            if isinstance(d, dict):
+                return d
+        except (json.JSONDecodeError, OSError):
+            pass
     try:
-        d = json.loads(PUBLIC.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
+        import urllib.request
+        req = urllib.request.Request(
+            PUBLISHED, headers={"User-Agent": "slingshot-tools"})
+        with urllib.request.urlopen(req, timeout=6) as r:
+            d = json.loads(r.read(200000).decode("utf-8", "replace"))
+        return d if isinstance(d, dict) else {}
+    except Exception:  # noqa: BLE001
         return {}
-    return d if isinstance(d, dict) else {}
 
 
 def installed_version(app_dir: Path) -> str:
     """The version the app on disk was built at.
 
-    Read from ``app/app.json``, which is the same file the installer writes and
-    the same file `native_launcher._title()` already reads, so there is one
-    source rather than three.
+    Read from ``app/app.json``, which is the same file the installer writes
+    and the same file `native_launcher._title()` already reads, so there is
+    one source rather than three.
+
+    The launcher passes the app's root folder and the file is in the app
+    folder inside it, while the command line passes the app folder itself.
+    Both are tried, because reading only one of them meant the installed
+    version was always the fallback of 1.0.0: the banner then said "1.0.0 is
+    installed" for a copy that was already current, and could never stop.
     """
-    meta = app_dir / "app.json"
-    if meta.exists():
+    for meta in (app_dir / "app" / "app.json", app_dir / "app.json"):
+        if not meta.exists():
+            continue
         try:
             d = json.loads(meta.read_text(encoding="utf-8-sig"))
             v = str(d.get("version") or "").strip()
             if v:
                 return us.format_version(us.parse(v))
-        except (json.JSONDecodeError, OSError, ValueError):
-            pass
+        except (json.JSONDecodeError, OSError, ValueError, AttributeError):
+            continue
     return "1.0.0"
 
 
@@ -90,7 +119,15 @@ def check(app_dir: Path, slug: str = "", enabled: bool = True) -> dict:
         return out
 
     state = latest()
+    # The company's version is the fallback. A product that has its own
+    # version uses its own, so one app being updated does not announce an
+    # update to every app that is already current.
     newest = str(state.get("version") or "1.0.0")
+    per_app = state.get("apps")
+    if isinstance(per_app, dict) and slug:
+        own = per_app.get(slug)
+        if own:
+            newest = str(own)
     out["latest"] = newest
     if us.is_newer(newest, out["installed"]):
         out["update_available"] = True

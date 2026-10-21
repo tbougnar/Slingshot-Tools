@@ -951,17 +951,22 @@ def _describe(slug: str) -> tuple[str, float]:
                 title = got.get("title") or title
         except (ValueError, OSError):
             pass
-    for entry in load_catalog():
-        if (entry.get("base_slug") or entry.get("slug")) != slug:
-            continue
-        paid = entry if entry.get("tier") == "full" else entry.get("full") or {}
-        if isinstance(paid, dict):
-            title = paid.get("title") or title
-            try:
-                price = float(paid.get("price") or price)
-            except (TypeError, ValueError):
-                pass
-        break
+    # The paid entry, whichever order the family is in. This used to take the
+    # first entry with a matching slug and stop there, so a family written
+    # basic-first described the product as the free edition, with its price
+    # of zero, and the caller then quietly substituted the default price of
+    # $3.00. The site advertised the catalogue price and itch.io charged the
+    # substituted one. It also asked for entry["full"], a nested shape the
+    # catalogue does not have, so the branch it took always found nothing.
+    family = [a for a in load_catalog()
+              if (a.get("base_slug") or a.get("slug")) == slug]
+    paid = next((a for a in family if a.get("tier") == "full"), {})
+    if paid:
+        title = paid.get("title") or title
+        try:
+            price = float(paid.get("price") or price)
+        except (TypeError, ValueError):
+            pass
     return title, price
 
 

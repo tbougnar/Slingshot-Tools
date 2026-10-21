@@ -77,13 +77,23 @@ def main() -> int:
         except (ValueError, OSError):
             got = None
         if isinstance(got, dict) and got.get("slug"):
+            # Only the free edition's folder is exempt. The paid edition is
+            # written to paid/<slug>/ and is never legitimately in site/,
+            # and the generate job only ever creates site/apps/<slug>-basic,
+            # so allowing the plain slug here let a paid build at
+            # site/apps/<slug>/app/index.html through the gate: the check
+            # below only looked for a flat index.html, and the directory
+            # check treated the folder as a known basic edition.
             basic.add(f"{got['slug']}-basic")
-            basic.add(got["slug"])
 
     problems = []
     blockers = []
     for slug in paid:
-        if (APPS / slug / "index.html").exists():
+        # The paid edition is paid/<slug>/app/index.html with a concept.json
+        # beside it. There is no flat index.html, so a copy of the paid
+        # folder into site/apps/ was invisible to the old check.
+        if (APPS / slug / "index.html").exists() or \
+                (APPS / slug / "app" / "index.html").exists():
             problems.append(f"a paid edition is published: apps/{slug}")
     for d in sorted(APPS.iterdir()) if APPS.exists() else []:
         if not d.is_dir():
@@ -92,6 +102,17 @@ def main() -> int:
             problems.append(f"a duplicated slug is published: apps/{d.name}")
         elif d.name not in basic:
             problems.append(f"apps/{d.name} is not a known basic edition")
+        # A folder that claims to be the free edition but holds a paid one is
+        # exposure, and the tier constant is written into the file.
+        _app = d / "app" / "index.html"
+        if _app.exists():
+            try:
+                _head = _app.read_text(encoding="utf-8", errors="ignore")[:4000]
+            except OSError:
+                _head = ""
+            if re.search(r'const\s+TIER\s*=\s*["\']full["\']', _head):
+                problems.append(f"a paid edition is published: "
+                                f"apps/{d.name}/app/index.html")
 
     lic = SITE / "licenses"
     if lic.exists():
@@ -100,8 +121,12 @@ def main() -> int:
     # Development-only material must never reach a customer. A .bak written
     # beside an app while the QA loop worked on it was committed by the next
     # blanket git add and served by GitHub Pages as part of the release.
+    # The binaries are here for the same reason: the paid product IS an
+    # installer, and a copy of one anywhere under site/ is the one file
+    # that must never be published.
     junk_suffixes = (".bak", ".trial.html", ".orig", ".rej", ".tmp",
                      ".py", ".log", ".bak.html")
+    binary_suffixes = (".exe", ".msi", ".zip", ".7z", ".msix", ".appx")
     for f in sorted(SITE.rglob("*")):
         if not f.is_file():
             continue
@@ -109,6 +134,9 @@ def main() -> int:
         if any(name.endswith(sfx) for sfx in junk_suffixes) or \
                 ".r0" in name or re.search(r"\.r\d+\.", name):
             problems.append(f"a development file is published: "
+                            f"{f.relative_to(SITE).as_posix()}")
+        elif name.lower().endswith(binary_suffixes):
+            problems.append(f"a binary is published: "
                             f"{f.relative_to(SITE).as_posix()}")
     if (SITE / "apps").is_dir():
         for f in sorted((SITE / "apps").rglob("*")):

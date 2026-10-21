@@ -1176,6 +1176,148 @@ FOUND = [
      "and checks that both are called '<slug>-basic'",
      "removing the guard from write_app makes the selftest fail",
      ""),
+
+    ("the command that puts a product on sale proved it with another "
+     "product's build",
+     "HIGH", "store", ["publish_paid.py", "itch_publish.py"],
+     "VERIFIED_FIXED",
+     "publish_paid.py decided a product was on sale by looking for the words "
+     "download, Buy or purchase in the body of the itch.io page. The store is "
+     "ONE project holding every product, and that page says 'download' for "
+     "every slug forever, so the check passed for a product whose build had "
+     "never been uploaded. The catalogue was then marked published and the "
+     "site offered a buy button for a product with nothing behind it. The "
+     "publisher had the right check all along, build_is_listed, which looks "
+     "for this product's own installer by name.",
+     "the live store page contains 'download' and 'purchase' for every "
+     "product, and 'Markdown editor-Setup.exe' is not listed on it at all, "
+     "so the old check would have published a product with no build",
+     "run publish_paid.py for a product that was never uploaded",
+     "the product's own installer has to be listed on the page, by name, and "
+     "the price rule is checked before the catalogue is written",
+     "itchpublish_selftest.py and itchurl_selftest.py cover the catalogue "
+     "rules; the check is in the publisher, which is the one place that "
+     "decides",
+     "a product with no build of its own on the page is refused, and the "
+     "refusal says which names it looked for",
+     ""),
+
+    ("the release gate let a paid build through",
+     "HIGH", "pipeline", ["check_exposure.py", "audit_selftest.py"],
+     "VERIFIED_FIXED",
+     "check_exposure.py is the last thing between the paid product and the "
+     "public site, and it had three holes. It looked for a flat index.html, "
+     "but the paid edition is paid/<slug>/app/index.html, so a copy of the "
+     "paid folder into site/apps/ was invisible to it. It read the folder "
+     "check's exemption from data/candidate.json and allowed the plain paid "
+     "slug with it, so the folder holding the paid build was accepted as a "
+     "known basic edition. And its list of development files had no binary "
+     "extensions, so the installer, which is the paid product, was not on "
+     "it.",
+     "five leaks were reproduced against the real gate: a paid build at "
+     "apps/<slug>/app/, the same with a candidate naming that slug, a flat "
+     "paid build, a paid edition inside the basic folder, and an installer "
+     "under site/downloads. The gate printed 'ok' for all five.",
+     "put a paid build in the published folder and run the gate",
+     "the gate looks for the paid build in the app folder as well, reads the "
+     "tier constant in the file, only exempts the free edition's folder "
+     "name, and refuses any binary under the published site",
+     "audit_selftest.py builds a public site with each leak in it and asks "
+     "the gate about it",
+     "all five leaks are now caught; the old gate passed all five",
+     ""),
+
+    ("a version with two numbers was silently thrown away",
+     "MEDIUM", "state", ["update_state.py", "update_selftest.py"],
+     "VERIFIED_FIXED",
+     "parse() returned (1, 0, 0) for any version with fewer than three "
+     "parts, so `update_state.py --set 2.0` stored version 1.0.0, logged "
+     "'version 1.0.0' and exited 0. The release state moved backwards and "
+     "the run reported success.",
+     "parse('2.0') gave (1, 0, 0), and the same fallback meant the "
+     "installed version of any app was normalised to 1.0.0",
+     "run update_state.py --set 2.0 and read the state file",
+     "a version with fewer than three parts is padded with zeros, and only a "
+     "version with no digits in it is the unknown 1.0.0",
+     "update_selftest.py checks the padding, the empty case and a bump on a "
+     "short version",
+     "restoring the old parse makes the new checks fail",
+     ""),
+
+    ("an installed app could never be told it was out of date",
+     "MEDIUM", "app", ["app_update.py", "update_state.py"],
+     "VERIFIED_FIXED",
+     "installed_version() read app.json from one level too high for the "
+     "launcher, which passes the app's root while the file is in the app "
+     "folder inside it, so the installed version was always the fallback of "
+     "1.0.0. The banner then said '1.0.0 is installed' for a copy that was "
+     "already current and could never stop. And latest() read a local "
+     "site/update.json, which is gitignored and was never in the bundle, so "
+     "for a customer it always returned nothing and the banner could never "
+     "appear at all. The per-app version map was kept in the state file and "
+     "never published, so a product could not learn its own version even in "
+     "principle.",
+     "the launcher reads BASE/app/app.json and the check read BASE/app.json, "
+     "and no build step put an app.json in the bundle at all",
+     "run app_update.py against an installed layout",
+     "both places the file can be are tried, the published file is fetched "
+     "when there is no local copy, and the per-app versions are published",
+     "update_selftest.py checks that the installed version is read from "
+     "either layout",
+     "the old function returns 1.0.0 for the layout the launcher uses",
+     ""),
+
+    ("a product's title and price came from whichever edition was listed "
+     "first",
+     "MEDIUM", "store", ["itch_publish.py"],
+     "VERIFIED_FIXED",
+     "_describe() took the first catalogue entry with a matching slug and "
+     "stopped there, so a family written basic-first described the product "
+     "as the free edition, with its price of zero, and the caller then "
+     "quietly substituted the default price of $3.00. The site advertised "
+     "the catalogue price and itch.io charged the substituted one. It also "
+     "asked for entry['full'], a nested shape the catalogue does not have, "
+     "so the branch it took always found nothing.",
+     "_describe on a synthetic basic-first family gave ('thing', 0.0), and "
+     "on a full-first family gave the right answer",
+     "describe a product whose family is listed basic-first",
+     "the paid entry is found whichever order the family is in, the same "
+     "way the rest of the module does it",
+     "the publisher's own tests cover the catalogue rules",
+     "a basic-first family now gives the same answer as a full-first one",
+     ""),
+
+    ("verifying an app destroyed the paid build that was already there",
+     "MEDIUM", "tooling", ["make_app.py", "verify_app.py"],
+     "VERIFIED_FIXED",
+     "write_app emptied the paid folder before writing to it, and the paid "
+     "folder holds the installer, which took forty minutes to build. "
+     "Verifying an app on a machine that already had the paid build "
+     "destroyed that build, silently, because paid/ is gitignored and "
+     "nothing showed it in a diff. It also meant the verify job's artifact "
+     "could never carry the installer, so the installer job always rebuilt "
+     "it from nothing.",
+     "write_app did rmtree(PAID_DIR / slug) for the full tier",
+     "run verify_app.py with a paid build present and look at the folder",
+     "only the two files write_app owns are replaced, and the rest of the "
+     "folder is left alone",
+     "the layout checks in paidbuild_selftest.py cover the folder naming",
+     "the paid folder and its installer survive a rewrite",
+     ""),
+
+    ("a rejected candidate stayed staged for ever",
+     "LOW", "tooling", ["verify_app.py"],
+     "VERIFIED_FIXED",
+     "verify_app.py removed data/candidate.json only when the app passed. A "
+     "rejected candidate stayed in a tracked file, so the next run verified "
+     "the same rejected app again, and it kept widening the release gate's "
+     "exemption for that folder name for as long as it existed.",
+     "the unlink was on the success path only",
+     "reject an app and look for the candidate file",
+     "the candidate is cleared whether the app passed or not",
+     "the file is gone either way",
+     "putting the unlink back leaves it behind on the failure path",
+     ""),
 ]
 
 

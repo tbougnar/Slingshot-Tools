@@ -768,8 +768,12 @@ def write_app(concept, html, tier="full"):
     if tier == "basic" and str(concept["slug"]).endswith("-basic"):
         slug = str(concept["slug"])
     out = (APPS_DIR / slug) if tier == "basic" else (PAID_DIR / slug)
-    if tier == "full" and out.exists():
-        shutil.rmtree(out)
+    # The paid folder is not emptied before it is written. It holds the
+    # installer, which took forty minutes to build, and rmtree took it with
+    # it: verifying an app on a machine that already had the paid build
+    # destroyed the build that was there, silently, because paid/ is
+    # gitignored and nothing showed it in a diff. Only the two files this
+    # function owns are replaced.
     (out / "app").mkdir(parents=True, exist_ok=True)
     (out / "app" / "index.html").write_text(_set_tier(html, tier), encoding="utf-8")
     meta = {**concept, "slug": slug, "tier": tier, "base_slug": concept["slug"]}

@@ -98,9 +98,39 @@ def main() -> int:
                         evidence={"itch_url": url, "bytes": len(_body)})
         return 1
 
+    # The page having a download section is not enough. The store is ONE
+    # itch.io project holding every product, so the word "download" is on
+    # that page for every slug forever, and the check above passed for a
+    # product that had never been uploaded. What has to be there is THIS
+    # product's own installer, by name, the way a buyer would see it. The
+    # publisher already works this way, with build_is_listed.
+    import itch_publish as ip
+
+    names = []
+    for cand in (paid.get("title"), slug):
+        if cand:
+            names.append(f"{cand}-Setup.exe")
+            names.append(f"SlingshotTool-{cand}-Setup.exe")
+    listed = next((n for n in names if ip.build_is_listed(url, n)), "")
+    if not listed:
+        log(f"{url} does not list {slug}'s own installer, so there is "
+            "nothing to sell")
+        log("it looked for: " + ", ".join(names[:4]))
+        log("another product's build on the same page is not this product's, "
+            "so nothing is marked on sale")
+        auditlog.failed("publish-paid", job=slug,
+                        error="the itch.io page does not list this product's "
+                              "own build, so there is nothing to buy",
+                        evidence={"itch_url": url, "looked_for": names[:4]})
+        return 1
+    log(f"the page lists {listed}, which is this product's build")
+
     price = float(paid.get("price") or 0)
     if not (1.0 <= price <= 10.0):
         log(f"the price ${price:.2f} is outside the $1-$10 rule, refusing")
+        auditlog.blocked("publish-paid", job=slug,
+                         reason=f"price ${price:.2f} is outside the $1-$10 rule",
+                         evidence={"price": price})
         return 1
 
     changed = False
@@ -118,6 +148,12 @@ def main() -> int:
     log(f"{slug} is now live at ${price:.2f}")
     log(f"  free : {next((a.get('url') for a in family if a.get('tier') == 'basic'), '(none)')}")
     log(f"  full : {url}")
+    # The one action in this repository that puts a product on sale for money
+    # was the only one that wrote no audit event. Every failure path did, so
+    # the trail showed attempts that all failed and never a sale.
+    auditlog.succeeded("publish-paid", job=slug,
+                       evidence={"price": price, "itch_url": url,
+                                 "build": listed, "exit_code": 0})
     return 0
 
 

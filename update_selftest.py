@@ -9,6 +9,7 @@ away, or a trailer that advertises something nobody built.
 from __future__ import annotations
 
 import json
+import shutil
 import sys
 import tempfile
 from datetime import date, timedelta
@@ -51,6 +52,43 @@ check("major bump clears", us.bump("2.3.4", "major") == "3.0.0")
 check("1.10.0 is newer than 1.9.0", us.is_newer("1.10.0", "1.9.0"))
 check("1.9.0 is not newer than 1.10.0", not us.is_newer("1.9.0", "1.10.0"))
 check("same version is not newer", not us.is_newer("1.0.0", "1.0.0"))
+# A version with fewer than three parts used to be thrown away and replaced
+# with 1.0.0, so `update_state.py --set 2.0` stored version 1.0.0, logged
+# "version 1.0.0" and exited 0. The release state moved backwards and the
+# run said it had worked.
+check("a two-part version is padded, not discarded",
+      us.parse("2.0") == (2, 0, 0) and us.format_version(us.parse("2.0"))
+      == "2.0.0",
+      f"parse('2.0') gave {us.parse('2.0')}")
+check("a one-part version is padded too", us.parse("2") == (2, 0, 0))
+check("a version with no digits is still the unknown 1.0.0",
+      us.parse("") == (1, 0, 0) and us.parse("v") == (1, 0, 0))
+check("and a bump on a short version still moves forward",
+      us.bump("2.0", "patch") == "2.0.1",
+      f"bump('2.0','patch') gave {us.bump('2.0', 'patch')}")
+
+# The installed version is read from the file the installer writes. The
+# launcher passes the app's root and the file is in the app folder inside
+# it, while the command line passes the app folder itself. Reading only one
+# of them meant the installed version was always the fallback of 1.0.0, so
+# the banner said "1.0.0 is installed" for a copy that was already current
+# and could never stop.
+import app_update as _au
+
+_vtmp = Path(tempfile.mkdtemp())
+try:
+    _root = _vtmp / "appdir"
+    (_root / "app").mkdir(parents=True)
+    (_root / "app" / "app.json").write_text(
+        json.dumps({"title": "T", "version": "1.4.0"}), encoding="utf-8")
+    check("the installed version is read from the app folder inside the root",
+          _au.installed_version(_root) == "1.4.0",
+          f"got {_au.installed_version(_root)}")
+    check("and from the app folder itself",
+          _au.installed_version(_root / "app") == "1.4.0",
+          f"got {_au.installed_version(_root / 'app')}")
+finally:
+    shutil.rmtree(_vtmp, ignore_errors=True)
 
 # ------------------------------------------------------------------ phases
 today = date.today()

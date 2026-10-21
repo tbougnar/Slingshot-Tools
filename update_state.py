@@ -52,11 +52,22 @@ def log(m: str) -> None:
 
 
 def parse(version: str) -> tuple[int, int, int]:
-    """A version as three integers, tolerating the usual junk around it."""
+    """A version as three integers, tolerating the usual junk around it.
+
+    A version with fewer than three parts is padded with zeros. It used to
+    return (1, 0, 0) for anything shorter, so `update_state.py --set 2.0`
+    stored version 1.0.0, logged "version 1.0.0" and exited 0: the release
+    state moved backwards and the run reported success. A version with no
+    digits in it at all is still 1.0.0, which is the "unknown" the callers
+    rely on.
+    """
     nums = re.findall(r"\d+", str(version or ""))
-    if len(nums) < 3:
+    if not nums:
         return (1, 0, 0)
-    return (int(nums[0]), int(nums[1]), int(nums[2]))
+    parts = [int(n) for n in nums[:3]]
+    while len(parts) < 3:
+        parts.append(0)
+    return (parts[0], parts[1], parts[2])
 
 
 def format_version(t: tuple[int, int, int]) -> str:
@@ -232,6 +243,13 @@ def publish_public(state: dict) -> bool:
         "next_major_notes": [] if ph == "idle" else
         list(state.get("next_major_notes") or [])[:6],
         "trailer": state.get("last_trailer"),
+        # The version of each product, so an app can be told about its own
+        # update rather than the company's. The map was kept in the state
+        # file and never published, so a product could not learn its own
+        # latest version even in principle.
+        "apps": {str(k): format_version(parse(v))
+                 for k, v in (state.get("apps") or {}).items()
+                 if isinstance(state.get("apps"), dict)},
     }
     try:
         PUBLIC.parent.mkdir(parents=True, exist_ok=True)
