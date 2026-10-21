@@ -161,6 +161,19 @@ check("the handler reads that list",
 check("an index outside the list is harmless",
       re.search(r"if\(item\)\s*openDialog", html) is not None)
 
+# --------------------------------------------------- what the shop says
+# The paid edition's differences were read out of the catalogue and never
+# shown. The customer was asked for three dollars and the dialog said what
+# the three dollars were for, in the sense that it said nothing at all.
+check("the differences are carried to the dialog",
+      "diffs:item.diffs||[]" in html,
+      "the full option does not carry what the paid edition adds")
+check("and they are rendered",
+      "optDiffs" in html and "class=\"diff\"" in html,
+      "the differences are computed and then thrown away")
+check("the style for them exists",
+      ".optDiffs{" in html and ".diff{" in html)
+
 # --------------------------------------------------------------- countdown
 check("the countdown element exists", 'id="countdown"' in html)
 check("it is hidden until there is something to count",

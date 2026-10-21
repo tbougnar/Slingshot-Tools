@@ -84,6 +84,8 @@
       color:var(--red-ink)}
     .optTitle{font-weight:700;font-size:16px}
     .optBlurb{color:var(--muted);font-size:13.5px;line-height:1.45}
+    .optDiffs{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+    .diff{font-size:12px;padding:3px 9px;border-radius:999px;background:color-mix(in srgb,var(--red) 12%,transparent);color:var(--red-ink);border:1px solid color-mix(in srgb,var(--red) 35%,transparent);white-space:nowrap}
     .optPrice{font-size:20px;font-weight:800;letter-spacing:-.02em;margin-top:2px}
     .optCta{font-size:13px;color:var(--red-ink);font-weight:700}
     .empty{grid-column:1/-1;text-align:center;padding:70px 20px;color:var(--muted);
@@ -213,9 +215,9 @@ const onSale=item.onSale; const price=onSale?'$'+Number(f.price||0).toFixed(2):'
     // product whose paid edition is not published yet used to be offered
     // at $0.00, with the price taken from the free edition, so the shop
     // asked for no money and said the full edition was free.
-    if(item.onSale&&item.full){const live=item.full.itch_url||''; opts.push({tier:'full',title:item.full.title,blurb:item.full.blurb,price:'$'+Number(item.full.price||0).toFixed(2),href:CHECKOUT+'?slug='+encodeURIComponent(item.key)+'&price='+Number(item.full.price||0).toFixed(2)+'&title='+encodeURIComponent(item.full.title)+'&itch='+encodeURIComponent(live)});}
+    if(item.onSale&&item.full){const live=item.full.itch_url||''; opts.push({tier:'full',title:item.full.title,blurb:item.full.blurb,diffs:item.diffs||[],price:'$'+Number(item.full.price||0).toFixed(2),href:CHECKOUT+'?slug='+encodeURIComponent(item.key)+'&price='+Number(item.full.price||0).toFixed(2)+'&title='+encodeURIComponent(item.full.title)+'&itch='+encodeURIComponent(live)});}
     const lead=item.lead||item.full||item.basic; const shown=String(lead.title||'').replace(/\s*\(basic\)\s*$/i,''); document.getElementById('dlgTitle').textContent=shown; document.getElementById('dlgBlurb').textContent=lead.blurb||''; // A product whose paid edition is not on sale yet still says so, so a visitor is not left thinking the free edition is all there will ever be.
-const soon=document.getElementById('dlgSoon'); if(soon)soon.style.display=(item.onSale||!item.full)?'none':'block'; document.getElementById('dlgOpts').innerHTML=opts.map(o=>'<button class="opt '+o.tier+'" onclick="location.href=\''+esc(o.href)+'\'"><span class="optTier">'+(o.tier==='basic'?'Free basic':'Full edition')+'</span><span class="optTitle">'+esc(o.title)+'</span><span class="optBlurb">'+esc(o.blurb||'')+'</span><span class="optPrice">'+esc(o.price)+'</span><span class="optCta">'+(o.tier==='basic'?'Download free':'Get the full edition')+'</span></button>').join(''); document.getElementById('dlg').classList.add('open');}
+const soon=document.getElementById('dlgSoon'); if(soon)soon.style.display=(item.onSale||!item.full)?'none':'block'; document.getElementById('dlgOpts').innerHTML=opts.map(o=>'<button class="opt '+o.tier+'" onclick="location.href=\''+esc(o.href)+'\'"><span class="optTier">'+(o.tier==='basic'?'Free basic':'Full edition')+'</span><span class="optTitle">'+esc(o.title)+'</span><span class="optBlurb">'+esc(o.blurb||'')+'</span><span class="optPrice">'+esc(o.price)+'</span>'+(o.diffs&&o.diffs.length?'<span class="optDiffs">'+o.diffs.map(function(d){return '<span class="diff">'+esc(d)+'</span>';}).join('')+'</span>':'')+'<span class="optCta">'+(o.tier==='basic'?'Download free':'Get the full edition')+'</span></button>').join(''); document.getElementById('dlg').classList.add('open');}
     function closeDialog(){document.getElementById('dlg').classList.remove('open');}
     fetch("apps.json",{cache:"no-store"}).then(r=>r.json()).then(d=>{APPS=Array.isArray(d)?d:(d.apps||[]); render();}).catch(()=>{appsEl.innerHTML='<div class="empty"><strong>Slingshot Tools</strong><br>The catalog loads on first build.</div>';});
 
