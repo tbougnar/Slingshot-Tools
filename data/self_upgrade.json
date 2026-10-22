@@ -11,6 +11,12 @@
       "at": 1792676224,
       "outcome": "no-change",
       "detail": "the model proposed nothing"
+    },
+    {
+      "fingerprint": "no-plan",
+      "at": 1792681992,
+      "outcome": "no-change",
+      "detail": "the model proposed nothing"
     }
   ]
 }
