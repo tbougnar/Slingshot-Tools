@@ -1612,6 +1612,45 @@ FOUND = [
      "the lane's own log handling",
      "removing the new places makes the lane find nothing again",
      ""),
+
+    ("no build was ever steered by the community's vote",
+     "MEDIUM", "community", ["discord_polls.py", "weekly_cycle.py",
+                              ".github/workflows/friday-build.yml"],
+     "VERIFIED_FIXED",
+     "The ballot was a weekly thing, opened on Monday and meant to steer the "
+     "build on Friday, but it was only ever closed once it had aged out "
+     "after twenty-one days. The Friday step was named 'Close this week's "
+     "ballot' and ran the Monday job, which opens a ballot and refuses to "
+     "open a second one. So the same ballot stayed open for three weeks, the "
+     "build never saw a closed ballot, and the vote steered nothing.",
+     "the ballot lifetime is twenty-one days, the Friday step ran the Monday "
+     "job, and vote_steer.py reads the winners of closed ballots",
+     "run the Friday lane and look at whether the build was steered",
+     "the ballot can be closed on demand, and the Friday lane closes it "
+     "before the build reads the vote",
+     "the weekly stage the Friday lane must run is checked by the audit",
+     "removing the force close leaves the ballot open and the build "
+     "unsteered",
+     ""),
+
+    ("a corrupted state file took the daily lane down",
+     "LOW", "improvement", ["improve_daily.py"],
+     "VERIFIED_FIXED",
+     "The lane's own state file was only checked at the top level, so a file "
+     "holding a changes list instead of a table, or a list holding something "
+     "that was not a record, made the cooldown check raise an "
+     "AttributeError. A corrupted file took the lane down with a traceback "
+     "instead of skipping the day, and the write was not atomic, so a crash "
+     "mid-write left a truncated file that the next read took for an empty "
+     "history.",
+     "a state file holding {\"changes\": {\"a\": 1}} raised an AttributeError "
+     "in the cooldown check",
+     "put each of those shapes in the daily lane's state file",
+     "the shape is checked before it is used, and the write goes to a side "
+     "file and is swapped in",
+     "the lane's own state handling",
+     "the old check crashes again",
+     ""),
 ]
 
 

@@ -43,14 +43,37 @@ def load() -> dict:
         return {"changes": [], "skips": []}
     try:
         d = json.loads(STATE.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
+    except (json.JSONDecodeError, OSError, UnicodeDecodeError):
         return {"changes": [], "skips": []}
-    return d if isinstance(d, dict) else {"changes": [], "skips": []}
+    if not isinstance(d, dict):
+        return {"changes": [], "skips": []}
+    # The lists inside are read as lists of records. A file holding
+    # {"changes": {"a": 1}} or {"changes": [null]} made last_change() raise an
+    # AttributeError, so a corrupted state file took the lane down with a
+    # traceback instead of skipping the day.
+    for key in ("changes", "skips"):
+        rows = d.get(key)
+        if not isinstance(rows, list):
+            d[key] = []
+            continue
+        d[key] = [r for r in rows if isinstance(r, dict)]
+    return d
 
 
 def save(state: dict) -> None:
+    # The write goes to a side file and is swapped in, so a crash halfway
+    # through leaves the previous file rather than a truncated one that the
+    # next read would take for an empty history.
     STATE.parent.mkdir(parents=True, exist_ok=True)
-    STATE.write_text(json.dumps(state, indent=2), encoding="utf-8")
+    tmp = STATE.with_suffix(".json.tmp")
+    try:
+        tmp.write_text(json.dumps(state, indent=2), encoding="utf-8")
+        tmp.replace(STATE)
+    except OSError:
+        try:
+            tmp.unlink(missing_ok=True)
+        except OSError:
+            pass
 
 
 def now() -> datetime:

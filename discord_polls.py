@@ -233,6 +233,14 @@ def resolve_slug(poll: dict) -> str:
 def main() -> int:
     # --dry-run shows what would be posted and changes nothing
     dry = "--dry-run" in sys.argv
+    # --force closes the open ballot even though it has not aged out. The
+    # ballot is a weekly thing: it is opened on Monday and the build on
+    # Friday is steered by it, so it has to be closed before the build reads
+    # the result. It was only ever closed once it had aged past 21 days, so
+    # the same ballot stayed open for three weeks, no build was ever steered
+    # by a vote, and the step called "Close this week's ballot" closed
+    # nothing.
+    force = "--force" in sys.argv
     if dry:
         log(f"DRY RUN - discord is {dp.describe()}")
         poll = dd.open_poll()
@@ -244,7 +252,7 @@ def main() -> int:
 
     # close any aged ballot first, so a winner can steer the build that the
     # new ballot is being raised for
-    closed = close_ballot()
+    closed = close_ballot(force=force)
     if closed:
         log(f"winner: {closed.get('winner') or 'tie'}")
     open_ballot()

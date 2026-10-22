@@ -31,6 +31,9 @@ COSTS = {
     "monday": 0.15,
     "wednesday": 0.35,
     "friday": 1.20,
+    # closing a ballot and counting the replies is the same work as opening
+    # one, so it costs the same
+    "close-ballot": 0.15,
     "emergency": 0.75,
 }
 
@@ -60,6 +63,18 @@ def monday() -> int:
     """Open the ballot for the week."""
     with budget.Timer("monday-vote"):
         return run(["discord_polls.py"], "monday")
+
+
+def close_ballot() -> int:
+    """Close this week's ballot and open the next one.
+
+    The build on Friday is steered by the vote, and the vote only steers
+    anything once the ballot has been closed and counted. It was only closed
+    once it had aged past three weeks, so no build was ever steered by a
+    vote.
+    """
+    with budget.Timer("monday-vote"):
+        return run(["discord_polls.py", "--force"], "friday/close-ballot")
 
 
 def wednesday() -> int:
@@ -136,7 +151,7 @@ def status() -> int:
 def main() -> int:
     ap = argparse.ArgumentParser(description="the weekly cycle")
     ap.add_argument("stage", choices=["monday", "wednesday", "friday",
-                                      "emergency", "status"])
+                                      "close-ballot", "emergency", "status"])
     ap.add_argument("script", nargs="?", default="",
                     help="for the emergency stage: the script to repair with")
     ap.add_argument("rest", nargs=argparse.REMAINDER)
@@ -157,7 +172,7 @@ def main() -> int:
         return rc
 
     return {"monday": monday, "wednesday": wednesday,
-            "friday": friday}[args.stage]()
+            "friday": friday, "close-ballot": close_ballot}[args.stage]()
 
 
 if __name__ == "__main__":

@@ -90,7 +90,12 @@ jobs:
         run: python budget.py check --label friday-generate --need 0.6
 
       - name: Close this week's ballot
-        run: python weekly_cycle.py monday
+        # The build below is steered by the vote, and the vote only steers
+        # anything once the ballot has been closed and counted. This step ran
+        # the Monday job, which opens a ballot and only closes one that has
+        # aged out, so the ballot from Monday was still open and the build
+        # was never steered by a vote.
+        run: python weekly_cycle.py close-ballot
 
       - name: Show what the community chose
         run: python vote_steer.py

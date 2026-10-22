@@ -157,8 +157,12 @@ WEEKLY_STAGES = {
     "wednesday-review.yml": ["weekly_cycle.py wednesday",
                              "retire_product.py", "self_upgrade.py",
                              "weekly_guard.py", "check_exposure.py"],
+    # The Friday lane closes this week's ballot and opens the next one. The
+    # stage is named rather than pinned to one string, because the ballot has
+    # to be closed before the build reads the vote, and the Monday stage only
+    # closes a ballot that has aged out.
     "friday-build.yml": ["stage_app.py", "vote_steer.py", "budget.py",
-                         "weekly_cycle.py monday", "selfheal.py",
+                         "weekly_cycle.py", "selfheal.py",
                          "selftest.py"],
     "friday-verify.yml": ["verify_app.py", "build_paid_only.py",
                           "check_exposure.py", "weekly_guard.py",
