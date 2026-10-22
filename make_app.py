@@ -528,7 +528,7 @@ def load_built():
 
 
 def pick_concept(money=""):
-    """Choose the next app locally.
+    """Choose the next app locally, or None when there is nothing new to build.
 
     This used to ask a model to pick from the unused concepts, which spent the
     first call of every run on something the code already knew. That call was
@@ -537,12 +537,22 @@ def pick_concept(money=""):
 
     Community votes are honoured first: whatever won the last Discord ballot
     is built next, so the roadmap follows what people actually asked for.
+
+    When every concept has been built there is nothing to build, and that is
+    the answer. The old code fell back to the whole list, so it rebuilt a
+    product that was already on the site, and a product that was on sale was
+    overwritten by a fresh generation of itself. A customer could be buying
+    one edition and have the other one replaced underneath them, and the
+    rebuilt file was the one with the query-string gate, so the free edition
+    of a product that was on the store came back unlocked.
     """
     built = load_built()
     taken = {b["slug"] for b in built}
     pool = [c for c in CATEGORIES if c[0] not in taken]
     if not pool:
-        pool = list(CATEGORIES)
+        log(f"every one of the {len(CATEGORIES)} concepts has been built, so "
+            "there is nothing new to make this week")
+        return None
 
     def parts(c):
         slug, desc = c[0], c[1]
@@ -781,6 +791,16 @@ def write_app(concept, html, tier="full"):
     return out
 
 
+# The edition of an app must be decided in the file, never by the address
+# bar. A query string that feeds a limit is a switch anybody can flip, and
+# the whole paid product is one flip away.
+_TIER_FROM_URL = re.compile(
+    r"(TIER|LIMITS?|PAID|tier|limits?)\s*=\s*[^;]{0,120}"
+    r"URLSearchParams\s*\(\s*location\.search\s*\)"
+    r"|URLSearchParams\s*\(\s*location\.search\s*\)\s*\.\s*has\s*\(\s*['\"]"
+    r"(paid|full|premium|pro)['\"]\s*\)")
+
+
 def html_looks_fine(html):
     problems = []
     notes = []
@@ -800,6 +820,17 @@ def html_looks_fine(html):
                      "default only, which is acceptable")
     if "localStorage" not in html and "indexedDB" not in html:
         problems.append("missing localStorage (the app would not save anything)")
+    # The edition must be decided in the file, not by the address bar. Every
+    # generated app used to read it from the query string, because the pattern
+    # library taught it that, and the twenty-five free editions that shipped
+    # that way were unlocked for free by anyone who added ?paid to the URL.
+    # Two of them are on the store for money. The library is fixed, and this
+    # refuses an app that does it anyway, so the fault cannot come back
+    # through a model that learned it elsewhere.
+    if _TIER_FROM_URL.search(html):
+        problems.append(
+            "the edition is read from the address bar, so ?paid unlocks the "
+            "paid product for free; the edition is a constant in the file")
     # The single most expensive failure in this pipeline was an app whose
     # script block did not parse. Nothing else goes wrong the same way: every
     # handler is attached, every control looks wired, and not one of them
@@ -1475,6 +1506,11 @@ def main():
     if earn_file.exists():
         money = earn_file.read_text(encoding="utf-8")[:2500]
     concept = pick_concept(money)
+    if not concept:
+        # Every concept has been built, so there is nothing new to make.
+        log("every concept has been built already, so there is nothing new "
+            "to make")
+        return 0
     log(f"concept: {concept['title']} ({concept['slug']})")
     for attempt in range(1, 3):
         html, brand, diffs, free_blurb, paid_blurb = build_html(

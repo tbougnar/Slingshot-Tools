@@ -65,8 +65,17 @@ def integration_picker_repeats():
     """The picker must never return something already built."""
     c1 = make_app.pick_concept("")
     c2 = make_app.pick_concept("")
+    if c1 is None or c2 is None:
+        # Everything has been built, so there is nothing new to make. That is
+        # the answer, and it is the answer that stops the builder from
+        # overwriting a product that is already on the site.
+        assert c1 is None and c2 is None, "the picker is not deterministic"
+        return
     assert c1["slug"] == c2["slug"], "picker is not deterministic"
     assert c1["slug"], "empty slug"
+    built = {b.get("slug") for b in make_app.load_built()}
+    assert c1["slug"] not in built, (
+        f"the picker returned {c1['slug']}, which is already on the site")
 
 
 def sweep_sizes():

@@ -87,6 +87,16 @@ def main() -> int:
                   f"{need} are needed, so starting anyway is the only option")
 
     concept = make_app.pick_concept(money)
+    if not concept:
+        # Every concept has been built. There is nothing new to make, and
+        # that is a legitimate week, not a failure. The old code fell back to
+        # the whole list and rebuilt a product that was already on the site,
+        # which for a product on sale meant overwriting the edition a
+        # customer was buying.
+        print("[stage] there is nothing new to build: every concept has been "
+              "made already")
+        print("[stage] the site keeps what it has, and the week is a no-op")
+        return 0
     make_app.log(f"concept: {concept['title']} ({concept['slug']})")
 
     for attempt in range(1, ATTEMPTS + 1):

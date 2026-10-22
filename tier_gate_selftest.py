@@ -220,6 +220,93 @@ if _cat:
           not _drift,
           f"{len(_drift)} disagree: {_drift[:3]}")
 
+# ------------------------------------------------- every app actually works
+# The chess-board app was served for weeks with one stray brace in its
+# script, so the whole file failed to parse and the app showed no board and
+# no buttons. Nothing said so, and the page was blank. A browser is the only
+# thing that can tell a working app from a dead one.
+
+# The teaching material is where the bypass came back from. Every generated
+# app inherits its patterns from PATTERNS.md, and that file taught the
+# query-string gate for months after the twenty-five apps that used it had
+# been fixed. So a new app arrived with the bypass in it, the free edition
+# of a product that was on the store came back unlocked, and the fix had to
+# be made again.
+_patterns = (ROOT / "PATTERNS.md")
+if _patterns.exists():
+    _text = _patterns.read_text(encoding="utf-8")
+    check("the pattern library does not teach the query-string gate",
+          not re.search(r"URLSearchParams\s*\(\s*location\.search",
+                        _text),
+          "the library still shows the model how to read the edition from "
+          "the address bar")
+    check("and it teaches the constant instead",
+          "const TIER" in _text,
+          "the library does not say how the edition is decided")
+
+# And the gate itself has to refuse an app that does it anyway, so a model
+# that learned it elsewhere cannot smuggle it back in.
+_bad_app = ('<html><body><script>const PAID=new URLSearchParams('
+            "location.search).has('paid');"
+            "const LIM=PAID?{max:Infinity,export:true}:{max:3,export:false};"
+            "localStorage.setItem('k','1');</script>"
+            + "x" * 2000 + "</body></html>")
+check("the staging gate refuses an app whose edition comes from the URL",
+      any("address bar" in p for p in make_app.html_looks_fine(_bad_app)),
+      "the gate let an app through that a visitor can unlock with ?paid")
+
+# And the builder must never rebuild a product that is already on the site.
+# Every concept had been built, and the picker fell back to the whole list,
+# so it regenerated a product that was on sale and overwrote the edition a
+# customer was buying.
+_built = {b.get("slug") for b in make_app.load_built()}
+_check = make_app.pick_concept("")
+if _built and len(_built) >= len(make_app.CATEGORIES):
+    check("the builder does not pick a product that is already built",
+          _check is None,
+          f"it picked {_check and _check.get('slug')}, which is already on "
+          "the site")
+else:
+    check("the builder does not pick a product that is already built",
+          _check is None or _check.get("slug") not in _built,
+          f"it picked {_check and _check.get('slug')}, which is already on "
+          "the site")
+
+print("\nEVERY APP LOADS AND WORKS\n")
+try:
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as _p:
+        _b = _p.chromium.launch()
+        _dead = []
+        for _src in SOURCES:
+            _pg = _b.new_page()
+            _errs = []
+            _pg.on("pageerror", lambda e: _errs.append(str(e)))
+            _pg.goto(_src.resolve().as_uri())
+            _pg.wait_for_timeout(200)
+            _info = _pg.evaluate(
+                """() => ({
+                    tier: (typeof TIER !== 'undefined') ? TIER : null,
+                    buttons: document.querySelectorAll('button').length,
+                    body: (document.body.innerText || '').trim().length
+                })""")
+            _pg.close()
+            _name = _src.parent.parent.name
+            if _errs:
+                _dead.append(f"{_name}: {_errs[0][:60]}")
+            elif _info["tier"] is None:
+                _dead.append(f"{_name}: the script did not run")
+            elif _info["body"] < 20:
+                _dead.append(f"{_name}: the page is blank")
+            elif _info["buttons"] == 0:
+                _dead.append(f"{_name}: the page has no controls")
+        _b.close()
+    check("every app loads and works", not _dead,
+          f"{len(_dead)} do not: {_dead[:3]}")
+except Exception as _e:  # noqa: BLE001
+    print("skip  no browser available:", str(_e)[:70])
+
 print(f"\nchecked {len(SOURCES)} free editions for a paid-tier bypass")
 print("FAILURES:", fails if fails else "none")
 sys.exit(1 if fails else 0)

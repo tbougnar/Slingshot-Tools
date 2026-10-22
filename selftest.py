@@ -59,6 +59,12 @@ def t_stage_uses_raw():
 def t_picker_local():
     import make_app
     c = make_app.pick_concept("")
+    if c is None:
+        # Every concept has been built, so there is nothing new to make. That
+        # is the answer, and it is the answer that stops the builder
+        # overwriting a product that is already on the site.
+        built = {b.get("slug") for b in make_app.load_built()}
+        return f"nothing new to build ({len(built)} already made)"
     for k in ("slug", "title", "blurb"):
         if not c.get(k):
             raise AssertionError(f"missing {k}")

@@ -1651,6 +1651,54 @@ FOUND = [
      "the lane's own state handling",
      "the old check crashes again",
      ""),
+
+    ("the pattern library taught every new app the paid bypass",
+     "CRITICAL", "app", ["PATTERNS.md", "make_app.py",
+                         "tier_gate_selftest.py"],
+     "VERIFIED_FIXED",
+     "Every generated app inherits its patterns from PATTERNS.md, and that "
+     "file still taught the query-string gate, months after the twenty-five "
+     "apps that used it had been fixed. So a new app arrived with the bypass "
+     "in it, and the free edition of a product that was on the store came "
+     "back unlocked. The bad form is not shown in the library any more, "
+     "because a library is what the model copies from, and the staging gate "
+     "refuses an app whose limits come from the query string, so a model that "
+     "learned it elsewhere cannot smuggle it back in.",
+     "the Friday lane's own log shows the app it generated was 5521 bytes "
+     "with 'const PAID=new URLSearchParams(location.search).has(\\'paid\\')' "
+     "in it, and the file it wrote to the site had the same line",
+     "generate an app and look at how its edition is decided",
+     "the library teaches the constant, the wrong form is not shown at all, "
+     "and the gate refuses an app that does it anyway",
+     "tier_gate_selftest.py checks the library does not teach the "
+     "query-string gate, that it teaches the constant instead, and that the "
+     "gate refuses an app that reads the edition from the URL",
+     "putting the bad form back in the library makes the check fail",
+     ""),
+
+    ("the builder overwrote a product that was on sale",
+     "CRITICAL", "pipeline", ["make_app.py", "stage_app.py",
+                              "site/apps/password-manager-basic/"],
+     "VERIFIED_FIXED",
+     "Every one of the forty-four concepts had been built, so the picker "
+     "fell back to the whole list and regenerated one of them. The one it "
+     "chose was a product that was on the store, and it overwrote the free "
+     "edition of it with a fresh generation, which is the generation that "
+     "carried the query-string gate. The customer was buying one edition and "
+     "the other one was replaced underneath them. The lane has done this "
+     "several times, and the history shows it: four candidate commits overwrote "
+     "the same live app.",
+     "the Friday lane's log reads 'choosing from 44 unused concepts (built: "
+     "45)' and then 'concept: Offline password manager (password-manager)', "
+     "and the candidate commit it made overwrote "
+     "site/apps/password-manager-basic/app/index.html",
+     "let every concept be built and ask what the picker returns",
+     "the picker says there is nothing new to build and the lane treats that "
+     "as a legitimate no-op week",
+     "tier_gate_selftest.py checks that the picker never returns a product "
+     "that is already on the site, and selftest_deep.py checks the same",
+     "putting the fallback back makes both fail",
+     ""),
 ]
 
 

@@ -88,6 +88,9 @@ data/coach_lessons.txt
 data/signals.json
 data/goal_history.json
 data/improve_daily.json
+# the generator log, handed to the repair lane. It is a build log, not
+# the company, and it is fetched as an artifact rather than committed.
+data/generate-log.txt
 data/weekly_review.md
 data/weekly_reviews.json
 

@@ -62,13 +62,25 @@ error on load breaks the whole app.
 
 ## Two editions from one file
 
+The edition is baked into the file. There is no runtime switch:
+
 ```js
-const PAID = new URLSearchParams(location.search).has('paid');
-const LIMITS = PAID ? { max: Infinity, export: true }
-                    : { max: 3, export: false };
+const TIER = "basic";                 // "basic" or "full", set when the file is written
+const LIM = TIER === 'full'
+  ? { max: Infinity, export: true }
+  : { max: 3, export: false };
 ```
 
-Read every limit from `LIMITS`. Never hardcode a number in a comparison.
+Read every limit from `LIM`. Never hardcode a number in a comparison.
+
+**Do not read the edition from the address bar.** A pattern like this was here
+once and every generated app inherited it: the two editions were the same file
+with one constant changed, and the paid edition was produced by writing that
+file with `TIER` set to `"full"`. So `?paid` on the free app's own URL used to
+unlock the whole paid product, for free, for anyone who guessed. It is not
+shown here on purpose: this library is what the model copies from. The
+staging gate refuses an app whose limits come from the query string, so
+writing it that way only wastes the build.
 
 ## Theme
 
