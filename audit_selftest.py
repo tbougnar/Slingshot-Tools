@@ -449,24 +449,33 @@ import weekly_guard as _wg
 import shutil as _shutil
 import subprocess as _subprocess
 
-_target = ROOT / ".github" / "workflows" / "pages.yml"
-_keep = _target.read_text(encoding="utf-8")
-try:
-    _target.write_text(_keep + "\n# a change\n", encoding="utf-8")
-    _seen = _wg.changed_files()
-    check("a modified protected file is seen",
-          ".github/workflows/pages.yml" in _seen,
-          f"the guard saw {_seen[:4]} and the protected file was not among "
-          "them")
-    check("and it is called a violation",
-          ".github/workflows/pages.yml" in _wg.violations(_seen),
-          "the guard saw the file and did not call it a violation")
-    check("and the gate refuses",
-          _wg.guard() != 0,
-          "the gate said it was fine")
-finally:
-    _target.write_text(_keep, encoding="utf-8")
-    importlib.reload(_wg)
+# The guard asks git what has changed, so it needs a repository. The clean
+# room is a plain directory, where git answers 128, and a guard that cannot
+# see anything would report "nothing changed" and look like it had passed.
+_git_ok = _subprocess.run(["git", "rev-parse", "--git-dir"], cwd=str(ROOT),
+                          capture_output=True).returncode == 0
+if not _git_ok:
+    print("skip  this is not a git repository, so the guard has nothing to "
+          "compare against")
+else:
+    _target = ROOT / ".github" / "workflows" / "pages.yml"
+    _keep = _target.read_text(encoding="utf-8")
+    try:
+        _target.write_text(_keep + "\n# a change\n", encoding="utf-8")
+        _seen = _wg.changed_files()
+        check("a modified protected file is seen",
+              ".github/workflows/pages.yml" in _seen,
+              f"the guard saw {_seen[:4]} and the protected file was not among "
+              "them")
+        check("and it is called a violation",
+              ".github/workflows/pages.yml" in _wg.violations(_seen),
+              "the guard saw the file and did not call it a violation")
+        check("and the gate refuses",
+              _wg.guard() != 0,
+              "the gate said it was fine")
+    finally:
+        _target.write_text(_keep, encoding="utf-8")
+        importlib.reload(_wg)
 
 # ---- 13. the audit trail must not hold a credential
 # The log is a tracked file in a public repository. The scrubber needed the
