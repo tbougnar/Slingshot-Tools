@@ -1750,5 +1750,18 @@
     ],
     "detects": "recurs every Wednesday; one entry per week is expected",
     "verified": false
+  },
+  {
+    "id": "B141",
+    "date": "2026-10-22",
+    "symptom": "weekly review 2026-W43: 0 order(s), $0.00, 0 star(s), 0 vote(s) on the open ballot",
+    "cause": "## What happened",
+    "fix": "read data/weekly_reviews.json before the next build; it carries this week's numbers and what to change",
+    "files": [
+      "data/weekly_reviews.json",
+      "weekly_review.py"
+    ],
+    "detects": "recurs every Wednesday; one entry per week is expected",
+    "verified": false
   }
 ]
