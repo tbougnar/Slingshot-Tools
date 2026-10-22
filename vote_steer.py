@@ -30,6 +30,13 @@ def main() -> int:
 
     concept = pick_concept()
     print()
+    if not concept:
+        # Every concept has been built, so there is nothing new to make. The
+        # picker says so rather than handing back a product that is already
+        # on the site, and this must not treat that as a crash.
+        print("next build: nothing new to build "
+              "(every concept has been made already)")
+        return 0
     print("next build:", concept["slug"], "-", concept["title"])
     for slug in winners:
         if slug == concept["slug"]:

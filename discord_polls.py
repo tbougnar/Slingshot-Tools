@@ -56,7 +56,12 @@ def candidates(limit: int = BALLOT_SIZE) -> list:
         taken = set()
     pool = [c for c in CATEGORIES if c and c[0] not in taken]
     if not pool:
-        pool = list(CATEGORIES)
+        # Every concept has been built, so there is nothing to hold a ballot
+        # about. The old code fell back to the whole list, so the community
+        # was asked to choose between products that were already on the site,
+        # and the winner was then ignored by the builder.
+        log("every concept has been built, so there is nothing to vote on")
+        return []
     pool.sort(key=lambda c: (-len(c[1] or ""), c[0]))
     return pool[:limit]
 
