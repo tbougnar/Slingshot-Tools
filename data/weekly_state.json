@@ -2,12 +2,13 @@
   "done": [
     "a11y",
     "theme",
-    "empty"
+    "empty",
+    "export"
   ],
   "last": {
-    "lane": "empty",
-    "area": "onboarding",
-    "what": "Make empty states say what to do first, not just that it is empty",
-    "version": "1.0.1"
+    "lane": "export",
+    "area": "data",
+    "what": "Make export and import survive a very large vault",
+    "version": "1.0.2"
   }
 }
