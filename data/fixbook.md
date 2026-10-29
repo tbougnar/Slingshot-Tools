@@ -1113,7 +1113,31 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** read data/weekly_reviews.json before the next build; it carries this week's numbers and what to change
 - **Files:** data/weekly_reviews.json, weekly_review.py
 - **Check for recurrence:** recurs every Wednesday; one entry per week is expected
-- **Status:** UNTESTED
+- **Status:** PROVEN
+
+## B140 - weekly review 2026-W43: 0 order(s), $0.00, 0 star(s), 0 vote(s) on the open ballot
+
+- **Cause:** ## What happened
+- **Fix:** read data/weekly_reviews.json before the next build; it carries this week's numbers and what to change
+- **Files:** data/weekly_reviews.json, weekly_review.py
+- **Check for recurrence:** recurs every Wednesday; one entry per week is expected
+- **Status:** PROVEN
+
+## B141 - weekly review 2026-W43: 0 order(s), $0.00, 0 star(s), 0 vote(s) on the open ballot
+
+- **Cause:** ## What happened
+- **Fix:** read data/weekly_reviews.json before the next build; it carries this week's numbers and what to change
+- **Files:** data/weekly_reviews.json, weekly_review.py
+- **Check for recurrence:** recurs every Wednesday; one entry per week is expected
+- **Status:** PROVEN
+
+## B142 - weekly review 2026-W44: 0 order(s), $0.00, 0 star(s), 0 vote(s) on the open ballot
+
+- **Cause:** ## What happened
+- **Fix:** read data/weekly_reviews.json before the next build; it carries this week's numbers and what to change
+- **Files:** data/weekly_reviews.json, weekly_review.py
+- **Check for recurrence:** recurs every Wednesday; one entry per week is expected
+- **Status:** PROVEN
 
 ## How to use this
 

@@ -5,7 +5,7 @@
     "title": "Offline password manager",
     "tier": "full",
     "tag": "password",
-    "blurb": "Everything the free edition does, and unlimited items, export and import your data.",
+    "blurb": "A small, focused password tool. Offline password manager does one job properly, runs offline, and keeps your data on your device.",
     "tags": [
       "password",
       "manager"
@@ -14,13 +14,10 @@
     "download": "",
     "price": 3.0,
     "free": false,
-    "differences": [
-      "Unlimited items",
-      "Export and import your data"
-    ],
+    "differences": [],
     "published": false,
     "badge": "New",
-    "date": "2026-10-16",
+    "date": "2026-10-29",
     "itch_url": "https://slingshot-tools.itch.io/slingshot-tools",
     "built": true
   },
@@ -37,12 +34,12 @@
     ],
     "url": "https://tbougnar.github.io/Slingshot-Tools/apps/password-manager-basic/",
     "download": "",
-    "price": 0,
+    "price": 0.0,
     "free": true,
     "differences": [],
     "published": true,
     "badge": "New",
-    "date": "2026-10-16"
+    "date": "2026-10-29"
   },
   {
     "slug": "stopwatch",
