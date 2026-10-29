@@ -52,12 +52,14 @@ Only needed for creating a *new* project. Updating an existing one does not
 use it.
 
 1. Log in at <https://itch.io> in your browser
-2. Open the developer console (<kbd>F12</kbd>)
-3. Run this and copy the value:
+2. Open the developer tools (<kbd>F12</kbd>) and go to
+   **Application** → **Cookies** → `https://itch.io`
+3. Find the cookie named `itchio_token` and copy its **Value**
 
-```js
-document.cookie.split('; ').find(c => c.startsWith('itch.io=')).slice(8)
-```
+The cookie is `itchio_token`, and it is HttpOnly, so
+`document.cookie` cannot see it. The old instructions here told you to read a
+cookie called `itch.io` from JavaScript, which does not exist; following them
+stored nothing and project creation kept failing.
 
 4. Store it:
 

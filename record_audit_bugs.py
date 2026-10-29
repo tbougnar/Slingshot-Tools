@@ -2453,6 +2453,23 @@ FOUND = [
      "itchpublish_selftest.py checks published tiers against the store state.",
      "a third published product passes the suite",
      ""),
+
+    ("the setup guide told the reader to copy a cookie that does not exist",
+     "LOW", "documentation", ["ITCH_SELLING.md"], "VERIFIED_FIXED",
+     "The itch.io session setup said to run document.cookie in the browser "
+     "console and take the cookie named 'itch.io'. The real cookie is "
+     "itchio_token, and it is HttpOnly, so document.cookie cannot read it at "
+     "all. Anyone following the guide stored an empty value and project "
+     "creation kept failing with 'the session cookie was refused'.",
+     "read the snippet against itch_publish.session_cookie, which looks for "
+     "itchio_token",
+     "follow the old instructions in a logged-in browser",
+     "The guide points at Application -> Cookies -> itchio_token and says why "
+     "JavaScript cannot see it. It also says which failure means the cookie "
+     "expired.",
+     "manual read of the rewritten section",
+     "a reader can find and store the cookie",
+     ""),
 ]
 
 
