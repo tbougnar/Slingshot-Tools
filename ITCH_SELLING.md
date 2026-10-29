@@ -126,6 +126,21 @@ python itch_publish.py                    # this week's tool
 python itch_publish.py password-manager   # a specific one
 ```
 
+## Replacing a paid build that already shipped
+
+The Friday lane only builds the week's new app, and `paid/` is never committed,
+so a product whose installer is stale or wrong cannot be fixed there. Both
+editions are the same file with one constant flipped and the free edition is
+committed, so the paid one can be rebuilt exactly:
+
+```bash
+gh workflow run rebuild-paid.yml -f slug=file-renamer
+```
+
+That replaces the store build and leaves the price and the catalogue alone. It
+does not put anything on sale — `publish_paid.py` still has to see the store
+charging the advertised price first.
+
 ## Keep the paid file out of the repository
 
 `paid/` is gitignored and `check_repo_hygiene.py` fails the build if it is ever
