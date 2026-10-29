@@ -38,7 +38,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      OPENROUTER_CHAT_MODEL: ${{ vars.OPENROUTER_CHAT_MODEL }}
       GROQ_CHAT_MODEL: ${{ secrets.GROQ_CHAT_MODEL }}
       ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
       ELEVENLABS_MODEL: ${{ secrets.ELEVENLABS_MODEL }}
@@ -49,6 +51,9 @@ jobs:
       YOUTUBE_PRIVACY: ${{ vars.YOUTUBE_PRIVACY }}
       SITE_URL: ${{ vars.SITE_URL }}
       DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      # Public at job level so a step-level if: can read it. A dry run must
+      # not post the preview to Discord, and the announce step runs always().
+      DRY_RUN: ${{ inputs.dry_run || 'true' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -115,7 +120,7 @@ jobs:
           DRY_RUN: ${{ inputs.dry_run }}
 
       - name: Announce
-        if: always()
+        if: always() && env.DRY_RUN != 'true'
         run: python shorts_announce.py
 
       # a single image of the whole clip, so the look can be judged from the

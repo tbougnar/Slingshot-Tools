@@ -11,6 +11,9 @@ Three things the old installer got wrong and that are fixed here:
 """
 from __future__ import annotations
 
+import json
+import os
+import re
 import shutil
 import subprocess
 import sys
@@ -51,14 +54,41 @@ def _find_makensis() -> str | None:
     exe = shutil.which("makensis")
     if exe:
         return exe
+    local = Path(os.environ.get("LOCALAPPDATA")
+                 or Path.home() / "AppData" / "Local")
     for p in (r"C:\Program Files (x86)\NSIS\makensis.exe",
               r"C:\Program Files\NSIS\makensis.exe",
               r"C:\ProgramData\chocolatey\bin\makensis.exe",
               r"C:\ProgramData\chocolatey\lib\nsis\tools\makensis.exe",
-              r"C:\Users\Taha\AppData\Local\Temp\nsis_x\makensis.exe"):
+              local / "Temp" / "nsis_x" / "makensis.exe"):
         if Path(p).exists():
-            return p
+            return str(p)
     return None
+
+
+def _product_meta(app_folder: Path, title: str) -> tuple[str, str]:
+    """(display version, four-number version) for the installer metadata.
+
+    Apps & Features showed every product as "Slingshot Tools" version 1.0.0,
+    so an update could not be told apart from the original install and the
+    product's own name never appeared. The bundle's app.json is the source of
+    truth; the fallback keeps an older bundle buildable.
+    """
+    meta: dict = {}
+    for candidate in (app_folder / "app" / "app.json",
+                      app_folder / "_internal" / "app" / "app.json"):
+        try:
+            got = json.loads(candidate.read_text(encoding="utf-8-sig"))
+        except (OSError, ValueError):
+            continue
+        if isinstance(got, dict):
+            meta = got
+            break
+    version = str(meta.get("version") or "1.0.0").strip() or "1.0.0"
+    m = re.match(r"^(\d+)\.(\d+)\.(\d+)(?:\.(\d+))?", version)
+    quad = (f"{m.group(1)}.{m.group(2)}.{m.group(3)}.{m.group(4) or 0}"
+            if m else "1.0.0.0")
+    return version, quad
 
 
 NSI = r"""
@@ -68,54 +98,58 @@ Unicode true
 !define SLUG "{slug}"
 !define VENDOR "Slingshot Tools"
 !define PUBLISHER "Slingshot Tools"
-!define VERSION "1.0.0"
+!define VERSION "{version}"
 !define OUT "{out}"
 
-Name "Slingshot Tools"
+Name "{name}"
 OutFile "${{OUT}}"
-InstallDir "$PROGRAMFILES64\{name}"
-InstallDirRegKey HKLM "Software\Slingshot\{slug}" "InstallDir"
-RequestExecutionLevel admin
+; Per-user, like the free launcher: no admin prompt, and the install folder is
+; writable, so a tool that keeps its data beside the exe still works. A paid
+; $3 download that opens a UAC box is also the single biggest drop-off there is.
+InstallDir "$LOCALAPPDATA\Programs\Slingshot Tools\{name}"
+InstallDirRegKey HKCU "Software\Slingshot\{slug}" "InstallDir"
+RequestExecutionLevel user
 SetCompressor /SOLID lzma
 
-VIProductVersion "1.0.0.0"
-VIAddVersionKey "ProductName" "Slingshot Tools"
+VIProductVersion "{quad}"
+VIAddVersionKey "ProductName" "{name}"
 VIAddVersionKey "CompanyName" "Slingshot Tools"
-VIAddVersionKey "FileDescription" "Slingshot Tools"
-VIAddVersionKey "FileVersion" "1.0.0.0"
+VIAddVersionKey "FileDescription" "{name} by Slingshot Tools"
+VIAddVersionKey "FileVersion" "{quad}"
 
 !define MUI_ICON "{icon}"
 !define MUI_UNICON "{icon}"
-!define MUI_FINISHPAGE_RUN "$INSTDIR\{name}\{exe}"
+!define MUI_FINISHPAGE_RUN "$INSTDIR\{exe}"
 
-Page directory
-Page instfiles
+; MUI pages only: "Page directory" beside MUI_PAGE_INSTFILES showed the
+; progress page twice.
+!insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
 !insertmacro MUI_PAGE_FINISH
 
-UninstPage instfiles
 !insertmacro MUI_UNPAGE_CONFIRM
 !insertmacro MUI_UNPAGE_INSTFILES
+!insertmacro MUI_LANGUAGE "English"
 
 Section "Install"
   ; the whole app folder, including app\icon.ico which every icon below points at
-  SetOutPath "$INSTDIR\{name}"
+  SetOutPath "$INSTDIR"
   File /r "{appdir}\*"
 
-  WriteRegStr HKLM "Software\Slingshot\{slug}" "InstallDir" "$INSTDIR\{name}"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\{slug}" "DisplayName" "{name}"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\{slug}" "DisplayIcon" "$INSTDIR\{name}\app\icon.ico"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\{slug}" "Publisher" "Slingshot Tools"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\{slug}" "DisplayVersion" "1.0.0"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\{slug}" "UninstallString" "$INSTDIR\uninstall.exe"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\{slug}" "InstallLocation" "$INSTDIR\{name}"
+  WriteRegStr HKCU "Software\Slingshot\{slug}" "InstallDir" "$INSTDIR"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{slug}" "DisplayName" "{name}"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{slug}" "DisplayIcon" "$INSTDIR\app\icon.ico"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{slug}" "Publisher" "Slingshot Tools"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{slug}" "DisplayVersion" "{version}"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{slug}" "UninstallString" '"$INSTDIR\uninstall.exe"'
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{slug}" "InstallLocation" "$INSTDIR"
 
   CreateDirectory "$SMPROGRAMS\{name}"
-  CreateShortcut "$SMPROGRAMS\{name}\{name}.lnk" "$INSTDIR\{name}\{exe}"
+  CreateShortcut "$SMPROGRAMS\{name}\{name}.lnk" "$INSTDIR\{exe}"
   ; shortcuts point at the exe itself, so the shell shows the logo that is
   ; embedded in it rather than a blank page or another program's icon
   CreateShortcut "$SMPROGRAMS\{name}\Uninstall.lnk" "$INSTDIR\uninstall.exe"
-  CreateShortcut "$DESKTOP\{name}.lnk" "$INSTDIR\{name}\{exe}"
+  CreateShortcut "$DESKTOP\{name}.lnk" "$INSTDIR\{exe}"
 
 
   WriteUninstaller "$INSTDIR\uninstall.exe"
@@ -125,17 +159,20 @@ SectionEnd
 Section "Uninstall"
   Delete "$DESKTOP\{name}.lnk"
   RMDir /r "$SMPROGRAMS\{name}"
-  RMDir /r "$INSTDIR\{name}"
-  Delete "$INSTDIR\uninstall.exe"
-  RMDir "$INSTDIR"
-  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\{slug}"
-  DeleteRegKey HKLM "Software\Slingshot\{slug}"
+  RMDir /r "$INSTDIR"
+  DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{slug}"
+  DeleteRegKey HKCU "Software\Slingshot\{slug}"
   System::Call 'shell32::SHChangeNotify(i 0x08000000, i 0, i 0, i 0)'
 SectionEnd
 """
 
 
 def build_installer(app_folder: Path, title: str, paid_dir: Path | None = None) -> Path | None:
+    # makensis resolves relative paths against the .nsi file's own folder (dist/),
+    # so a caller that passed "dist/Thing/Thing" had every path doubled and the
+    # build failed on the icon. Resolve once, here, whatever the caller passes.
+    app_folder = Path(app_folder).resolve()
+    paid_dir = Path(paid_dir).resolve() if paid_dir else None
     makensis = _find_makensis()
     if not makensis:
         print("[nsis] makensis not found - cannot build the installer", flush=True)
@@ -150,10 +187,19 @@ def build_installer(app_folder: Path, title: str, paid_dir: Path | None = None) 
     (app_folder / "app").mkdir(parents=True, exist_ok=True)
     icon = app_folder / "app" / "icon.ico"
     if not icon.exists() and src_ok(ICON_SRC):
-        icon = make_ico(ICON_SRC, icon)
-    if not icon:
+        try:
+            icon = make_ico(ICON_SRC, icon)
+        except Exception as e:  # noqa: BLE001
+            print(f"[nsis] could not convert the icon: {str(e)[:80]}",
+                  flush=True)
+            icon = None
+    if not icon or not Path(icon).exists():
+        # A Path is always truthy, so the old check passed with a path that
+        # did not exist and makensis failed later on a bad MUI_ICON.
         print("[nsis] no icon available", flush=True)
         return None
+
+    version, quad = _product_meta(app_folder, title)
 
     DIST.mkdir(exist_ok=True)
     out_exe = DIST / f"{title}-Setup.exe"
@@ -172,11 +218,12 @@ def build_installer(app_folder: Path, title: str, paid_dir: Path | None = None) 
         NSI.format(name=title, slug=title.lower().replace(" ", "-"),
                    out=str(out_exe).replace("\\", "/"),
                    appdir=str(app_folder).replace("\\", "/"),
-                   paidir=str(paid_dir or app_folder).replace("\\", "/"),
                    icon=str(icon).replace("\\", "/"),
+                   version=version, quad=quad,
                    exe=exe_name),
         encoding="utf-8")
-    r = subprocess.run([makensis, str(nsi)], capture_output=True, text=True, timeout=1200)
+    r = subprocess.run([makensis, str(nsi)], capture_output=True, text=True,
+                       encoding="utf-8", errors="replace", timeout=1200)
     # The return code was never checked. dist/<title>-Setup.exe from a previous
     # release was left in place, so a compile error, a timeout or a full disk
     # still left the old file there, and this returned it while printing

@@ -52,7 +52,25 @@ const title=q.get('title')||'Slingshot Tools';
 const price=parseFloat(q.get('price')||'0');
 document.getElementById('h').textContent=title;
 document.getElementById('amt').textContent=price>0?'$'+price.toFixed(2):'Free';
-if(itch&&/^https:\/\/[^/]+\.itch\.io\//.test(itch)){
+const cancelled=q.get('cancelled');
+const paid=q.get('paid');
+if(cancelled){
+  // A cancelled order used to be indistinguishable from a bad link and said
+  // the tool was "still being prepared". That is wrong and alarming.
+  document.getElementById('go').style.display='none';
+  document.getElementById('amt').style.display='none';
+  const n=document.getElementById('soon');
+  n.textContent='Payment was cancelled. Nothing was charged. You can try again whenever you are ready.';
+  n.style.display='block';
+}else if(paid){
+  document.getElementById('go').style.display='none';
+  document.getElementById('amt').style.display='none';
+  document.getElementById('ss').style.display='none';
+  document.getElementById('how').style.display='none';
+  const n=document.getElementById('soon');
+  n.innerHTML='<b>Payment received.</b><br>Your download link and licence key have been emailed to you. If it has not arrived in a few minutes, check your spam folder or ask in the Discord server.';
+  n.style.display='block';
+}else if(itch&&/^https:\/\/[^/]+\.itch\.io\//.test(itch)){
   const a=document.getElementById('go');
   a.href=itch;
   document.getElementById('how').style.display='block';

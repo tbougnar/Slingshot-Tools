@@ -75,7 +75,7 @@ def local(state: dict) -> dict:
 
 def ask(state: dict) -> dict | None:
     """Let the model write the lines, from the plan's own notes."""
-    if not providers.groq_available():
+    if not providers.configured():
         log("no model available, writing it from the plan")
         return None
 
@@ -84,7 +84,7 @@ def ask(state: dict) -> dict | None:
     listing = "\n".join(f"- {n}" for n in notes)
     try:
         raw = providers.chat(
-            providers.models("debug").get("debug", ""),
+            providers.best_model("debug"),
             "You write voiceover for a software release trailer. Spoken, "
             "warm, concrete. You never promise a feature that is not in the "
             "notes you are given.",

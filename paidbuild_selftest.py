@@ -30,8 +30,21 @@ import make_app
 import auditlog as _auditlog
 
 _real_log = _auditlog.LOG
-_auditlog.LOG = pathlib.Path(tempfile.mkdtemp(prefix="paidbuild-selftest-")) \
-    / "events.jsonl"
+_log_dir = pathlib.Path(tempfile.mkdtemp(prefix="paidbuild-selftest-"))
+_auditlog.LOG = _log_dir / "events.jsonl"
+
+# Restore on the way out even when a scenario raises. Without this a failure
+# left every later audit write in this process pointing at the temp file, so
+# the real log silently stopped recording.
+import atexit
+
+
+def _restore_log():
+    _auditlog.LOG = _real_log
+    shutil.rmtree(_log_dir, ignore_errors=True)
+
+
+atexit.register(_restore_log)
 
 fails = []
 
@@ -73,6 +86,7 @@ def scenario(named, uploaded, write_stage=True):
         make_app.PAID_DIR, make_app.DATA = real_paid_dir, real_data
         if real_staged is not None:
             build_paid_only.PAID = real_staged
+        shutil.rmtree(tmp, ignore_errors=True)
     return rc
 
 
@@ -255,7 +269,82 @@ check("the previous installer is removed before the build",
       _nsis.find("unlink(missing_ok=True)") < _nsis.find("subprocess.run"),
       "a stale installer can be returned as this week's")
 
+# A $3 download that opens a UAC box is the biggest drop-off a small app can
+# have, and the per-machine folder is not writable, so a tool that keeps its
+# data beside the exe breaks there. Per-user, like the free launcher.
+check("the installer installs for the current user, without an admin prompt",
+      "RequestExecutionLevel user" in _nsis
+      and "RequestExecutionLevel admin" not in _nsis,
+      "it still asks for elevation")
+check("and it installs under the user's own programs folder",
+      'InstallDir "$LOCALAPPDATA\\Programs\\Slingshot Tools\\{name}"' in _nsis,
+      "it still writes into Program Files")
+check("and the files land in that folder, not a folder inside it",
+      'SetOutPath "$INSTDIR"' in _nsis
+      and 'SetOutPath "$INSTDIR\\{name}"' not in _nsis,
+      "install dir and file dir differ, so the app ends up one level deeper")
+check("and the shortcuts follow the same folder",
+      '"$INSTDIR\\{name}\\{exe}"' not in _nsis,
+      "a shortcut points at the nested folder")
+
+# The frozen launcher reads app/app.json for the window title and the update
+# slug. No build step wrote one, so every paid app opened as "Slingshot Tool"
+# and the update check asked the catalogue about an empty slug.
+_meta_dir = pathlib.Path(tempfile.mkdtemp(prefix="paidmeta-selftest-"))
+(_meta_dir / "app").mkdir()
+(_meta_dir / "concept.json").write_text(
+    json.dumps({"slug": "password-manager", "title": "Offline password manager"}),
+    encoding="utf-8")
+import build_exe as _be
+
+_be.write_meta(_meta_dir, "Offline password manager")
+_meta = json.loads((_meta_dir / "app" / "app.json").read_text(encoding="utf-8"))
+check("the paid bundle carries the product's own title",
+      _meta.get("title") == "Offline password manager", str(_meta))
+check("and its catalogue slug, not the title with dashes", _meta.get("slug")
+      == "password-manager", str(_meta))
+check("and a version", bool(_meta.get("version")), str(_meta))
+
+(_meta_dir / "app" / "app.json").write_text(
+    json.dumps({"title": "Kept", "version": "2.1.0"}), encoding="utf-8")
+_be.write_meta(_meta_dir, "Offline password manager")
+_meta = json.loads((_meta_dir / "app" / "app.json").read_text(encoding="utf-8"))
+check("a metadata file the build already wrote is not overwritten",
+      _meta.get("title") == "Kept" and _meta.get("version") == "2.1.0"
+      and _meta.get("slug") == "password-manager", str(_meta))
+
 _auditlog.LOG = _real_log
+
+# Re-publishing must not drop what another step proved. verify_app re-publishes
+# the full entry with published=was_live, and a rebuild that lost itch_url left
+# a "published for sale" product with no page to buy from, which the exposure
+# gate refuses.
+print("\nRE-PUBLISHING KEEPS THE STORE URL AND THE BUILT MARK\n")
+_keep_dir = pathlib.Path(tempfile.mkdtemp(prefix="republish-selftest-"))
+_real_cat = make_app.CATALOG
+try:
+    make_app.CATALOG = _keep_dir / "apps.json"
+    make_app.CATALOG.write_text(json.dumps([{
+        "slug": "dev-converter", "base_slug": "dev-converter",
+        "tier": "full", "title": "Unit converter", "tag": "convert",
+        "blurb": "old", "tags": ["convert"], "url": "", "price": 3.0,
+        "free": False, "published": True,
+        "itch_url": "https://slingshot-tools.itch.io/slingshot-tools",
+        "built": True, "date": "2026-01-01"}]), encoding="utf-8")
+    make_app.publish({"slug": "dev-converter", "base_slug": "dev-converter",
+                      "title": "Unit converter", "tag": "convert",
+                      "blurb": "new", "tags": ["convert"]},
+                     _keep_dir, None, tier="full", published=True,
+                     price_override=3.0)
+    _kept = json.loads(make_app.CATALOG.read_text(encoding="utf-8"))[0]
+    check("a re-published paid entry keeps its itch.io page",
+          _kept.get("itch_url")
+          == "https://slingshot-tools.itch.io/slingshot-tools", str(_kept))
+    check("and still says a build exists", _kept.get("built") is True,
+          str(_kept))
+finally:
+    make_app.CATALOG = _real_cat
+    shutil.rmtree(_keep_dir, ignore_errors=True)
 
 print()
 print("FAILURES:", fails if fails else "none")

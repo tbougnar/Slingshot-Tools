@@ -38,7 +38,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      OPENROUTER_CHAT_MODEL: ${{ vars.OPENROUTER_CHAT_MODEL }}
       GROQ_CHAT_MODEL: ${{ secrets.GROQ_CHAT_MODEL }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       SLINGSHOT_MONTHLY_HOURS: "30"
@@ -98,8 +100,18 @@ jobs:
         run: |
           git config user.name "slingshot-bot"
           git config user.email "slingshot-bot@users.noreply.github.com"
-          git add data/self_upgrade.json data/improve_daily.json \
-                  data/goals.json data/signals.json || true
+          # A single missing (or ignored) pathspec makes git exit 128 and stage
+          # nothing, and "|| true" hid that. Add each generated file only when
+          # it exists and is not ignored.
+          for f in data/self_upgrade.json data/improve_daily.json \
+                   data/goals.json data/signals.json; do
+            [ -e "$f" ] || continue
+            git check-ignore -q "$f" || git add "$f"
+          done
+          # The accepted patch is a tracked source file. Staging only data/
+          # left the patch on the runner while data/self_upgrade.json recorded
+          # it as kept and permanently blacklisted that fingerprint.
+          git add -u
           git diff --staged --quiet || \
             git commit -q -m "chore: daily self-improvement [skip ci]"
-          git push || echo "nothing to push"
+          git push

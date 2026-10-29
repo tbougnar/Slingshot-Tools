@@ -31,13 +31,8 @@ POLLS = DATA / "polls.json"
 CATALOG = ROOT / "site" / "apps.json"
 WEEKLY = DATA / "weekly_review.md"
 
-GROQ_BASE = "https://api.groq.com/openai/v1"
-GROQ_KEY = (os.environ.get("GROQ_API_KEY") or "").strip()
-CHAT_MODEL = (os.environ.get("GROQ_CHAT_MODEL") or "").strip() \
-    or "openai/gpt-oss-20b"
-
-import urllib.error
-import urllib.request
+# The model backend (OpenRouter first, Groq fallback) lives in providers.py.
+# This file used to carry its own Groq URL, key and model.
 
 
 def log(msg: str) -> None:
@@ -74,16 +69,64 @@ def ballot_state() -> dict:
     return {"open": live[0] if live else None, "closed": closed[:5]}
 
 
+def _write(path: Path, text: str) -> None:
+    """Replace a tracked file atomically.
+
+    These are committed files. A crash during a plain write_text left a
+    truncated fixbook or review history, and the next build read it.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(text, encoding="utf-8")
+    os.replace(tmp, path)
+
+
 def revenue() -> dict:
-    data = load(EARNINGS, [])
-    orders = data if isinstance(data, list) else data.get("orders", [])
-    total = 0.0
-    for o in orders:
-        try:
-            total += float(o.get("price") or 0)
-        except (TypeError, ValueError):
-            continue
-    return {"orders": len(orders), "total": round(total, 2)}
+    """This week's money, from the file pricing.py actually writes.
+
+    pricing.py writes {"revenue": total, "products": [{sales, revenue}, ...]}.
+    This used to look for a list or an "orders" key and therefore reported
+    $0.00 and 0 orders on every run, even when the file was full of sales.
+    """
+    data = load(EARNINGS, None)
+    if data is None:
+        return {"orders": 0, "total": 0.0, "available": False}
+    if isinstance(data, list):
+        total = 0.0
+        for o in data:
+            if isinstance(o, dict):
+                try:
+                    total += float(o.get("price") or o.get("amount") or 0)
+                except (TypeError, ValueError):
+                    continue
+        return {"orders": len(data), "total": round(total, 2), "available": True}
+    if isinstance(data, dict):
+        orders = data.get("orders")
+        if isinstance(orders, list):
+            total = 0.0
+            for o in orders:
+                if isinstance(o, dict):
+                    try:
+                        total += float(o.get("price") or o.get("amount") or 0)
+                    except (TypeError, ValueError):
+                        continue
+            return {"orders": len(orders), "total": round(total, 2),
+                    "available": True}
+        rows = data.get("products")
+        if isinstance(rows, list):
+            count = sum(int(r.get("sales") or 0)
+                        for r in rows if isinstance(r, dict))
+            if data.get("revenue") is not None:
+                try:
+                    total = float(data["revenue"])
+                except (TypeError, ValueError):
+                    total = 0.0
+            else:
+                total = sum(float(r.get("revenue") or 0)
+                            for r in rows if isinstance(r, dict))
+            return {"orders": count, "total": round(total, 2),
+                    "available": True}
+    return {"orders": 0, "total": 0.0, "available": True}
 
 
 def live_products() -> list:
@@ -127,25 +170,15 @@ def facts() -> dict:
 
 
 def groq(system: str, user: str, max_tokens: int = 900) -> str:
-    req = urllib.request.Request(
-        f"{GROQ_BASE}/chat/completions",
-        data=json.dumps({
-            "model": CHAT_MODEL,
-            "messages": [{"role": "system", "content": system},
-                         {"role": "user", "content": user}],
-            "temperature": 0.35,
-            "max_tokens": max_tokens,
-        }).encode("utf-8"),
-        headers={"Authorization": f"Bearer {GROQ_KEY}",
-                 "Content-Type": "application/json"},
-        method="POST")
+    """The review text from the live backend, or "" when it cannot answer."""
     try:
-        with urllib.request.urlopen(req, timeout=90) as r:
-            data = json.loads(r.read().decode("utf-8"))
-        return (data["choices"][0]["message"]["content"] or "").strip()
-    except (urllib.error.HTTPError, urllib.error.URLError, KeyError,
-            IndexError, json.JSONDecodeError) as e:
-        log(f"the model was unavailable ({e})")
+        import providers
+        if not providers.configured():
+            return ""
+        return (providers.chat(providers.best_model("chat"), system, user,
+                               0.35, max_tokens, role="debug") or "").strip()
+    except Exception as e:  # noqa: BLE001
+        log(f"the model was unavailable ({str(e)[:120]})")
         return ""
 
 
@@ -183,14 +216,19 @@ def review(f: dict) -> str:
         lines.append(f"- Last ballot: {w['winner'] or 'a tie'} "
                      f"({w['slug'] or 'no slug'}).")
     lines.append(f"- {len(f['products'])} product(s) on sale.")
-    lines.append(f"- Revenue recorded: ${rev['total']:.2f} "
-                 f"from {rev['orders']} order(s).")
+    if rev.get("available") is False:
+        lines.append("- Revenue data is not available in this checkout "
+                     "(data/earnings.json was not produced), so the number of "
+                     "sales is unknown rather than zero.")
+    else:
+        lines.append(f"- Revenue recorded: ${rev['total']:.2f} "
+                     f"from {rev['orders']} order(s).")
     if f["stars"] is not None:
         lines.append(f"- Public interest: {f['stars']} stars, "
                      f"{f['forks']} forks.")
 
     lines += ["", "## What to change"]
-    if rev["orders"] == 0:
+    if rev.get("available") is not False and rev["orders"] == 0:
         lines.append("- No sales at all. Check that the checkout works end to "
                      "end before changing anything else.")
     if not f["ballot_votes"]:
@@ -219,12 +257,24 @@ def record(f: dict, body: str) -> dict:
 
     f["text"] = body
     DATA.mkdir(parents=True, exist_ok=True)
-    (DATA / "weekly_reviews.json").write_text(
-        json.dumps({f["week"]: f}, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8")
-    WEEKLY.write_text(f"# Week {f['week']}\n\n{body}\n", encoding="utf-8")
+    # Merge, do not replace. Writing {week: f} overwrote the file with a single
+    # week and destroyed every earlier review, which is the history the next
+    # build is supposed to read.
+    history = load(DATA / "weekly_reviews.json", {})
+    if not isinstance(history, dict):
+        history = {}
+    history[f["week"]] = f
+    _write(DATA / "weekly_reviews.json",
+           json.dumps(history, indent=2, ensure_ascii=False) + "\n")
+    _write(WEEKLY, f"# Week {f['week']}\n\n{body}\n")
 
     rev = f["revenue"]
+    cause = ""
+    for line in body.splitlines():
+        text = line.strip().lstrip("-* ").strip()
+        if text and not text.startswith("#"):
+            cause = text[:280]
+            break
     entry = {
         "id": next_id(entries),
         "date": datetime.now(timezone.utc).date().isoformat(),
@@ -232,7 +282,7 @@ def record(f: dict, body: str) -> dict:
                     f"{rev['orders']} order(s), ${rev['total']:.2f}, "
                     f"{f['stars']} star(s), "
                     f"{f['ballot_votes']} vote(s) on the open ballot"),
-        "cause": body.strip().splitlines()[0][:280] if body.strip() else "",
+        "cause": cause,
         "fix": "read data/weekly_reviews.json before the next build; "
                "it carries this week's numbers and what to change",
         "files": ["data/weekly_reviews.json", "weekly_review.py"],
@@ -240,8 +290,7 @@ def record(f: dict, body: str) -> dict:
         "verified": False,
     }
     entries.append(entry)
-    FIXBOOK.write_text(json.dumps(entries, indent=2, ensure_ascii=False)
-                       + "\n", encoding="utf-8")
+    _write(FIXBOOK, json.dumps(entries, indent=2, ensure_ascii=False) + "\n")
     return entry
 
 

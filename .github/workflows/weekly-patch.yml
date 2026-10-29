@@ -25,7 +25,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      OPENROUTER_CHAT_MODEL: ${{ vars.OPENROUTER_CHAT_MODEL }}
       GROQ_CHAT_MODEL: ${{ secrets.GROQ_CHAT_MODEL }}
       DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
       DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
@@ -67,4 +69,4 @@ jobs:
           git add data/update_state.json data/weekly_state.json || true
           git diff --staged --quiet || \
             git commit -q -m "chore: weekly patch [skip ci]"
-          git push || echo "nothing to push"
+          git push

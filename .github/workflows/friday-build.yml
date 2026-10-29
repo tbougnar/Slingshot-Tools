@@ -21,6 +21,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 45
     env:
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
       SITE_URL: ${{ vars.SITE_URL }}
       PRICE_FLOOR: '1.00'
@@ -138,7 +139,7 @@ jobs:
         run: |
           git add -A
           git -c user.name="slingshot-bot" -c user.email="bot@users.noreply.github.com" commit -q -m "candidate: staged for verification" || echo "nothing to commit"
-          git push || (git pull --rebase origin main && git push) || echo "push failed"
+          git push || (git pull --rebase origin main && git push)
 
   # If generation fails, the model diagnoses it and patches itself.
   selfheal:
@@ -149,7 +150,9 @@ jobs:
     permissions:
       contents: write
     env:
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      OPENROUTER_CHAT_MODEL: ${{ vars.OPENROUTER_CHAT_MODEL }}
       GROQ_CHAT_MODEL: ${{ secrets.GROQ_CHAT_MODEL }}
       SLINGSHOT_EMERGENCY: "1"
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -192,4 +195,4 @@ jobs:
           git config user.email "bot@users.noreply.github.com"
           git add -A
           git commit -q -m "fix: self-heal after a failed generation [skip ci]" || echo "nothing to commit"
-          git push || (git pull --rebase origin main && git push) || echo "push failed"
+          git push || (git pull --rebase origin main && git push)

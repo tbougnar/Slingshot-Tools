@@ -85,8 +85,37 @@ now. They are kept for the case where you want to do it by hand.
 | butler missing | `butler is not installed` | stops, product stays hidden |
 | Upload fails | butler's own error | stops, product stays hidden |
 | Price outside $1-$10 | `outside the $1-$10 rule` | stops, product stays hidden |
+| The page lets a buyer pay $0 | `the page does not ask for $3.00` | stops, product stays hidden; set the minimum price on itch.io |
 
 Never a partial state where the site sells something that cannot be bought.
+
+## The project has to charge
+
+The publish path refuses to advertise a product whose itch.io page lets a buyer
+pay less than the price the site shows. This is not theoretical: the store
+project was created as **pay-what-you-want with no minimum**, so two products
+advertised at $3.00 were behind a button that read *Download Now* and took
+nothing.
+
+One project holds every product, so a purchase covers the builds listed on it.
+
+Set it once, in the itch.io page, not in the code:
+
+1. Open <https://slingshot-tools.itch.io/slingshot-tools/edit>
+2. **Pricing** → *Paid* (not *No payment required*, not a $0 minimum)
+3. Price **$3.00** (or "pay what you want" with a $3.00 minimum, which is also
+   accepted: the gate reads the floor)
+4. Save, then reload the public page: the button must read **Buy Now $3.00**,
+   not **Download Now**
+
+Check it without publishing anything:
+
+```bash
+python -c "import itch_publish as ip; print(ip.price_is_asked('https://slingshot-tools.itch.io/slingshot-tools', 3.0))"
+```
+
+`True` means the page asks for the money. `False` means the product stays
+hidden, because the site will not advertise a price the store does not charge.
 
 ## Running it by hand
 

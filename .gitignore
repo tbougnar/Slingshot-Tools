@@ -26,7 +26,10 @@ build/
 # NOTE: site/ is intentionally public (GitHub Pages). Only the product
 # front-ends belong there. The paid installer is delivered through itch.io
 # and must never be copied into site/.
+# Buyer licences hold emails and keys, so they stay out of the repository and
+# out of the published site entirely.
 site/licenses/
+data/licenses/
 
 # The full native source of the paid products. These are dead products that are
 # not for sale and are not deployed, but their source has no business being in

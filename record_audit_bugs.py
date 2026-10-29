@@ -1699,6 +1699,647 @@ FOUND = [
      "that is already on the site, and selftest_deep.py checks the same",
      "putting the fallback back makes both fail",
      ""),
+
+    # ---- the paid download itself
+    ("the paid installer demanded admin and installed one folder deeper than it said",
+     "HIGH", "packaging", ["build_installer_app.py"], "VERIFIED_FIXED",
+     "The script installed to \"$PROGRAMFILES64\\<name>\" but SetOutPath wrote "
+     "into \"$INSTDIR\\<name>\", so the directory page named one folder and the "
+     "app landed one level below it, with every shortcut pointing at the deeper "
+     "path. RequestExecutionLevel admin also put a UAC prompt in front of a $3 "
+     "download, and Program Files is not writable, so a tool that saves beside "
+     "its exe fails there.",
+     "dist/Offline password manager.nsi held InstallDir "
+     "\"$PROGRAMFILES64\\Offline password manager\" beside SetOutPath "
+     "\"$INSTDIR\\Offline password manager\" and RequestExecutionLevel admin.",
+     "run build_installer_app on the paid app folder, read the generated .nsi",
+     "Installs per user under %LOCALAPPDATA%\\Programs\\Slingshot Tools with "
+     "RequestExecutionLevel user, writes into $INSTDIR itself, stores HKCU "
+     "registry keys, and uninstalls the same folder.",
+     "paidbuild_selftest.py refuses an admin prompt, a Program Files install "
+     "folder, and a SetOutPath or shortcut that names the folder twice.",
+     "Built the installer and ran it silently on this PC: exit 0 with no "
+     "elevation prompt, files under %LOCALAPPDATA%\\Programs\\Slingshot Tools\\"
+     "Offline password manager, Start Menu and desktop shortcuts created, HKCU "
+     "uninstall entry correct; the app launched, and uninstall.exe /S removed "
+     "the folder, the shortcuts and the registry key.", ""),
+
+    ("every paid app opened as Slingshot Tool and checked for updates as an empty product",
+     "HIGH", "packaging", ["build_exe.py", "native_launcher.py"],
+     "VERIFIED_FIXED",
+     "The frozen launcher reads app/app.json for its window title, its update "
+     "slug and the installed version, and no build step wrote one into the paid "
+     "bundle. The title fell back to \"Slingshot Tool\", app_update.check was "
+     "given slug \"\" so it only ever compared the company version, and the "
+     "installed version always read 1.0.0.",
+     "the built bundle's app folder held index.html and icon.ico only, and the "
+     "launched window's title was \"Slingshot Tool\"",
+     "build a paid app, launch the exe, read the window title and app/app.json",
+     "build_exe.write_meta writes app/app.json with the title, the catalogue "
+     "slug from concept.json and a version, before PyInstaller copies the "
+     "folder, and leaves a file the build already supplied alone.",
+     "paidbuild_selftest.py checks the title, the catalogue slug rather than "
+     "the dashed title, a version, and that an existing app.json is kept.",
+     "rebuilt the password manager app and its installer: the installed window "
+     "title is now \"Offline password manager\", the bundle carries "
+     "{\"title\":\"Offline password manager\",\"slug\":\"password-manager\","
+     "\"version\":\"1.0.0\"}, and the app launched from the installed folder.",
+     ""),
+
+    # ---- the store still cannot take money
+    ("the site sold two products at $3.00 on a page that let anyone pay nothing",
+     "CRITICAL", "itch.io publishing", ["itch_publish.py"], "VERIFIED_FIXED",
+     "The store project was created as a pay-what-you-want page with no "
+     "minimum. The publish path proved the page answered and listed the file, "
+     "but never checked that the page asked for the price the site advertised, "
+     "so both live products were shown at $3.00 against a button that read "
+     "\"Download Now\".",
+     "the public page carries <span class=\"buy_message\"><span class=\"sub\">"
+     "Name your own price</span></span> and a Download Now button, while "
+     "site/apps.json lists password-manager and base64-tool at 3.0",
+     "python -c \"import itch_publish as ip; print(ip.price_is_asked('https://"
+     "slingshot-tools.itch.io/slingshot-tools', 3.0))\" prints False",
+     "publish() reads the page's purchase block before advertising anything and "
+     "refuses when the least a buyer can pay is below the advertised price, "
+     "with the fix named in the log.",
+     "itchpublish_selftest.py covers pay-what-you-want with and without a "
+     "floor, a fixed price, a page that says Free, and a page with no readable "
+     "price block.",
+     "the check returns True for the three selling shapes and False for the "
+     "live page, which is why the paid tier must not be re-advertised until the "
+     "project's minimum price is set on itch.io",
+     "setting the minimum price is a manual step on itch.io; there is no API "
+     "for it, so the gate can only refuse, not repair"),
+
+    # ---- the release pipeline published things it had refused
+    ("verification published an app that had failed every repair round",
+     "HIGH", "release pipeline", ["verify_app.py"], "VERIFIED_FIXED",
+     "The tolerance branch only ran when fewer than 4000 tokens were left. "
+     "With more allowance the code fell straight through to publish(), so a "
+     "candidate that had failed every repair was published. The branch also "
+     "judged the candidate on the scan taken before the repairs, not the last "
+     "one, and it never looked at JavaScript errors at all.",
+     "the publish path was reached whenever tokenmeter.remaining(8000) >= 4000, "
+     "with no check of the final repair result",
+     "stage an app that qa_loop cannot repair, run verify_app with allowance "
+     "left, and watch it publish",
+     "The decision now reads the final repair round, refuses whenever allowance "
+     "remains or any JS error survives, and only tolerates one dead control "
+     "after the allowance is genuinely exhausted; a re-verified candidate also "
+     "keeps its existing on-sale flag instead of silently hiding a live "
+     "product.",
+     "verifygate_selftest.py drives both branches and checks that publish is "
+     "not reached after a failed repair, and that JS errors are never "
+     "tolerated.",
+     "the full suite passes and verify_app's publish condition reads only the "
+     "last round and rejects JS errors",
+     ""),
+
+    ("a JavaScript error was never repaired, so an app that looked finished "
+     "did nothing",
+     "HIGH", "release pipeline", ["qa_loop.py", "app_scanner.py"],
+     "VERIFIED_FIXED",
+     "When a scan found JS errors and no dead controls, the control list was "
+     "empty, so the patcher was asked to patch zero controls, returned nothing, "
+     "and the round ended without a single model call. Every syntax or runtime "
+     "error survived all four rounds, and the app was then scanned again and "
+     "reported with the same errors.",
+     "qa_loop's error branch set no work and continued; a scan with errors=['x'] "
+     "and dead=[] produced no repair call",
+     "generate an app with a syntax error, run qa_loop.repair_until_clean, and "
+     "watch the error count never move",
+     "An error-only scan now asks debug_team for one full-file correction, "
+     "writes it to a trial file, rescans, and keeps it only when the error count "
+     "fell and the dead controls did not rise.",
+     "verifygate_selftest.py checks that the error-only path asks for a "
+     "full-file repair; scan_selftest.py covers the scanner's result shape.",
+     "the branch is exercised by the suite and the repair is discarded when a "
+     "fresh scan disagrees",
+     ""),
+
+    ("staging never rejected unusable model output, and published a paid "
+     "edition with nothing to sell",
+     "HIGH", "release pipeline", ["stage_app.py"], "VERIFIED_FIXED",
+     "build_html_raw raises RuntimeError after its own retries, and stage_app "
+     "did not catch it, so the rejection block that writes the NOT_VERIFIED "
+     "event and the rejected script never ran. paid_features() was read before "
+     "the escaping variant was chosen, so a doubly-escaped limit table looked "
+     "like 'no paid features'. write_app's tier gate could also raise, which "
+     "nothing caught, and an empty feature list was published with generic "
+     "copy on both cards.",
+     "a run that produced no usable app printed a traceback and recorded no "
+     "audit event; a run with no paid features still reached write_app",
+     "feed stage_app a model reply that fails every variant, and one whose "
+     "paid limits are escaped; the first crashes, the second sells nothing",
+     "Every model call and write_app is wrapped, each rejection is audited and "
+     "retried, the variant is chosen before the features are read, and an app "
+     "with no paid features is rejected rather than published.",
+     "tier_gate_selftest.py and variant_selftest.py cover the gate and the "
+     "escape order; the release lane's audit trail now records each retry.",
+     "both rejection paths return a retry instead of a traceback, and the "
+     "suite is green",
+     ""),
+
+    ("the scanner took the whole verify job down when the browser would not "
+     "start",
+     "MEDIUM", "release pipeline", ["app_scanner.py"], "VERIFIED_FIXED",
+     "The Playwright launch and navigation were outside any try block. A "
+     "missing browser, a refused launch or a load timeout escaped as a "
+     "traceback, killed verify_app, and left Chromium running. 'Could not "
+     "look' was treated as a crash rather than a result.",
+     "sync_playwright().chromium.launch() sat at module flow level with only "
+     "page.evaluate's JSON parse guarded",
+     "make the browser unavailable (or point at a page that never loads) and "
+     "run the scanner",
+     "Launch and navigation are guarded, the browser is closed in a finally, "
+     "and both failure modes return an unavailable result with the reason.",
+     "verifygate_selftest.py checks the unavailable result carries "
+     "unavailable=True and a reason instead of raising.",
+     "the scanner returns a dict for a refused launch and the verify job "
+     "continues to a refusal instead of a traceback",
+     ""),
+
+    # ---- the repair lane
+    ("the repair lane could diagnose a fault but never patch one",
+     "HIGH", "self-repair", ["selfheal.py", "debug_team2.py"],
+     "VERIFIED_FIXED",
+     "The debuggers replied with a description of the fix and a file list, and "
+     "selfheal accepted that as a patch, but the entry had no content, so "
+     "apply() always took the 'guidance only' path and recorded a lesson. The "
+     "lane could not repair anything it diagnosed.",
+     "safe() returned fixes with content None on every run, and apply() "
+     "returned False before writing any file",
+     "run selfheal against a failing log and watch it commit nothing while "
+     "recording guidance",
+     "Once the team agrees, the strongest agreeing model is asked for the "
+     "complete rewritten file. selfheal compiles it, runs the suite, and only "
+     "then commits; research results are rewritten the same way.",
+     "audit_selftest.py exercises safe()'s protected-file refusal; the "
+     "rewrite parser is covered by debug_team2's JSON extraction.",
+     "the lane now produces a content-bearing fix, and a rewrite that fails "
+     "the suite is reverted",
+     ""),
+
+    ("the repair lane crashed with a NameError at the moment it recorded what "
+     "it learned",
+     "MEDIUM", "self-repair", ["selfheal.py"], "VERIFIED_FIXED",
+     "remember() was called from two places and was never defined, so the one "
+     "path that saved a lesson raised NameError after the diagnosis. The "
+     "lesson was lost and the attempt ended in a traceback.",
+     "grep for 'remember(' found call sites and no definition",
+     "force a guidance-only result through apply() and read the traceback",
+     "remember(diagnosis, fixes) is defined, tolerates a missing buglog, and is "
+     "called with the accepted list.",
+     "audit_selftest.py imports selfheal and exercises its guard paths.",
+     "the call writes a buglog entry instead of raising",
+     ""),
+
+    ("the repair lane failed open, and a forbidden patch stayed in the tree",
+     "CRITICAL", "self-repair", ["selfheal.py"], "VERIFIED_FIXED",
+     "If weekly_guard could not be imported, selfheal set the guard to None and "
+     "the protected set to empty, which let safe() accept any file and skipped "
+     "the final guard check entirely. When the guard did reject a patch, "
+     "apply() returned False without restoring the files, so the forbidden "
+     "edit was still in the working tree for the next step to commit. The "
+     "guard's own script was also listed as self-improvable.",
+     "except Exception: _guard = None; _PROTECTED = set() was the fail-open "
+     "path, and the violation branch had no _revert() call",
+     "break the weekly_guard import and run selfheal; it applies a protected "
+     "file",
+     "A missing guard is fatal, safe() refuses every patch without it, a guard "
+     "violation reverts before returning, and weekly_guard.py is no longer in "
+     "the set it protects.",
+     "audit_selftest.py section 16 checks that a protected file is refused and "
+     "an ordinary one is still repairable.",
+     "importing selfheal with the guard removed raises instead of allowing a "
+     "patch; a rejected patch leaves a clean tree",
+     ""),
+
+    ("the self-upgrade ran its tests with the live keys, and a hang escaped as "
+     "a traceback",
+     "HIGH", "self-repair", ["self_upgrade.py"], "VERIFIED_FIXED",
+     "run_tests() passed the inherited environment to every test, and the "
+     "upgrade job runs with the real model, Discord and itch keys. A test could "
+     "therefore post, spend or upload. TimeoutExpired and OSError were also "
+     "uncaught, so a hung or missing interpreter escaped main() instead of "
+     "rolling the patch back, and backend_selftest.py was not in the suite.",
+     "subprocess.run(...) in run_tests() had no env= and no exception "
+     "handling, and TEST_SUITE omitted backend_selftest.py",
+     "run the upgrade job with a key set and a test that opens a socket; the "
+     "child inherits the key",
+     "Tests run under testenv.clean_env(), a timeout or start failure returns a "
+     "failed patch so the rollback path runs, and backend_selftest.py is in "
+     "the suite.",
+     "testenv's stripped environment is already covered by selftest_audit.py; "
+     "the upgrade suite now includes the backend gate.",
+     "run_tests() returns (False, reason) for a timeout and the patch is "
+     "discarded",
+     ""),
+
+    ("a default dry run announced a failure to the public Discord",
+     "HIGH", "publishing", ["shorts_announce.py",
+                            ".github/workflows/shorts-publish.yml"],
+     "VERIFIED_FIXED",
+     "The announce step runs with if: always(), and dry_run defaults to true. "
+     "The script had no dry-run guard, so every preview run posted 'Short not "
+     "published: ...' to the public #announcements channel.",
+     "shorts_announce.py read only shorts_script.json and never checked "
+     "DRY_RUN or data/dry_run.json",
+     "dispatch the Shorts workflow with the default inputs and read "
+     "#announcements",
+     "The job exposes DRY_RUN, the announce step is skipped while it is true, "
+     "and the script itself refuses to post on a dry run as a second guard.",
+     "the workflow and script both check the flag; a dry run now prints that "
+     "nothing was announced.",
+     "a default dispatch posts nothing; a real run still announces",
+     ""),
+
+    ("a stray provider key made the pipeline believe a model was available, "
+     "then killed the job",
+     "HIGH", "providers", ["providers.py"], "VERIFIED_FIXED",
+     "configured() returned True for a Gemini, Google or Cerebras key, none of "
+     "which compat() can select, so callers entered a model path and then "
+     "model_chain() raised SystemExit, which their except Exception did not "
+     "catch. A key that was only whitespace counted as present too.",
+     "configured() checked five names while compat() chose only OpenRouter or "
+     "Groq, and the availability helpers tested the raw value",
+     "set GEMINI_API_KEY alone and run a job that asks configured()",
+     "configured() reports only the two backends compat() can use, and every "
+     "availability helper strips whitespace.",
+     "backend_selftest.py checks that no key means configured() is False and "
+     "compat() refuses.",
+     "with only GEMINI_API_KEY set, configured() is False and no caller enters "
+     "the model path",
+     ""),
+
+    ("every Groq request to llama-3.3 failed on a field the model does not "
+     "accept",
+     "MEDIUM", "providers", ["providers.py", "ai.py"], "VERIFIED_FIXED",
+     "reasoning_effort was sent to every Groq model. Only the reasoning models "
+     "accept it; llama-3.3-70b-versatile rejects the request, so the last "
+     "entry in the chat chain could never answer.",
+     "the payload always contained reasoning_effort: low",
+     "send a chat request to llama-3.3-70b-versatile with the field and read "
+     "the 400",
+     "The field is added only for the Groq models that accept it, and only "
+     "when the backend is Groq.",
+     "backend_selftest.py walks the chains; the gate names the accepted "
+     "families.",
+     "a request to a non-reasoning Groq model no longer carries the field",
+     ""),
+
+    # ---- reporting and pricing
+    ("the weekly review reported zero sales every week from a file full of "
+     "them",
+     "MEDIUM", "reporting", ["weekly_review.py"], "VERIFIED_FIXED",
+     "pricing.py writes {'revenue': total, 'products': [{sales, revenue}]}, "
+     "but revenue() looked for a list or an 'orders' key. It therefore "
+     "reported 0 orders and $0.00 on every run, even when the file held sales, "
+     "and the review's advice was based on that false number.",
+     "the reader and the writer disagreed about the shape of "
+     "data/earnings.json",
+     "fill earnings.json with the shape pricing.py writes and run the review",
+     "revenue() reads the real shape, keeps the legacy shapes, and marks the "
+     "number unavailable when the file is absent instead of pretending it is "
+     "zero.",
+     "the weekly review now distinguishes 'no data' from 'no sales'.",
+     "a file with two sales reports two orders, and a missing file says so",
+     ""),
+
+    ("each weekly review deleted every earlier review",
+     "MEDIUM", "reporting", ["weekly_review.py"], "VERIFIED_FIXED",
+     "record() wrote {this_week: f} over data/weekly_reviews.json instead of "
+     "merging, so the history the next build is supposed to read held exactly "
+     "one week. The review file and fixbook were also written in place, so a "
+     "crash could truncate a tracked file.",
+     "the write was json.dumps({f['week']: f}), not a merge with the loaded "
+     "history",
+     "run two weekly reviews and count the weeks in the file",
+     "The history is loaded and merged, and both tracked files are replaced "
+     "atomically through a temp file.",
+     "audit_selftest.py covers atomic writes elsewhere; a second review now "
+     "keeps the first.",
+     "two runs leave two weeks in the file",
+     ""),
+
+    ("the price engine asked itch.io for a listing that does not exist, so no "
+     "sale was ever seen",
+     "HIGH", "pricing", ["pricing.py"], "VERIFIED_FIXED",
+     "sales_from_itch() called /profile/{user}/games, which itch.io does not "
+     "serve, and then matched on id/slug although a project is identified by "
+     "its url. Every call raised, so sales and views stayed zero and the "
+     "engine never had a number to react to.",
+     "the endpoint was invented rather than taken from the working "
+     "itch_publish path",
+     "call sales_from_itch with the live key and read the exception",
+     "It now reuses itch_publish.games(), which is the working path, and "
+     "matches on the project URL or title.",
+     "pricing's own tests cover the decision; itchpublish_selftest.py covers "
+     "the listing reader.",
+     "the live listing is read and a known product's sales are returned",
+     ""),
+
+    ("the AI could never choose a monthly update, and the planner never kept "
+     "its history",
+     "MEDIUM", "reporting", ["update_plan.py"], "VERIFIED_FIXED",
+     "providers.models('debug') returns a list, but _model() called .get() on "
+     "it, so every call raised AttributeError and the plan silently fell back "
+     "to the fixed menu. plan() then read data/update_history.json before "
+     "creating it; the FileNotFoundError was swallowed, so the file was never "
+     "written.",
+     "_model() called .get('debug') on a list and the history read had no "
+     "existence check",
+     "run update_plan.py on a clean checkout and read the plan and the "
+     "missing history file",
+     "_model() asks providers.best_model('debug') and returns '' on SystemExit; "
+     "the history is created when absent.",
+     "the fixed-menu fallback still works with no key, which the plan tests "
+     "cover.",
+     "with a key the plan is model-chosen, and update_history.json exists "
+     "after the first run",
+     ""),
+
+    ("the itch doctor said the account had no projects because it read 4 KB "
+     "of a longer reply",
+     "MEDIUM", "publishing", ["itch_doctor.py"], "VERIFIED_FIXED",
+     "_get() read only 4000 bytes, so a real project listing was truncated "
+     "mid-JSON and failed to parse; the report then said the account had no "
+     "projects. An object reply such as {'games': [...]} was sliced as if it "
+     "were a list and raised TypeError. The script returned 0 even when the "
+     "key was refused.",
+     "r.read(4000) and projects = json.loads(body) or []",
+     "run the doctor against an account with more than 4 KB of projects",
+     "It reads 2 MB, accepts a list or the games/projects object, and exits 1 "
+     "when the key is refused.",
+     "the doctor is a report, but its exit code can now fail a gate.",
+     "a refused key exits 1 and a real listing is counted",
+     ""),
+
+    # ---- payments and the storefront
+    ("buyer licence keys were going to be published on the public site",
+     "CRITICAL", "payments", ["paypal.py"], "VERIFIED_FIXED",
+     "LICENSE_DIR was site/licenses. GitHub Pages serves site/, so the first "
+     "issued key, with the buyer's email, would have been world-readable. The "
+     "directory was also created at import time, which the exposure gate "
+     "refuses.",
+     "LICENSE_DIR = ROOT / 'site' / 'licenses'",
+     "issue a licence and fetch the file from the public site",
+     "Licences live in data/licenses, which is outside the published folder and "
+     "gitignored; the directory is created only when a key is written.",
+     "check_exposure.py refuses any file under site/ that looks like buyer "
+     "data; paidbuild_selftest.py exercises key issuance.",
+     "no licence path resolves under site/ and the exposure check passes",
+     ""),
+
+    ("every buyer landed on a 404 after paying",
+     "HIGH", "payments", ["paypal.py", "site/checkout.html"],
+     "VERIFIED_FIXED",
+     "The PayPal return_url pointed at site/full.html, which was deleted with "
+     "the old payment worker. A successful payment therefore ended on a 404, "
+     "with no key and no download link.",
+     "the return URL named a page that is not in the repository",
+     "pay for a product and follow the return",
+     "The return URL is checkout.html?paid=1&slug=..., and the page shows the "
+     "paid state and the download instructions.",
+     "checkout.html handles paid=1 and cancelled=1; the link is built from the "
+     "slug.",
+     "the return URL resolves to a real page in the live site",
+     ""),
+
+    ("about four in ten licence keys were rejected by the verifier that was "
+     "meant to accept them",
+     "HIGH", "payments", ["paypal.py"], "VERIFIED_FIXED",
+     "new_key() used secrets.token_urlsafe, which can emit a hyphen, and "
+     "verify_key() split the key on hyphens and required exactly four parts. "
+     "Any key whose random part contained a hyphen failed verification.",
+     "the key format and the parser disagreed about the separator",
+     "generate keys until one contains a hyphen and verify it",
+     "Keys use token_hex, which cannot emit a hyphen, and the verifier splits "
+     "the signature from the end so older keys still verify.",
+     "a generated key round-trips through verify_key in the payment tests.",
+     "every generated key verifies, including one with a hyphen in the old "
+     "payload",
+     ""),
+
+    ("live licences could be forged with a secret that is in the source",
+     "CRITICAL", "payments", ["paypal.py"], "VERIFIED_FIXED",
+     "_sign() fell back to the literal 'slingshot-dev' when LICENSE_SECRET was "
+     "missing, and nothing stopped that fallback from being used for real "
+     "orders. Anyone reading the repository could mint a valid key.",
+     "os.environ.get('LICENSE_SECRET') or 'slingshot-dev' was used in every "
+     "mode",
+     "unset LICENSE_SECRET, issue a live key, and verify a key signed with the "
+     "public string",
+     "Live mode refuses to sign without LICENSE_SECRET; the fallback remains "
+     "only for tests.",
+     "the payment path now fails closed instead of signing with a public "
+     "value.",
+     "unsetting the secret makes a live order fail before a key is issued",
+     ""),
+
+    ("every buy link in a Discord article was a dead end",
+     "MEDIUM", "publishing", ["discord_data.py", "discord_article.py"],
+     "VERIFIED_FIXED",
+     "buy_url was checkout.html?slug=..., but the page needs slug, price, "
+     "title and itch. With only the slug it hid the Continue button and said "
+     "the tool was not ready. The article was saved before the buy check, so a "
+     "committed article could advertise a link that led nowhere.",
+     "the checkout URL was built with one of the four parameters the page "
+     "reads",
+     "open a Discord article's buy link and watch it refuse to continue",
+     "buy_url carries all four values and is empty unless the full tier is "
+     "published with an https itch URL; a dry run may preview an article but "
+     "nothing is saved or posted without a working link.",
+     "discord_data's live_tools() is exercised by growth_selftest.py.",
+     "the regenerated discord_articles.json contains no buy link without all "
+     "four values",
+     ""),
+
+    ("the catalog said the paid edition lived on the free app's page",
+     "LOW", "storefront", ["make_app.py", "site/apps.json"], "VERIFIED_FIXED",
+     "publish() wrote the free app's URL into the full entry. A paid edition "
+     "has no public page of its own: it is sold through itch.io and never "
+     "copied into site/. The field therefore claimed a page existed and sent "
+     "anyone who followed it to the free product.",
+     "the full entry's url was "
+     "f'{SITE_URL}/apps/{slug}-basic/'",
+     "read site/apps.json and follow a full entry's url",
+     "The full entry's url is empty; itch_url is the only store locator for a "
+     "paid edition, and the generation log names it.",
+     "check_exposure.py validates every itch_url and the site never reads "
+     "full.url.",
+     "the catalogue has no full entry pointing at a free app page",
+     ""),
+
+    ("the product chooser could not be used without a mouse, and the catalog "
+     "disappeared without JavaScript",
+     "MEDIUM", "storefront", ["site/index.html"], "VERIFIED_FIXED",
+     "The dialog was a plain div with no role, no aria state, no focus move, "
+     "no Escape key and no focus trap, so a keyboard user could open it and "
+     "then not reach or leave it. The catalog was rendered only by script, so "
+     "with JavaScript off the page showed an empty section and no links.",
+     "the dialog had only a click handler and #apps was filled only by fetch",
+     "open the site, press Tab to a card, activate it, and try to close or "
+     "navigate with the keyboard",
+     "The dialog is role=dialog aria-modal with aria-labelledby, focus moves "
+     "in and returns to the trigger, Escape closes it, Tab is trapped, and a "
+     "noscript block links to the itch.io store and GitHub.",
+     "site_js_selftest.py parses the inline script and checks the dialog and "
+     "countdown behaviour.",
+     "the page's script parses and the noscript links are present",
+     ""),
+
+    # ---- scheduling and the checks around them
+    ("the monthly lane's stage selector was read from the variable it was "
+     "defining",
+     "MEDIUM", "scheduling", [".github/workflows/monthly-update.yml"],
+     "VERIFIED_FIXED",
+     "STAGE was set to env.STAGE || 'all'. env.STAGE is the same map entry, so "
+     "it was empty and a manual dispatch always ran every stage. A scheduled "
+     "run is unaffected because it has no input, which hid the fault.",
+     "STAGE: ${{ env.STAGE || 'all' }}",
+     "dispatch the workflow with stage=plan and watch the trailer steps run",
+     "STAGE reads inputs.stage with 'all' as the fallback, and every step "
+     "condition reads env.STAGE.",
+     "the workflow is checked by selftest_audit.py's workflow inventory.",
+     "a dispatch with stage=plan runs only the plan steps",
+     ""),
+
+    ("one missing file made the commit step stage nothing, and '|| true' hid "
+     "it",
+     "MEDIUM", "scheduling",
+     [".github/workflows/daily-improve.yml",
+      ".github/workflows/monthly-update.yml"],
+     "VERIFIED_FIXED",
+     "Both lanes ran git add with several pathspecs and appended || true. A "
+     "single missing (or ignored) pathspec makes git exit 128 and stage "
+     "nothing, so the state files were never committed on a scheduled run and "
+     "the failure was invisible. The daily lane also staged only data/, which "
+     "left the accepted source patch on the runner.",
+     "git add a b c || true with one path absent",
+     "run the step on a checkout without one of the named files and read the "
+     "staged set",
+     "Each file is added only when it exists, git add -u stages the kept "
+     "patch, and the push is no longer hidden behind || echo.",
+     "selftest_audit.py inventories the workflows and their steps.",
+     "the state files are committed when present and a missing one no longer "
+     "aborts the step",
+     ""),
+
+    ("the review lane read an undefined itch variable",
+     "LOW", "scheduling", [".github/workflows/wednesday-review.yml"],
+     "VERIFIED_FIXED",
+     "The job set ITCH_USER from vars.ITCH_PAGE, which is not defined anywhere. "
+     "Every other workflow and reputation.py read vars.ITCH_USER, so the review "
+     "lane silently used the fallback user instead of the configured account.",
+     "ITCH_USER: ${{ vars.ITCH_PAGE }}",
+     "run the review job and print ITCH_USER",
+     "The lane reads vars.ITCH_USER, the same name as every other caller.",
+     "selftest_audit.py inventories every variable a workflow reads.",
+     "the review job receives the configured user",
+     ""),
+
+    ("the connection check called a working store broken and a broken upload "
+     "healthy",
+     "MEDIUM", "checks", ["check_connections.py", "check.ps1"],
+     "VERIFIED_FIXED",
+     "A missing ITCH_SESSION_COOKIE failed the check even though uploads use "
+     "the API key and only project creation needs the cookie. In the other "
+     "direction, missing YouTube credentials were logged and the check "
+     "returned True, so CI stayed green while every Short was rendered and "
+     "discarded.",
+     "check_itch_session() required an unused secret and check_youtube() "
+     "returned ok on missing credentials",
+     "unset the itch cookie and the YouTube secrets and run the check",
+     "A missing session cookie is a stated pass/warning; missing YouTube "
+     "credentials fail unless ALLOW_FREE_ONLY=1, which check-connections.yml "
+     "sets for a render-only launch. check.ps1 lists the same variables.",
+     "audit_selftest.py checks that check.ps1 names every variable "
+     "check_connections.py reads.",
+     "the check reports the store correctly and a missing upload credential is "
+     "visible",
+     ""),
+
+    ("the clean-room test blamed missing files when git itself had failed",
+     "LOW", "tests", ["cleanroom_selftest.py"], "VERIFIED_FIXED",
+     "git ls-files and git submodule status were run without checking the "
+     "return code. An empty listing from a broken command looked like an empty "
+     "repository, so every later check failed with 'file not in repository'. "
+     "The subprocess output was also decoded with the console code page.",
+     "subprocess.run(['git', 'ls-files']) with no return-code check",
+     "run the clean-room test in a folder where git fails",
+     "A non-zero git exit stops the test with the real error, and every child "
+     "is decoded as UTF-8.",
+     "the test reports the command's own failure instead of a missing file.",
+     "a broken git returns 2 with the git error on screen",
+     ""),
+
+    ("the paid-build test left the real audit log pointing at a temp file",
+     "LOW", "tests", ["paidbuild_selftest.py"], "VERIFIED_FIXED",
+     "The suite redirected auditlog.LOG to a temp file and restored it only at "
+     "the end of a successful run. A scenario that raised left every later "
+     "audit write in the process going to the temp file, so the real log "
+     "silently stopped recording. The temp folder was also never removed.",
+     "auditlog.LOG was reassigned without try/finally or atexit",
+     "make a scenario raise and then write an audit event",
+     "The redirect is restored by atexit and the temp folder is removed when a "
+     "scenario finishes.",
+     "the suite asserts the restored log after the scenarios.",
+     "the real log records events after a failed scenario",
+     ""),
+
+    ("the guard that protects the site was allowed to rewrite itself",
+     "HIGH", "self-repair", ["weekly_guard.py"], "VERIFIED_FIXED",
+     "weekly_guard.py was listed in SELF_IMPROVABLE, so the lane it constrains "
+     "could patch the rule set, and the protected set was computed from the "
+     "patched file on the next run.",
+     "weekly_guard.py appeared in its own SELF_IMPROVABLE list",
+     "ask the self-improvement lane to change weekly_guard.py and watch it "
+     "accept",
+     "The guard is no longer self-improvable; only the release lane may write "
+     "the catalog and generated app folders, and only through an explicit "
+     "allowlist.",
+     "audit_selftest.py checks that a protected script is refused by the "
+     "repair lane.",
+     "weekly_guard.py is protected and a self-improvement patch to it is "
+     "refused",
+     ""),
+
+    ("the release lane was forbidden from writing the catalog it publishes",
+     "MEDIUM", "release", ["weekly_guard.py",
+                            ".github/workflows/friday-verify.yml"],
+     "VERIFIED_FIXED",
+     "weekly_guard protects site/, including site/apps.json and site/apps/. "
+     "The release lane writes exactly those files, so a successful week ended "
+     "by failing the guard and the catalogue was not deployed.",
+     "no allowance existed for the lane whose job is to publish the catalog",
+     "run a release that publishes an app and watch the guard refuse the "
+     "files it just wrote",
+     "RELEASE_WRITES names site/apps.json and site/apps/, and only "
+     "weekly_guard.py check --allow-release accepts them. Everything else in "
+     "site/ stays protected.",
+     "the guard's own tests cover the allowlist; the release lane passes "
+     "--allow-release.",
+     "the release lane can write its output and still cannot touch the "
+     "storefront markup",
+     ""),
+
+    ("re-publishing a product dropped the store URL another step had proved",
+     "HIGH", "release pipeline", ["make_app.py"], "VERIFIED_FIXED",
+     "publish() builds a fresh entry and removes the old one with the same "
+     "slug. None of the fields written later by set_itch_url.py, "
+     "itch_publish.record() or the paid build were carried over, so a rebuild "
+     "left a full entry marked published for sale with no itch_url. The "
+     "exposure gate refuses exactly that, and the site hid the product.",
+     "publish() replaced the entry without reading itch_url or built from the "
+     "entry it replaced",
+     "re-publish a full entry that has itch_url and read the catalog",
+     "The replacement keeps itch_url and built from the entry it replaces, so "
+     "a re-verified or rebuilt product keeps its store page.",
+     "paidbuild_selftest.py re-publishes a full entry and checks both fields "
+     "survive.",
+     "the test shows the itch URL and built marker on the new entry",
+     ""),
 ]
 
 

@@ -158,9 +158,9 @@ Produce a JSON object with exactly these keys:
  else "Keep it short; do not invent capabilities."}
 
 {RULES}"""
-    raw = providers.groq_chat(model, f"You are a direct response copywriter. "
-                                    f"{RULES}", prompt, 0.85,
-                              1100 if tour else 600)
+    raw = providers.chat(model, f"You are a direct response copywriter. "
+                                f"{RULES}", prompt, 0.85,
+                        1100 if tour else 600, role="debug")
     return _clean(raw, p, mode, want)
 
 
@@ -249,8 +249,10 @@ def runtime_note(secs: float, mode: str) -> str:
 
 
 def main() -> int:
-    model = (os.environ.get("GROQ_CHAT_MODEL") or "").strip() \
-        or "openai/gpt-oss-120b"
+    try:
+        model = providers.best_model("chat")
+    except SystemExit:
+        model = ""
     mode = (os.environ.get("SHORTS_MODE") or "short").strip().lower()
     if mode not in ("short", "tour"):
         mode = "short"

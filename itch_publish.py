@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -178,6 +179,71 @@ def build_is_listed(url: str, filename: str, attempts: int = 3) -> bool:
 
 
 _PROBE_CACHE: dict[str, tuple[bool, str]] = {}
+
+
+def _buy_box(body: str) -> str:
+    """The purchase block of an itch.io page, lowercased, or "" when absent."""
+    m = re.search(r'class="buy_message"[^>]*>(.*?)</div>', body, re.S | re.I)
+    if m:
+        return m.group(1).lower()
+    # Some layouts put the price on the buy button itself ("Buy Now $3.00").
+    m = re.search(r'<div class="donate">(.{0,400}?)</div>', body, re.S | re.I)
+    return m.group(1).lower() if m else ""
+
+
+def _advertised_minimum(body: str) -> float | None:
+    """The least a buyer can pay on this page, or None when it is not shown.
+
+    itch.io marks a pay-what-you-want page with "Name your own price" and, when
+    there is a floor, "Pay $3.00 or more". A page with no floor says only the
+    first, and its button reads "Download Now": that page sells nothing.
+    """
+    box = _buy_box(body)
+    if not box:
+        return None
+    m = re.search(r"\$\s*([0-9]+(?:\.[0-9]{1,2})?)", box)
+    if "name your own price" in box:
+        if m and "or more" in box:
+            return float(m.group(1))
+        return 0.0
+    if "free" in box:
+        return 0.0
+    if m:
+        return float(m.group(1))
+    return None
+
+
+def asks_for_price(body: str, price: float) -> bool:
+    """Does the store page charge exactly the price the site advertises?
+
+    A money gate has to fail closed. An unreadable page is not evidence that
+    the price is right: publishing on a guess is how the store advertised
+    $3.00 while its button said "Download Now". Retrying is cheap; charging
+    the wrong amount is not.
+    """
+    minimum = _advertised_minimum(body)
+    if minimum is None:
+        log("   the purchase block could not be read, so the price is unverified")
+        return False
+    # Exact match, not "at least". A $5.00 floor also satisfies ">= 3.00",
+    # which would advertise $3.00 and charge $5.00 at checkout.
+    return abs(minimum - price) < 0.005
+
+
+def price_is_asked(url: str, price: float, attempts: int = 2) -> bool:
+    """ask_for_price, over the wire. A page that cannot be read is refused."""
+    for i in range(attempts):
+        try:
+            req = urllib.request.Request(
+                url, headers={"User-Agent": "slingshot-tools"})
+            with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+                body = r.read(600_000).decode("utf-8", "replace")
+            return asks_for_price(body, price)
+        except Exception:  # noqa: BLE001
+            if i < attempts - 1:
+                time.sleep(2)
+    log(f"   could not read the price on {url}, so it is not verified")
+    return False
 
 
 def _probe_cached(url: str):
@@ -916,6 +982,17 @@ def publish(slug: str, title: str, price: float, version: str = "") -> bool:
             "file is on the page")
         return False
     log(f"4. the page answers and lists {installer.name}")
+
+    # 4b. a page that lets a buyer pay nothing is not selling a $3.00 product.
+    # The project was created as pay-what-you-want, so this is not theoretical:
+    # the site showed $3.00 and the store's button said "Download Now".
+    if not price_is_asked(url, price):
+        log(f"4. the page does not ask for ${price:.2f}: it is a "
+            "pay-what-you-want page with no minimum, so a buyer can pay $0.00")
+        log("   set the minimum price under the project's Pricing on itch.io, "
+            "then run this again; the paid tier stays hidden until then")
+        return False
+    log(f"4. the page asks for at least ${price:.2f}")
 
     # 5. only now is it safe to show a buy button
     if not record(slug, url, price):

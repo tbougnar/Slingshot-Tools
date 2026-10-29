@@ -28,6 +28,7 @@ ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 
 import weekly_guard as guard
+from testenv import clean_env
 
 DATA = ROOT / "data"
 STATE = DATA / "self_upgrade.json"
@@ -41,8 +42,16 @@ ALLOWED = [p.strip() for p in
             "sizeguard.py,tokenmeter.py,providers.py").split(",")
            if p.strip()]
 
-MODEL = (os.environ.get("GROQ_CHAT_MODEL") or "").strip() \
-    or "openai/gpt-oss-20b"
+def _model() -> str:
+    """The upgrade model on the live backend (OpenRouter first)."""
+    try:
+        import providers
+        return providers.default_model("chat")
+    except SystemExit:
+        return ""
+
+
+MODEL = _model()
 
 # The tests that must all pass before a patch is kept.
 # Everything that has to stay green. A patch that breaks any of these is
@@ -54,7 +63,11 @@ TEST_SUITE = ["selftest.py", "selftest_deep.py", "selftest_audit.py",
               "check_exposure.py", "check_links.py",
               "update_selftest.py", "site_js_selftest.py",
               "shorts_layout_selftest.py", "shorts_mux_selftest.py",
-              "shorts_script_selftest.py", "scan_selftest.py"]
+              "shorts_script_selftest.py", "scan_selftest.py",
+              # providers.py is in ALLOWED, and this is the test that requires
+              # every chain id to end in :free. Without it a patch could move
+              # the pipeline onto paid models and still pass every test here.
+              "backend_selftest.py"]
 
 
 def log(msg: str) -> None:
@@ -85,10 +98,23 @@ def recent_lessons(limit: int = 25) -> list:
 
 
 def run_tests() -> tuple[bool, str]:
-    """Every test has to pass. Returns (ok, what failed)."""
+    """Every test has to pass. Returns (ok, what failed).
+
+    The suite runs with the same stripped environment run_selftests.py uses.
+    These tests start child processes, and the upgrade job runs with the live
+    keys, so inheriting the environment let a test post to Discord or spend
+    real model tokens. A timeout or a missing interpreter must also come back
+    as a failed patch so the rollback path runs, rather than escaping main().
+    """
     for script in TEST_SUITE:
-        r = subprocess.run([sys.executable, script], cwd=ROOT,
-                           capture_output=True, text=True, timeout=900)
+        try:
+            r = subprocess.run([sys.executable, script], cwd=ROOT,
+                               capture_output=True, text=True, timeout=900,
+                               env=clean_env())
+        except subprocess.TimeoutExpired:
+            return False, f"{script} did not finish within 900 seconds"
+        except OSError as e:
+            return False, f"{script} could not be started: {str(e)[:160]}"
         if r.returncode != 0:
             tail = (r.stdout or r.stderr or "").strip().splitlines()[-6:]
             return False, (f"{script} exited {r.returncode}\n"
@@ -137,7 +163,13 @@ def propose(lessons: list) -> list[dict]:
     user = UPGRADE_USER.format(allowed="\n".join(f"  - {f}" for f in ALLOWED),
                                lessons=lesson_text)
 
-    for model in (MODEL, "openai/gpt-oss-20b", "llama-3.3-70b-versatile"):
+    try:
+        import providers
+        chain = providers.model_chain("chat")
+    except SystemExit:
+        log("no model provider is configured; nothing to do")
+        return []
+    for model in chain:
         try:
             raw = patcher.chat(model, UPGRADE_SYSTEM, user, max_tokens=6000)
         except Exception as e:  # noqa: BLE001

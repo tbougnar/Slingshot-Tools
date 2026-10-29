@@ -137,6 +137,42 @@ def main() -> int:
                          evidence={"price": price})
         return 1
 
+    # A page that lists the file is not necessarily charging for it. The store
+    # project was created as pay-what-you-want with no minimum, so this exact
+    # check is what stops the site advertising $3.00 for a $0.00 download.
+    if not ip.price_is_asked(url, price):
+        log(f"{url} does not charge ${price:.2f}, so a buyer could pay less "
+            "than the site advertises")
+        log("nothing new is marked on sale, and anything already marked on "
+            "sale for this family is hidden until the price is fixed")
+        auditlog.blocked("publish-paid", job=slug,
+                         reason=f"the store page does not charge the "
+                                f"advertised ${price:.2f}",
+                         evidence={"itch_url": url, "price": price})
+        hidden = False
+        for entry in family:
+            # Only the paid tier goes dark. The free edition is not for sale
+            # and must stay visible; hiding it took every product off the site.
+            if entry.get("tier") == "full" and entry.get("published") is True:
+                entry["published"] = False
+                hidden = True
+        if hidden:
+            try:
+                CATALOG.write_text(
+                    json.dumps(apps, indent=2, ensure_ascii=False) + "\n",
+                    encoding="utf-8")
+                log(f"hid {slug}: the site will not advertise a price the "
+                    "store does not charge")
+                auditlog.succeeded(
+                    "publish-paid", job=slug,
+                    reason="the paid tier was hidden because the store does "
+                           "not charge the advertised price",
+                    evidence={"itch_url": url, "price": price})
+            except OSError as e:
+                log(f"could not hide it in the catalog: {str(e)[:90]}")
+        return 1
+    log(f"the page charges ${price:.2f}, which is what the site advertises")
+
     changed = False
     for entry in family:
         if entry.get("published") is not True:

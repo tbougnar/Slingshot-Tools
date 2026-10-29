@@ -62,6 +62,7 @@ SECRET_PATTERNS = [
     (r"ghp_[A-Za-z0-9]{30,}", "a GitHub personal access token"),
     (r"AKIA[0-9A-Z]{16}", "an AWS access key id"),
     (r"-----BEGIN [A-Z ]*PRIVATE KEY-----", "a private key"),
+    (r"\bsk-or-v1-[A-Za-z0-9]{20,}", "an OpenRouter API key"),
     (r"\bsk-[A-Za-z0-9]{32,}", "an API secret key"),
     (r"\bgsk_[A-Za-z0-9]{20,}", "a Groq API key"),
     (r"x-access-token:[A-Za-z0-9_]{10,}@", "a token in a git remote"),

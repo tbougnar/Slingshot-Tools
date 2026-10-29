@@ -131,9 +131,21 @@
       </div>
     </section>
     <section class="grid" id="apps"></section>
+    <noscript>
+      <div class="empty">
+        <strong>The catalog needs JavaScript to load.</strong><br>
+        Every tool is also listed on the store, where you can download it
+        directly:<br>
+        <a href="https://slingshot-tools.itch.io/slingshot-tools">slingshot-tools.itch.io/slingshot-tools</a><br>
+        The source and releases are on
+        <a href="https://github.com/tbougnar/Slingshot-Tools">GitHub</a>.
+      </div>
+    </noscript>
   </main>
-  <div class="dlg" id="dlg" onclick="if(event.target.id==='dlg')closeDialog()">
-    <div class="dlgBox">
+  <div class="dlg" id="dlg" onclick="if(event.target.id==='dlg')closeDialog()"
+       role="dialog" aria-modal="true" aria-labelledby="dlgTitle"
+       aria-hidden="true">
+    <div class="dlgBox" role="document">
       <button class="dlgX" onclick="closeDialog()" aria-label="Close">&times;</button>
       <h3 id="dlgTitle"></h3>
       <p id="dlgBlurb" class="dlgBlurb"></p>
@@ -209,6 +221,7 @@ const onSale=item.onSale; const price=onSale?'$'+Number(f.price||0).toFixed(2):'
     // The index refers to VIEW, which is whatever render() last drew, so it
     // stays correct when a filter is on and the card order has changed.
     function openDialogByIndex(i){const item=VIEW[i]; if(item) openDialog(item);}
+    let lastFocus=null;
     function openDialog(item){const opts=[]; if(item.basic)opts.push({tier:'basic',title:item.basic.title,blurb:item.basic.blurb,price:'Free',href:item.basic.url});
     // checkout.html only forwards to itch.io, so no payment detail touches this site
     // The paid edition is only offered when it is actually on sale. A
@@ -217,8 +230,22 @@ const onSale=item.onSale; const price=onSale?'$'+Number(f.price||0).toFixed(2):'
     // asked for no money and said the full edition was free.
     if(item.onSale&&item.full){const live=item.full.itch_url||''; opts.push({tier:'full',title:item.full.title,blurb:item.full.blurb,diffs:item.diffs||[],price:'$'+Number(item.full.price||0).toFixed(2),href:CHECKOUT+'?slug='+encodeURIComponent(item.key)+'&price='+Number(item.full.price||0).toFixed(2)+'&title='+encodeURIComponent(item.full.title)+'&itch='+encodeURIComponent(live)});}
     const lead=item.lead||item.full||item.basic; const shown=String(lead.title||'').replace(/\s*\(basic\)\s*$/i,''); document.getElementById('dlgTitle').textContent=shown; document.getElementById('dlgBlurb').textContent=lead.blurb||''; // A product whose paid edition is not on sale yet still says so, so a visitor is not left thinking the free edition is all there will ever be.
-const soon=document.getElementById('dlgSoon'); if(soon)soon.style.display=(item.onSale||!item.full)?'none':'block'; document.getElementById('dlgOpts').innerHTML=opts.map(o=>'<button class="opt '+o.tier+'" onclick="location.href=\''+esc(o.href)+'\'"><span class="optTier">'+(o.tier==='basic'?'Free basic':'Full edition')+'</span><span class="optTitle">'+esc(o.title)+'</span><span class="optBlurb">'+esc(o.blurb||'')+'</span><span class="optPrice">'+esc(o.price)+'</span>'+(o.diffs&&o.diffs.length?'<span class="optDiffs">'+o.diffs.map(function(d){return '<span class="diff">'+esc(d)+'</span>';}).join('')+'</span>':'')+'<span class="optCta">'+(o.tier==='basic'?'Download free':'Get the full edition')+'</span></button>').join(''); document.getElementById('dlg').classList.add('open');}
-    function closeDialog(){document.getElementById('dlg').classList.remove('open');}
+const soon=document.getElementById('dlgSoon'); if(soon)soon.style.display=(item.onSale||!item.full)?'none':'block'; document.getElementById('dlgOpts').innerHTML=opts.map(o=>'<button class="opt '+o.tier+'" onclick="location.href=\''+esc(o.href)+'\'"><span class="optTier">'+(o.tier==='basic'?'Free basic':'Full edition')+'</span><span class="optTitle">'+esc(o.title)+'</span><span class="optBlurb">'+esc(o.blurb||'')+'</span><span class="optPrice">'+esc(o.price)+'</span>'+(o.diffs&&o.diffs.length?'<span class="optDiffs">'+o.diffs.map(function(d){return '<span class="diff">'+esc(d)+'</span>';}).join('')+'</span>':'')+'<span class="optCta">'+(o.tier==='basic'?'Download free':'Get the full edition')+'</span></button>').join('');
+    // A dialog that only responds to the mouse is unreachable by keyboard.
+    // Remember what opened it so focus can go back there, move focus inside,
+    // and keep Tab inside while it is open.
+    lastFocus=document.activeElement;
+    const box=document.getElementById('dlg'); box.setAttribute('aria-hidden','false'); box.classList.add('open');
+    const first=box.querySelector('button.opt')||box.querySelector('button.dlgX'); if(first)first.focus();}
+    function closeDialog(){const box=document.getElementById('dlg'); if(!box||!box.classList.contains('open'))return; box.classList.remove('open'); box.setAttribute('aria-hidden','true'); if(lastFocus&&lastFocus.focus)lastFocus.focus(); lastFocus=null;}
+    document.addEventListener('keydown',function(e){const box=document.getElementById('dlg'); if(!box||!box.classList.contains('open'))return;
+      if(e.key==='Escape'){e.preventDefault(); closeDialog(); return;}
+      if(e.key!=='Tab')return;
+      const focusable=box.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      if(!focusable.length)return; const first=focusable[0], last=focusable[focusable.length-1];
+      if(e.shiftKey&&document.activeElement===first){e.preventDefault(); last.focus();}
+      else if(!e.shiftKey&&document.activeElement===last){e.preventDefault(); first.focus();}
+    });
     fetch("apps.json",{cache:"no-store"}).then(r=>r.json()).then(d=>{APPS=Array.isArray(d)?d:(d.apps||[]); render();}).catch(()=>{appsEl.innerHTML='<div class="empty"><strong>Slingshot Tools</strong><br>The catalog loads on first build.</div>';});
 
     // Release countdown. Reads update.json, which update_state.py writes.

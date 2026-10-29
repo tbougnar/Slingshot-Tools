@@ -97,7 +97,6 @@ SELF_IMPROVABLE = [
     "log_lesson.py",
     "selftest*.py",
     "budget.py",
-    "weekly_guard.py",
     "reputation.py",
     "data/fixbook.json",
     "data/fixbook.md",
@@ -106,6 +105,16 @@ SELF_IMPROVABLE = [
 # A product cannot be taken down until it has been ignored this long, and the
 # evidence has to say it will never sell.
 RETIRE_MIN_DAYS = 365
+
+
+# The release lane is allowed to write the catalogue and the generated app
+# folders. It is the lane that publishes them, and a guard that forbids the
+# publish step from doing its own job fails every successful week. Everything
+# else in site/ stays protected, including the storefront markup.
+RELEASE_WRITES = (
+    "site/apps.json",
+    "site/apps/",
+)
 
 
 def protected_globs() -> list[str]:
@@ -190,9 +199,15 @@ def is_protected(path: str) -> bool:
     return False
 
 
-def violations(paths: list[str]) -> list[str]:
+def violations(paths: list[str], allow: tuple[str, ...] = ()) -> list[str]:
     """Which of these paths the learn job is not allowed to touch."""
-    return [p for p in paths if is_protected(p)]
+    out = []
+    for p in paths:
+        if any(p == a or (a.endswith("/") and p.startswith(a)) for a in allow):
+            continue
+        if is_protected(p):
+            out.append(p)
+    return out
 
 
 def uncommitted(paths: list[str]) -> list[str]:
@@ -209,10 +224,11 @@ def uncommitted(paths: list[str]) -> list[str]:
     return out
 
 
-def guard(paths: list[str] | None = None) -> int:
+def guard(paths: list[str] | None = None,
+          allow: tuple[str, ...] = ()) -> int:
     """Refuse to go on if a protected file was modified. 0 means it is fine."""
     paths = paths if paths is not None else changed_files()
-    bad = violations(paths)
+    bad = violations(paths, allow)
     if not bad:
         print(f"[guard] ok: {len(paths)} changed file(s), none protected")
         return 0
@@ -233,7 +249,8 @@ def guard(paths: list[str] | None = None) -> int:
 def main() -> int:
     """Print the rule set, or check a change set."""
     if len(sys.argv) > 1 and sys.argv[1] == "check":
-        return guard()
+        allow = RELEASE_WRITES if "--allow-release" in sys.argv[2:] else ()
+        return guard(allow=allow)
     if len(sys.argv) > 1 and sys.argv[1] == "uncommitted":
         bad = uncommitted(changed_files())
         if bad:

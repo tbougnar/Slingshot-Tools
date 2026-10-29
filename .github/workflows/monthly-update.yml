@@ -39,7 +39,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      OPENROUTER_CHAT_MODEL: ${{ vars.OPENROUTER_CHAT_MODEL }}
       GROQ_CHAT_MODEL: ${{ secrets.GROQ_CHAT_MODEL }}
       DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
       DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
@@ -47,7 +49,7 @@ jobs:
       ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
       ELEVENLABS_VOICE_ID: ${{ vars.ELEVENLABS_VOICE_ID }}
       SLINGSHOT_MONTHLY_HOURS: "30"
-      STAGE: ${{ inputs.stage }}
+      STAGE: ${{ inputs.stage || 'all' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -73,37 +75,37 @@ jobs:
       # piece, and so the 20th's announce-only run does not rebuild a trailer
       # that already exists.
       - name: Plan the update
-        if: ${{ inputs.stage == 'all' || inputs.stage == 'plan' }}
+        if: ${{ env.STAGE == 'all' || env.STAGE == 'plan' }}
         run: python update_plan.py
 
       - name: Show the plan
-        if: ${{ inputs.stage == 'all' || inputs.stage == 'plan' }}
+        if: ${{ env.STAGE == 'all' || env.STAGE == 'plan' }}
         run: python update_plan.py --show
 
       - name: Announce it on Discord
-        if: ${{ inputs.stage == 'all' || inputs.stage == 'announce' }}
+        if: ${{ env.STAGE == 'all' || env.STAGE == 'announce' }}
         run: python update_discord.py
 
       # The trailer reads the real app's HTML, so the screenshots come from the
       # same shots.py the Shorts pipeline uses rather than a mock-up.
       - name: Shoot the real app
-        if: ${{ inputs.stage == 'all' || inputs.stage == 'trailer' }}
+        if: ${{ env.STAGE == 'all' || env.STAGE == 'trailer' }}
         run: python shots.py || true
 
       - name: Write the trailer script
-        if: ${{ inputs.stage == 'all' || inputs.stage == 'trailer' }}
+        if: ${{ env.STAGE == 'all' || env.STAGE == 'trailer' }}
         run: python update_trailer_script.py
 
       - name: Speak the trailer
-        if: ${{ inputs.stage == 'all' || inputs.stage == 'trailer' }}
+        if: ${{ env.STAGE == 'all' || env.STAGE == 'trailer' }}
         run: python update_trailer_voice.py
 
       - name: Render the trailer
-        if: ${{ inputs.stage == 'all' || inputs.stage == 'trailer' }}
+        if: ${{ env.STAGE == 'all' || env.STAGE == 'trailer' }}
         run: python update_trailer_render.py
 
       - name: Join the trailer
-        if: ${{ inputs.stage == 'all' || inputs.stage == 'trailer' }}
+        if: ${{ env.STAGE == 'all' || env.STAGE == 'trailer' }}
         run: python update_trailer_mux.py
 
       # Only the small public data file is written. The homepage markup is
@@ -130,11 +132,15 @@ jobs:
         run: |
           git config user.name "slingshot-bot"
           git config user.email "slingshot-bot@users.noreply.github.com"
-          git add data/update_state.json data/weekly_state.json \
-                  data/update_history.json || true
+          # Add each file only if it exists. A single missing pathspec made git
+          # exit 128 and stage nothing at all, and "|| true" hid that, so the
+          # state files were never committed on any scheduled run.
+          for f in data/update_state.json data/weekly_state.json data/update_history.json; do
+            [ -e "$f" ] && git add "$f"
+          done
           git diff --staged --quiet || \
             git commit -q -m "release: monthly update plan [skip ci]"
-          git push || echo "nothing to push"
+          git push
 
       - name: Keep the trailer
         if: always()

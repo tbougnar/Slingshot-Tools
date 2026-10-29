@@ -18,10 +18,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      OPENROUTER_CHAT_MODEL: ${{ vars.OPENROUTER_CHAT_MODEL }}
       GROQ_CHAT_MODEL: ${{ secrets.GROQ_CHAT_MODEL }}
       ITCH_API_KEY: ${{ secrets.ITCH_API_KEY }}
-      ITCH_USER: ${{ vars.ITCH_PAGE }}
+      # Every other workflow and reputation.py read ITCH_USER. This lane read
+      # ITCH_PAGE, which is undefined, so it silently fell back to a default.
+      ITCH_USER: ${{ vars.ITCH_USER }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
       DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
@@ -82,7 +86,7 @@ jobs:
           git config user.email "bot@users.noreply.github.com"
           git add -A
           git commit -q -m "chore: weekly review and coaching [skip ci]" || echo "nothing to commit"
-          git push || (git pull --rebase origin main && git push) || echo "push failed"
+          git push || (git pull --rebase origin main && git push)
 
   # The self-upgrade pass: the company may rewrite its own machinery, and
   # nothing else. It runs on a second day so a bad patch has a week to be
@@ -92,7 +96,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      OPENROUTER_CHAT_MODEL: ${{ vars.OPENROUTER_CHAT_MODEL }}
       GROQ_CHAT_MODEL: ${{ secrets.GROQ_CHAT_MODEL }}
       SLINGSHOT_MONTHLY_HOURS: "30"
     steps:
@@ -132,4 +138,4 @@ jobs:
           git config user.email "bot@users.noreply.github.com"
           git add -A
           git commit -q -m "chore: self-improvement [skip ci]" || echo "nothing to commit"
-          git push || (git pull --rebase origin main && git push) || echo "push failed"
+          git push || (git pull --rebase origin main && git push)

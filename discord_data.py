@@ -10,6 +10,7 @@ import json
 import re
 import time
 from pathlib import Path
+from urllib.parse import quote
 
 ROOT = Path(__file__).resolve().parent
 DATA = ROOT / "data"
@@ -68,8 +69,6 @@ def live_tools() -> list:
     """Published product families, cheapest description first."""
     families: dict[str, dict] = {}
     for a in catalog():
-        if a.get("published") is False:
-            continue
         key = a.get("base_slug") or a.get("slug")
         fam = families.setdefault(key, {"base": key, "full": None, "basic": None})
         if a.get("tier") == "basic":
@@ -78,16 +77,40 @@ def live_tools() -> list:
             fam["full"] = a
     out = []
     for fam in families.values():
-        head = fam["full"] or fam["basic"] or {}
+        full = fam["full"] or {}
+        basic = fam["basic"] or {}
+        # A family is live when either edition is published. The full entry is
+        # kept for its title and blurb even while it is hidden, so the free
+        # edition's article does not end up titled "... (Basic)".
+        if (full.get("published") is not True
+                and basic.get("published") is not True):
+            continue
+        # Describe what a visitor can actually get. While the paid edition is
+        # hidden, that is the free edition: its blurb is the right one, and the
+        # "(Basic)" suffix is stripped below.
+        head = full if (full.get("published") is True and full) else (basic or full)
+        title = re.sub(r"\s*\(basic\)\s*$", "",
+                       str(head.get("title") or fam["base"]), flags=re.I)
+        price = float(full.get("price") or 0)
+        itch = full.get("itch_url") or ""
+        # checkout.html needs all four values. A link with only ?slug= hid the
+        # "Continue to checkout" button and said the tool was not ready, so
+        # every buy link in a Discord article was a dead end.
+        buy = ""
+        if full.get("published") is True and itch.startswith("https://"):
+            buy = (f"{SITE_URL}/checkout.html"
+                   f"?slug={quote(fam['base'], safe='')}"
+                   f"&price={price:.2f}"
+                   f"&title={quote(title, safe='')}"
+                   f"&itch={quote(itch, safe='')}")
         out.append({
             "base": fam["base"],
-            "title": head.get("title", fam["base"]),
-            "blurb": (fam["full"] or fam["basic"] or {}).get("blurb", ""),
-            "tags": (fam["full"] or fam["basic"] or {}).get("tags", []),
-            "free_url": (fam["basic"] or {}).get("url", ""),
-            "price": float((fam["full"] or {}).get("price") or 0),
-            "buy_url": (f"{SITE_URL}/checkout.html?slug={fam['base']}"
-                        if (fam["full"] or {}).get("published") is True else ""),
+            "title": title,
+            "blurb": head.get("blurb", ""),
+            "tags": head.get("tags", []),
+            "free_url": basic.get("url", ""),
+            "price": price,
+            "buy_url": buy,
         })
     out.sort(key=lambda t: t["title"].lower())
     return out

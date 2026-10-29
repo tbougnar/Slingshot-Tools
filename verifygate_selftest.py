@@ -1,0 +1,155 @@
+"""A failed verification must never publish, and the edition must really flip.
+
+Three faults this suite exists to catch, all of which shipped:
+
+1. verify_app only made a decision when the token meter was nearly empty. With
+   allowance left it fell through and published an app that had failed every
+   repair round.
+2. The tolerance decision read the scan taken BEFORE the repair, so an app
+   that ended with a JavaScript error looked clean because the first scan had
+   no dead controls.
+3. The edition flip only matched double quotes, so a generated
+   ``const TIER = 'full'`` shipped the paid limits inside the free folder.
+
+    python verifygate_selftest.py
+"""
+from __future__ import annotations
+
+import pathlib
+import re
+import sys
+import tempfile
+
+ROOT = pathlib.Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT))
+
+import make_app
+
+fails: list[str] = []
+
+
+def check(label: str, ok: bool, detail: str = "") -> None:
+    print(("ok   " if ok else "FAIL "), label, ("\n        " + detail) if detail else "")
+    if not ok:
+        fails.append(label)
+
+
+print("\nTHE EDITION FLIPS WHATEVER QUOTE STYLE THE MODEL USED\n")
+for label, html in (
+        ("double quotes", '<html><script>const TIER = "full";</script></html>'),
+        ("single quotes", "<html><script>const TIER = 'full';</script></html>"),
+        ("no const", '<html><script>TIER = "full";</script></html>'),
+        ("let binding", '<html><script>let TIER = "full";</script></html>'),
+        ("compact", '<html><script>const TIER="full";</script></html>'),
+):
+    got = make_app._set_tier(html, "basic")
+    check(f"{label} becomes the basic edition",
+          make_app._tier_value(got) == "basic", got[:100])
+
+check("the paid build still flips back to full",
+      make_app._tier_value(make_app._set_tier(
+          "<script>const TIER = 'basic';</script>", "full")) == "full")
+check("a comparison is not mistaken for the assignment",
+      make_app._set_tier("<script>const PAID = TIER === 'full';</script>",
+                         "basic") ==
+      "<script>const PAID = TIER === 'full';</script>")
+
+print("\nAN APP WITH NO EDITION CONSTANT IS REFUSED\n")
+no_tier = ("<html><body><script>localStorage.setItem('k','1');</script>"
+           + "x" * 2000 + "</body></html>")
+problems = make_app.html_looks_fine(no_tier)
+check("the staging gate says the free edition cannot be limited",
+      any("TIER" in p for p in problems), str(problems))
+
+_real_apps, _real_paid = make_app.APPS_DIR, make_app.PAID_DIR
+_scratch = pathlib.Path(tempfile.mkdtemp(prefix="verifygate-"))
+make_app.APPS_DIR = _scratch / "site" / "apps"
+make_app.PAID_DIR = _scratch / "paid"
+try:
+    try:
+        make_app.write_app({"slug": "no-tier", "title": "No Tier"},
+                           no_tier, tier="basic")
+        check("write_app refuses to publish an unlocked free edition", False,
+              "the unlocked app was written to the public folder")
+    except RuntimeError as e:
+        check("write_app refuses to publish an unlocked free edition",
+              "TIER" in str(e), str(e)[:80])
+
+    concept = {"slug": "quote-test", "title": "Quote Test"}
+    basic = make_app.write_app(
+        concept, "<html><script>const TIER = 'full';</script></html>",
+        tier="basic")
+    full = make_app.write_app(
+        concept, "<html><script>const TIER = 'basic';</script></html>",
+        tier="full")
+    basic_html = (basic / "app" / "index.html").read_text(encoding="utf-8")
+    full_html = (full / "app" / "index.html").read_text(encoding="utf-8")
+    check("the public folder holds the basic edition",
+          make_app._tier_value(basic_html) == "basic", basic_html[:80])
+    check("the paid folder holds the full edition",
+          make_app._tier_value(full_html) == "full", full_html[:80])
+finally:
+    make_app.APPS_DIR, make_app.PAID_DIR = _real_apps, _real_paid
+    import shutil
+    shutil.rmtree(_scratch, ignore_errors=True)
+
+
+def source(name: str) -> str:
+    return (ROOT / name).read_text(encoding="utf-8", errors="replace")
+
+
+print("\nA FAILED VERIFICATION CANNOT FALL THROUGH TO PUBLISH\n")
+_verify = source("verify_app.py")
+check("the tolerance is limited to an exhausted allowance",
+      "left < 4000" in _verify and "TOLERATED" in _verify)
+check("a JavaScript error is never tolerated",
+      re.search(r"not remaining_errors", _verify) is not None,
+      "the publish condition excludes JS errors")
+check("the decision uses the scan taken after the repair",
+      'final.get("remaining_dead")' in _verify
+      and "remaining_errors" in _verify,
+      "verify_app judges the post-repair scan")
+check("every failed branch returns instead of falling through",
+      _verify.count("stage_file.unlink(missing_ok=True)") >= 1)
+
+print("\nA JAVASCRIPT ERROR IS ACTUALLY HANDED TO A REPAIR\n")
+_qa = source("qa_loop.py")
+check("the error-only path asks for a full-file repair",
+      "debug_team.fix" in _qa and "only JS errors present" in _qa,
+      "the patcher is no longer called with zero controls")
+check("that repair must reduce the errors to be kept",
+      "fewer" in _qa and "no_worse" in _qa)
+
+print("\nTHE SCANNER REPORTS INABILITY INSTEAD OF CRASHING\n")
+import app_scanner
+_missing = pathlib.Path(tempfile.mkdtemp(prefix="verifygate-gone-")) / "nope.html"
+try:
+    _result = app_scanner.scan(_missing)
+    check("a page that cannot be opened is a result, not a traceback",
+          isinstance(_result, dict) and _result.get("unavailable") is True,
+          str(_result)[:120])
+    check("and it is not a pass", app_scanner.verdict(_result) is False)
+except Exception as e:  # noqa: BLE001
+    check("a page that cannot be opened is a result, not a traceback", False,
+          f"raised {type(e).__name__}: {str(e)[:100]}")
+
+print("\nTHE STAGER KEEPS A REFUSAL INSTEAD OF ABORTING\n")
+_stage = source("stage_app.py")
+check("a model that produces nothing is caught",
+      "except RuntimeError" in _stage and "produced nothing usable" in _stage)
+check("the rejection block always has a script and issues to report",
+      re.search(r"^    html = \"\"$", _stage, re.M) is not None
+      and re.search(r"^    issues = \[\]$", _stage, re.M) is not None,
+      "html/issues are defined before the first attempt")
+
+print("\nTHE INSTALLER REPORTS THE PRODUCT, NOT THE VENDOR\n")
+_nsi = source("build_installer_app.py")
+check("the product name is templated", 'Name "{name}"' in _nsi)
+check("the version is read from the bundle",
+      "_product_meta" in _nsi and '"{quad}"' in _nsi)
+check("a missing icon is refused, not passed to makensis",
+      "not Path(icon).exists()" in _nsi)
+
+print()
+print("FAILURES:", fails if fails else "none")
+sys.exit(1 if fails else 0)

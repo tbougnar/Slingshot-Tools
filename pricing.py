@@ -11,8 +11,6 @@ from __future__ import annotations
 import json
 import os
 import re
-import time
-import urllib.request
 from datetime import date
 from pathlib import Path
 
@@ -24,9 +22,9 @@ PRICES = DATA / "prices.json"
 LOG = DATA / "price_log.json"
 CATALOG = ROOT / "site" / "apps.json"
 
-GROQ_BASE = "https://api.groq.com/openai/v1"
-GROQ_KEY = (os.environ.get("GROQ_API_KEY") or "").strip()
-CHAT_MODEL = (os.environ.get("GROQ_CHAT_MODEL") or "").strip() or "qwen/qwen3.8-27b"
+# The model backend (OpenRouter first, Groq fallback) lives in providers.py.
+# This file used to carry its own Groq URL, key and model, so a provider change
+# had to be repeated here or the price advisor silently stopped working.
 
 FLOOR = float((os.environ.get("PRICE_FLOOR") or "").strip() or "1.00")
 CEILING = float((os.environ.get("PRICE_CEILING") or "").strip() or "10.00")
@@ -48,6 +46,14 @@ def load(path, default):
         except json.JSONDecodeError:
             return default
     return default
+
+
+def _atomic(path: Path, text: str) -> None:
+    """Write a tracked file via a temp file, so a crash cannot truncate it."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(text, encoding="utf-8")
+    os.replace(tmp, path)
 
 
 def charm(price: float) -> float:
@@ -83,17 +89,23 @@ def decide(sales_count: int, views: int, current: float) -> tuple[float, str]:
 
 
 def sales_from_itch(slug):
-    """Real numbers if the itch API key is present, else an honest None."""
+    """Real numbers if the itch API key is present, else an honest None.
+
+    This used to call /profile/{user}/games, which does not exist, and then
+    match on id/slug although itch identifies a project by its url. The result
+    was an exception every time, so sales and views stayed zero and the price
+    engine never had a number to react to. itch_publish.games() is the working
+    path and already reads the right shape.
+    """
     if not (ITCH_KEY and slug):
         return None
     try:
-        req = urllib.request.Request(
-            f"https://api.itch.io/profile/{ITCH_USER}/games",
-            headers={"Authorization": f"Bearer {ITCH_KEY}"})
-        with urllib.request.urlopen(req, timeout=30) as r:
-            games = json.loads(r.read().decode())
-        for g in games:
-            if g.get("id") == slug or g.get("slug") == slug:
+        import itch_publish as ip
+        want = slug.lower().replace("_", "-")
+        for g in ip.games():
+            url = (g.get("url") or "").rstrip("/").lower()
+            title = (g.get("title") or "").strip().lower()
+            if url.endswith(f"/{want}") or title == want.replace("-", " "):
                 stats = g.get("extra") or {}
                 return {"sales": int(g.get("num_sales") or 0),
                         "views": int(stats.get("views") or 0),
@@ -191,37 +203,27 @@ def profit_directives(apps, prices, rows, total_net):
 
 
 def groq(system, user, max_tokens=900, temperature=0.4):
-    if not GROQ_KEY:
-        return ""
-    body = json.dumps({
-        "model": CHAT_MODEL,
-        "messages": [{"role": "system", "content": system},
-                     {"role": "user", "content": user}],
-        "max_tokens": max_tokens, "temperature": temperature,
-    }).encode()
-    headers = {
-        "Authorization": f"Bearer {GROQ_KEY}",
-        "Content-Type": "application/json",
-        "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                       "AppleWebKit/537.36 (KHTML, like Gecko) "
-                       "Chrome/124.0.0.0 Safari/537.36"),
-        "Accept": "application/json",
-    }
-    deadline = time.monotonic() + 600
-    attempt = 0
-    while attempt < 4 and time.monotonic() < deadline:
-        attempt += 1
-        try:
-            req = urllib.request.Request(f"{GROQ_BASE}/chat/completions",
-                                         data=body, headers=headers)
-            with urllib.request.urlopen(req, timeout=180) as r:
-                raw = json.loads(r.read().decode())["choices"][0]["message"]["content"]
-            m = re.search(r"\{[\s\S]*\}", raw or "")
-            return json.loads(m.group()) if m else {}
-        except Exception as e:  # noqa: BLE001
-            log(f"model unavailable: {str(e)[:90]}")
-            time.sleep(8)
-    return {}
+    """Structured price advice from the live backend. {} means "no advice".
+
+    providers.chat walks the free-model chain and handles a per-day cap, so the
+    retry loop that slept for eight seconds here is gone.
+    """
+    try:
+        import providers
+        if not providers.configured():
+            return {}
+        raw = providers.chat(providers.best_model("chat"), system, user,
+                             temperature, max_tokens, role="debug")
+    except Exception as e:  # noqa: BLE001
+        log(f"model unavailable: {str(e)[:90]}")
+        return {}
+    m = re.search(r"\{[\s\S]*\}", raw or "")
+    if not m:
+        return {}
+    try:
+        return json.loads(m.group())
+    except (json.JSONDecodeError, ValueError):
+        return {}
 
 
 def assign_tiers(apps, prices):
@@ -326,17 +328,19 @@ def main():
             else:
                 a["itch_url"] = a.get("itch_url") or ""
 
-    PRICES.write_text(json.dumps(prices, indent=2), encoding="utf-8")
-    LOG.write_text(json.dumps(history[-200:], indent=2), encoding="utf-8")
+    _atomic(PRICES, json.dumps(prices, indent=2))
+    _atomic(LOG, json.dumps(history[-200:], indent=2))
     if apps:
-        CATALOG.write_text(json.dumps(apps, indent=2), encoding="utf-8")
+        # site/apps.json is the live storefront manifest. Writing it in place
+        # meant a crash mid-write could publish a truncated catalogue.
+        _atomic(CATALOG, json.dumps(apps, indent=2))
 
     rows, total_rev, total_net = summarise_earnings(apps, prices)
     tips = profit_directives(apps, prices, rows, total_net)
     earnings = {"date": date.today().isoformat(), "revenue": total_rev,
                 "net_profit": total_net, "break_even": break_even_price(),
                 "products": rows, "directives": tips}
-    (DATA / "earnings.json").write_text(json.dumps(earnings, indent=2), encoding="utf-8")
+    _atomic(DATA / "earnings.json", json.dumps(earnings, indent=2))
     log(f"EARNINGS revenue=${total_rev:.2f} net=${total_net:.2f} "
         f"break_even=${break_even_price():.2f}")
     for tip in tips:

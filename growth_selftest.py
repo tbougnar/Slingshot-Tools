@@ -143,8 +143,6 @@ check("progress never goes negative",
 # left the real goal wiped or fabricated, and a git add -A in a job that ran
 # this test would commit that. The test works on its own file; the check that
 # the real path is tracked is made against git directly, further down.
-import tempfile
-
 state_file = goals.STATE
 real_state_file = state_file
 scratch = Path(tempfile.mkdtemp())

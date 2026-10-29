@@ -38,7 +38,15 @@ def main() -> int:
 
     # exactly what a runner gets
     r = subprocess.run(["git", "ls-files"], cwd=str(ROOT), env=clean_env(),
-                       capture_output=True, text=True)
+                       capture_output=True, text=True, encoding="utf-8",
+                       errors="replace")
+    if r.returncode != 0:
+        # An empty listing is not an empty repository; it is a broken command.
+        # Continuing made every later check fail with "file not in repository",
+        # which sends the reader after the wrong fault.
+        print(f"git ls-files failed rc={r.returncode}: {(r.stderr or '')[:300]}")
+        shutil.rmtree(tmp, ignore_errors=True)
+        return 2
     for line in r.stdout.splitlines():
         rel = line.strip()
         if not rel:
@@ -51,15 +59,20 @@ def main() -> int:
         shutil.copy2(src, dst)
 
     r = subprocess.run(["git", "submodule", "status"], cwd=str(ROOT),
-                       env=clean_env(),
-                       capture_output=True, text=True)
+                       env=clean_env(), capture_output=True, text=True,
+                       encoding="utf-8", errors="replace")
+    if r.returncode != 0:
+        print(f"git submodule status failed rc={r.returncode}: "
+              f"{(r.stderr or '')[:300]}")
+        shutil.rmtree(tmp, ignore_errors=True)
+        return 2
     print(f"{len(r.stdout.splitlines())} submodules\n")
 
     bad = 0
     for label, cmd in CHECKS:
         p = subprocess.run(cmd, cwd=str(tmp), capture_output=True, text=True,
-                     env=clean_env(),
-                           shell=True, timeout=900)
+                           encoding="utf-8", errors="replace",
+                           env=clean_env(), shell=True, timeout=900)
         if p.returncode == 0:
             print(f"  ok    {label}")
         else:

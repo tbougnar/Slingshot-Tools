@@ -121,22 +121,32 @@ def scan(index_file: Path, timeout_ms: int = 25000) -> dict:
                 "controls": 0, "skipped": [], "unavailable": True}
 
     url = index_file.resolve().as_uri()
-    with sync_playwright() as pw:
-        b = pw.chromium.launch(args=["--no-sandbox"])
-        page = b.new_page()
-        console: list[str] = []
-        page.on("console", lambda m: console.append(f"{m.type}: {m.text}"
-                    if m.type in ("error",) else ""))
-        page.on("pageerror", lambda e: console.append(f"pageerror: {e}"))
-        page.goto(url, wait_until="load", timeout=timeout_ms)
-        page.wait_for_timeout(700)
-        raw = page.evaluate(PROBE)
-        b.close()
+    console: list[str] = []
+    try:
+        with sync_playwright() as pw:
+            b = pw.chromium.launch(args=["--no-sandbox"])
+            try:
+                page = b.new_page()
+                page.on("console", lambda m: console.append(
+                    f"{m.type}: {m.text}" if m.type in ("error",) else ""))
+                page.on("pageerror", lambda e: console.append(f"pageerror: {e}"))
+                page.goto(url, wait_until="load", timeout=timeout_ms)
+                page.wait_for_timeout(700)
+                raw = page.evaluate(PROBE)
+            finally:
+                # A launch or navigation failure used to escape here and take
+                # the whole verify job down with a traceback, leaving Chromium
+                # running. "Could not look" is a result, not a crash.
+                b.close()
+    except Exception as e:  # noqa: BLE001
+        return {"dead": [], "errors": [f"scanner could not run: {str(e)[:200]}"],
+                "missing": [], "controls": 0, "skipped": [],
+                "unavailable": True}
     try:
         data = json.loads(raw)
     except Exception:  # noqa: BLE001
         return {"dead": [], "errors": ["probe returned nothing"], "missing": [],
-                "controls": 0}
+                "controls": 0, "skipped": [], "unavailable": True}
     for c in console:
         if c and c not in data["errors"]:
             data["errors"].append(c)

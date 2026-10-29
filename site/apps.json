@@ -10,7 +10,7 @@
       "password",
       "manager"
     ],
-    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/password-manager-basic/",
+    "url": "",
     "download": "",
     "price": 3.0,
     "free": false,
@@ -18,7 +18,7 @@
       "Unlimited items",
       "Export and import your data"
     ],
-    "published": true,
+    "published": false,
     "badge": "New",
     "date": "2026-10-16",
     "itch_url": "https://slingshot-tools.itch.io/slingshot-tools",
@@ -55,7 +55,7 @@
       "stopwatch",
       "lap"
     ],
-    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/stopwatch-basic/",
+    "url": "",
     "download": "",
     "price": 3.0,
     "free": false,
@@ -101,7 +101,7 @@
       "url",
       "encoding"
     ],
-    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/base64-tool-basic/",
+    "url": "",
     "download": "",
     "price": 3.0,
     "free": false,
@@ -110,7 +110,7 @@
       "Export and import your data",
       "Every theme"
     ],
-    "published": true,
+    "published": false,
     "badge": "New",
     "date": "2026-10-16",
     "itch_url": "https://slingshot-tools.itch.io/slingshot-tools",
@@ -149,7 +149,7 @@
       "markdown",
       "editor"
     ],
-    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/markdown-preview-basic/",
+    "url": "",
     "download": "",
     "price": 3.0,
     "free": false,
@@ -194,7 +194,7 @@
       "chess",
       "clock"
     ],
-    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/chess-clock-basic/",
+    "url": "",
     "download": "",
     "price": 3.0,
     "free": false,
@@ -240,7 +240,7 @@
     "tags": [
       "calendar"
     ],
-    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/calendar-diff-basic/",
+    "url": "",
     "download": "",
     "price": 3.0,
     "free": false,
@@ -286,7 +286,7 @@
       "board",
       "viewer"
     ],
-    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/chess-board-basic/",
+    "url": "",
     "download": "",
     "price": 3.0,
     "free": false,
@@ -332,7 +332,7 @@
       "quick",
       "taker"
     ],
-    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/note-taker-basic/",
+    "url": "",
     "download": "",
     "price": 3.0,
     "free": false,
@@ -380,7 +380,7 @@
       "human",
       "date"
     ],
-    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/timestamp-converter-basic/",
+    "url": "",
     "download": "",
     "price": 3.0,
     "free": false,
@@ -429,7 +429,7 @@
       "typing",
       "test"
     ],
-    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/speed-typing-test-basic/",
+    "url": "",
     "download": "",
     "price": 3.0,
     "free": false,
@@ -477,7 +477,7 @@
       "shopping",
       "list"
     ],
-    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/split-bill-app-basic/",
+    "url": "",
     "download": "",
     "price": 3.0,
     "free": false,
@@ -527,7 +527,7 @@
       "character",
       "reading"
     ],
-    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/text-stats-basic/",
+    "url": "",
     "download": "",
     "price": 3.0,
     "free": false,
@@ -576,7 +576,7 @@
       "shuffle",
       "picker"
     ],
-    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/random-team-basic/",
+    "url": "",
     "download": "",
     "price": 3.0,
     "free": false,
@@ -623,7 +623,7 @@
       "art",
       "editor"
     ],
-    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/pixel-art-editor-basic/",
+    "url": "",
     "download": "",
     "price": 3.0,
     "free": false,
@@ -670,7 +670,7 @@
       "code",
       "generator"
     ],
-    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/qr-generator-basic/",
+    "url": "",
     "download": "",
     "price": 3.0,
     "free": false,
@@ -717,7 +717,7 @@
       "fitness",
       "calculator"
     ],
-    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/bmi-calculator-basic/",
+    "url": "",
     "download": "",
     "price": 3.0,
     "free": false,
@@ -764,7 +764,7 @@
       "subnet",
       "helper"
     ],
-    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/ip-info-basic/",
+    "url": "",
     "download": "",
     "price": 3.0,
     "free": false,
@@ -811,7 +811,7 @@
       "exercise",
       "guide"
     ],
-    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/breathing-exercise-basic/",
+    "url": "",
     "download": "",
     "price": 3.0,
     "free": false,
@@ -859,7 +859,7 @@
       "combination",
       "generator"
     ],
-    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/permutation-tool-basic/",
+    "url": "",
     "download": "",
     "price": 3.0,
     "free": false,
@@ -907,7 +907,7 @@
       "dice",
       "roller"
     ],
-    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/coin-toss-basic/",
+    "url": "",
     "download": "",
     "price": 3.0,
     "free": false,
@@ -955,7 +955,7 @@
       "regex",
       "tester"
     ],
-    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/regex-tester-basic/",
+    "url": "",
     "download": "",
     "price": 3.0,
     "free": false,
@@ -1001,7 +1001,7 @@
       "text",
       "generator"
     ],
-    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/lorem-generator-basic/",
+    "url": "",
     "download": "",
     "price": 3.0,
     "free": false,
@@ -1049,7 +1049,7 @@
       "focus",
       "timer"
     ],
-    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/pomodoro-timer-basic/",
+    "url": "",
     "download": "",
     "price": 3.0,
     "free": false,
@@ -1097,7 +1097,7 @@
       "showing",
       "what"
     ],
-    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/text-diff-basic/",
+    "url": "",
     "download": "",
     "price": 3.0,
     "free": false,
@@ -1145,7 +1145,7 @@
       "viewer",
       "formatter"
     ],
-    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/json-formatter-basic/",
+    "url": "",
     "download": "",
     "price": 3.0,
     "free": false,
@@ -1192,7 +1192,7 @@
       "strength",
       "auditor"
     ],
-    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/password-strength-basic/",
+    "url": "",
     "download": "",
     "price": 3.0,
     "free": false,
@@ -1238,7 +1238,7 @@
       "csv",
       "viewer"
     ],
-    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/csv-viewer-basic/",
+    "url": "",
     "download": "",
     "price": 3.0,
     "free": false,
@@ -1284,7 +1284,7 @@
       "transfer",
       "calculator"
     ],
-    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/bandwidth-calc-basic/",
+    "url": "",
     "download": "",
     "price": 3.0,
     "free": false,
@@ -1330,7 +1330,7 @@
       "bookmark",
       "cleaner"
     ],
-    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/bookmark-organizer-basic/",
+    "url": "",
     "download": "",
     "price": 3.0,
     "free": false,
@@ -1375,7 +1375,7 @@
       "color",
       "picker"
     ],
-    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/color-picker-basic/",
+    "url": "",
     "download": "",
     "price": 3.0,
     "free": false,
@@ -1421,7 +1421,7 @@
       "prescription",
       "converter"
     ],
-    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/glasses-prescription-basic/",
+    "url": "",
     "download": "",
     "price": 3.0,
     "free": false,
@@ -1467,7 +1467,7 @@
       "unit",
       "converter"
     ],
-    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/unit-converter-basic/",
+    "url": "",
     "download": "",
     "price": 3.0,
     "free": false,
@@ -1515,7 +1515,7 @@
       "unit",
       "converter"
     ],
-    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/dev-converter-basic/",
+    "url": "",
     "download": "",
     "price": 3.0,
     "free": false,
@@ -1564,7 +1564,7 @@
       "notes",
       "organizer"
     ],
-    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/ebook-converter-notes-basic/",
+    "url": "",
     "download": "",
     "price": 3.0,
     "free": false,

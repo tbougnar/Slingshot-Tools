@@ -86,7 +86,12 @@ print("\nESCAPED TEMPLATE MARKERS ARE LEFT ALONE\n")
 # \` inside a JavaScript template literal is a valid escape that means
 # backtick, and \${ means a literal ${. Decoding them would change what the
 # code does, so they must survive.
-tmpl = "const t=\\`a ${b}\\`;"
+#
+# The fixture has to BE a template literal. An earlier version wrapped the
+# escaped backtick in ordinary quotes (const t=\`a ...\`), which is a syntax
+# error whatever the unescape does, so the two checks below could never both
+# pass and the suite failed for weeks on a test that was wrong, not code.
+tmpl = "const t=`a \\` b ${c}`;"
 got_t = make_app._unescape(tmpl)
 check("an escaped backtick survives", "\\`" in got_t, f"got {got_t!r}")
 check("and it parses", not make_app.js_syntax_errors(

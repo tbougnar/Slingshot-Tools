@@ -5,7 +5,7 @@
 # own machine, where it can reach services that block cloud runners.
 #
 # On your machine, set the values first in the SAME window:
-#   $env:GROQ_API_KEY="gsk_..."
+#   $env:OPENROUTER_API_KEY="sk-or-v1-..."
 #   $env:DISCORD_BOT_TOKEN="..."
 #   $env:DISCORD_GUILD_ID="1516907450983383201"
 #   $env:ITCH_USER="slingshot-tools"
@@ -14,7 +14,8 @@
 #   .\check.ps1
 #
 # Where each value comes from:
-#   GROQ_API_KEY          https://console.groq.com/keys
+#   OPENROUTER_API_KEY    https://openrouter.ai/keys  (primary)
+#   GROQ_API_KEY          https://console.groq.com/keys  (rollback only)
 #   DISCORD_BOT_TOKEN     Developer Portal, your app, Bot, Reset Token
 #   DISCORD_GUILD_ID      right-click the server name, Copy Server ID
 #   ITCH_USER             your itch.io subdomain, lowercase
@@ -31,8 +32,8 @@ Set-Location -LiteralPath $PSScriptRoot
 # five, including DISCORD_GUILD_ID, which is named in the comment block above
 # but was not checked: a missing guild id was only discovered after the check
 # had already run and reported on everything else.
-$required = "GROQ_API_KEY", "DISCORD_BOT_TOKEN", "DISCORD_GUILD_ID",
-            "ITCH_USER", "ITCH_API_KEY", "ITCH_SESSION_COOKIE"
+$required = "OPENROUTER_API_KEY", "DISCORD_BOT_TOKEN", "DISCORD_GUILD_ID",
+            "ITCH_USER", "ITCH_API_KEY"
 
 $missing = @()
 foreach ($name in $required) {
@@ -45,9 +46,13 @@ foreach ($name in $required) {
 }
 
 # Optional, but the check reports less without them, so they are listed
-# separately rather than treated as a failure.
-$optional = "YOUTUBE_CLIENT_ID", "YOUTUBE_CLIENT_SECRET", "YOUTUBE_REFRESH_TOKEN",
-            "DISCORD_WEBHOOK_URL", "YOUTUBE_API_KEY"
+# separately rather than treated as a failure. GROQ_API_KEY is the rollback:
+# it is only read when the OpenRouter key is missing. ITCH_SESSION_COOKIE is
+# only needed to create a new project; uploads use the API key.
+# ALLOW_FREE_ONLY=1 accepts a launch without YouTube upload credentials.
+$optional = "GROQ_API_KEY", "ITCH_SESSION_COOKIE", "YOUTUBE_CLIENT_ID",
+            "YOUTUBE_CLIENT_SECRET", "YOUTUBE_REFRESH_TOKEN",
+            "DISCORD_WEBHOOK_URL", "YOUTUBE_API_KEY", "ALLOW_FREE_ONLY"
 
 $absent = @()
 foreach ($name in $optional) {

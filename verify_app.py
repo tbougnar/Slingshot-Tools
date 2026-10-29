@@ -60,33 +60,51 @@ def main() -> int:
         clean, history = qa_loop.repair_until_clean(candidate, log=print)
         if not clean:
             # A fresh app costs about the same as several repair rounds and is
-            # far more likely to be correct, so regenerate rather than keep
-            # patching something that resists fixing.
+            # far more likely to be correct, so regenerating is the right
+            # answer - but there is no regeneration step here. When the
+            # allowance is gone the only honest choice is the small tolerance
+            # below. When it is not, publishing a failed app is not an option.
             import tokenmeter
             left = tokenmeter.remaining(8000)
-            print(f"[verify] repair failed; {left} tokens left this minute")
+            final = history[-1] if history else {}
+            remaining = final.get("remaining_dead")
+            if not isinstance(remaining, list):
+                remaining = first.get("dead", [])
+            remaining_errors = final.get("remaining_errors")
+            if not isinstance(remaining_errors, list):
+                remaining_errors = first.get("errors", [])
+            print(f"[verify] repair failed; {left} tokens left this minute, "
+                  f"{len(remaining)} dead control(s), "
+                  f"{len(remaining_errors)} JS error(s) remaining")
             # A real shop ships an app that is nearly right. One dead control
-            # is not a reason to publish nothing, which is how the catalogue
-            # stays empty forever. Two or more is still refused.
-            if left < 4000:
-                remaining = len(first.get("dead", []))
-                if remaining <= TOLERATED:
-                    print(f"[verify] repair ran out of allowance with "
-                          f"{remaining} dead control(s); publishing anyway "
-                          f"because that is within the tolerance of {TOLERATED}")
-                    print("[verify] still dead: "
-                          + ", ".join(first.get("dead", [])[:5]))
-                else:
-                    print(f"[verify] {remaining} controls still dead, over the "
-                          f"tolerance of {TOLERATED}; publishing nothing")
-                    print(json.dumps(history, indent=1)[-1200:])
-                    # The candidate is cleared whether it passed or not.
-                    # It is a tracked file, so leaving it there means the
-                    # next run verifies the same rejected app again, and it
-                    # keeps widening the release gate's exemption for that
-                    # folder name for as long as it exists.
-                    stage_file.unlink(missing_ok=True)
-                    return 1
+            # with no JS errors, after every repair round has been tried and
+            # the allowance is exhausted, is not a reason to publish nothing.
+            # Anything worse is refused, and a searchable/syntax error always
+            # is: the page may look fine and do nothing at all.
+            if left < 4000 and len(remaining) <= TOLERATED and not remaining_errors:
+                print(f"[verify] repair ran out of allowance with "
+                      f"{len(remaining)} dead control(s) and no JS errors; "
+                      f"publishing anyway because that is within the "
+                      f"tolerance of {TOLERATED}")
+                print("[verify] still dead: " + ", ".join(remaining[:5]))
+            else:
+                why = []
+                if remaining_errors:
+                    why.append(f"{len(remaining_errors)} JS error(s)")
+                if len(remaining) > TOLERATED:
+                    why.append(f"{len(remaining)} dead control(s)")
+                if left >= 4000:
+                    why.append("allowance remains, so a broken app must not "
+                               "be published")
+                print(f"[verify] NOT publishing: {'; '.join(why)}")
+                print(json.dumps(history, indent=1)[-1200:])
+                # The candidate is cleared whether it passed or not.
+                # It is a tracked file, so leaving it there means the
+                # next run verifies the same rejected app again, and it
+                # keeps widening the release gate's exemption for that
+                # folder name for as long as it exists.
+                stage_file.unlink(missing_ok=True)
+                return 1
     html = candidate.read_text(encoding="utf-8", errors="replace")
     concept = {"slug": stage["slug"], "brand": stage["brand"],
                "title": stage["title"], "tag": stage["tag"],
@@ -114,9 +132,10 @@ def main() -> int:
     price = max(make_app.PRICE_FLOOR, min(make_app.PRICE_CEILING, price))
 
     # A Windows .exe cannot be built on the Linux runner, so this job only
-    # publishes the free edition. The paid tier is listed but stays hidden:
-    # itch.io hosts the paid file and only a person can upload it, so
-    # publish_paid.py is what makes it visible, and never before then.
+    # publishes the free edition. The paid tier is listed but stays hidden
+    # unless it was already proven on sale: itch.io hosts the paid file and
+    # only a person can upload it, so publish_paid.py is what makes it
+    # visible, and never before the build and the price are verified.
     # write_app named the public folder "<slug>-basic"; the catalog entry must
     # carry the same name so the two match on disk and in URLs
     make_app.publish({**concept, "slug": basic_dir.name}, basic_dir, None,
@@ -125,10 +144,15 @@ def main() -> int:
                      free_blurb=stage["free_blurb"], paid_blurb=stage["paid_blurb"],
                      published=True, price_override=0.0)
 
+    # A re-verified candidate must not hide a product that is already on sale.
+    # publish() replaces the entry with the same slug, so passing False blindly
+    # removed the buy button from a live product until publish_paid.py ran
+    # again - and that run now correctly refuses while the price is unverified.
+    was_live = make_app.already_listed(stage["slug"])
     make_app.publish({**concept, "slug": stage["slug"]}, full_dir, None, tier="full",
                      brand=stage["brand"], differences=stage["differences"],
                      free_blurb=stage["free_blurb"], paid_blurb=stage["paid_blurb"],
-                     published=False, price_override=price)
+                     published=was_live, price_override=price)
 
     # write_app already put the full tier under paid/, so just record it
     import json as _json

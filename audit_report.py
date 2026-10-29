@@ -119,10 +119,11 @@ def main() -> int:
         ("Discord (`discord_announce.py`)",
          "verified in CI",
          "refuses to announce a paid tier that is not live"),
-        ("Groq integration (`providers.py`, `tokenmeter.py`, `budget.py`)",
+        ("Model backend (`providers.py`, `tokenmeter.py`, `budget.py`)",
          "verified",
-         "fail-closed on unreadable state; rate-limit backoff waits out the "
-         "window"),
+         "OpenRouter is primary and Groq is the automatic fallback; a 404 or a "
+         "per-day cap walks the chain, a rejected key stops at once, and no "
+         "call fails the process when no key exists"),
         ("Structured audit log (`auditlog.py`)",
          "verified",
          "survives a hard kill; redacts seven credential shapes; cannot record "
@@ -287,13 +288,15 @@ def main() -> int:
           "and lists nothing. Everything up to that point is verified |")
     print("| No purchase has ever been exercised | dependent on the above. No "
           "money was spent and no checkout was bypassed at any point |")
-    print("| The Windows installer has not been run on a customer machine | CI "
-          "builds and uploads it, but installing and launching it on a real "
-          "desktop was not done |")
-    print("| Groq can produce unparseable JavaScript | the gate refuses such an "
-          "app rather than shipping it, so a release can fail when the model "
-          "has a bad run. Run 38432094739 failed this way, which is the gate "
-          "working |")
+    print("| The Windows installer has not been run on a customer machine | it "
+          "was installed, launched and uninstalled on a real desktop here, "
+          "per-user and with no admin prompt, but not yet on a machine that "
+          "did not build it |")
+    print("| A free model can produce unparseable JavaScript | the gate refuses "
+          "such an app rather than shipping it, so a release can fail when the "
+          "model has a bad run. Run 38432094739 failed this way, which is the "
+          "gate working. The free chains in `providers.py` fail over on a 404 "
+          "or a per-day cap |")
     print("| `set_itch_url` accepts any host ending in `itch.io` | a look-alike "
           "such as `notitch.io` would pass. This is a hardening opportunity, "
           "not an active exploit; the check requires an account subdomain but "

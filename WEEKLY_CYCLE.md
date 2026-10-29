@@ -114,6 +114,44 @@ If any of it fails, one repair attempt runs against the emergency reserve.
 
 ---
 
+## The model backend
+
+All model calls go through `providers.py`. **OpenRouter is primary** and Groq is
+the automatic fallback, so adding the new key cannot break a machine that still
+has the old one.
+
+| | Primary | Fallback |
+|---|---|---|
+| Secret | `OPENROUTER_API_KEY` | `GROQ_API_KEY` |
+| Base URL | `https://openrouter.ai/api/v1` | `https://api.groq.com/openai/v1` |
+| Key prefix | `sk-or-v1-` | `gsk_` |
+| Model pin | `OPENROUTER_CHAT_MODEL` (variable) | `GROQ_CHAT_MODEL` |
+| Get a key | <https://openrouter.ai/keys> | <https://console.groq.com/keys> |
+
+The backend is whichever key exists; OpenRouter wins when both do. Each job has
+a chain of free models in `providers.py` (builder, debug, chat), tried best
+first. A 404 (an id that belongs to the other backend) or a per-day cap moves
+to the next model instead of failing the run; a rejected key (401/403) stops
+immediately, because walking the chain cannot fix a bad key.
+
+Set the secret once:
+
+```bash
+gh secret set OPENROUTER_API_KEY --repo tbougnar/Slingshot-Tools
+```
+
+Prove it without storing it (`groq_live_check.py` reads the prefix and tests the
+matching backend, then forgets the key):
+
+```bash
+python groq_live_check.py
+```
+
+Keep `GROQ_API_KEY` in place until an OpenRouter run has passed end to end. It
+costs nothing to leave and is the rollback.
+
+---
+
 ## Why Friday's verification is a separate workflow
 
 It chains automatically on `workflow_run`, so verification is never a manual

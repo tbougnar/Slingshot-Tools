@@ -1,8 +1,8 @@
 """Multi-model debug team for a generated app.
 
-Every available Groq model is asked what is wrong. The three strongest are then
-asked to reconcile the reports into one agreed set of fixes, so a single model
-cannot talk the others into changing working code.
+Several models are asked what is wrong. The strongest three are then asked to
+reconcile the reports into one agreed set of fixes, so a single model cannot
+talk the others into changing working code.
 
 Only fixes that survive a re-scan are kept.
 """
@@ -11,13 +11,22 @@ from __future__ import annotations
 import json
 import re
 
-# Groq's catalogue changes often; unknown ids are skipped at runtime.
-# Checked against the live catalogue: the prompt-guard models are classifiers
-# and whisper is audio, so only three of the eleven can be asked for a repair.
-CANDIDATES = [
-    "openai/gpt-oss-120b",
-    "openai/gpt-oss-20b",
-]
+
+def candidates() -> list[str]:
+    """The debug models for the live backend (OpenRouter first, Groq back).
+
+    This used to be a hard-coded list of Groq ids. Under any other backend
+    every one of them is a 404, which the team reports as "no bugs found" --
+    a broken app would then pass QA without a single model having answered.
+    """
+    try:
+        import providers
+        return providers.model_chain("debug")
+    except SystemExit:
+        return []
+
+
+CANDIDATES = candidates()
 
 LEADERS = 3           # the three that reconcile the reports
 # Groq refuses a max_tokens larger than the model will produce, and the refusal
@@ -175,6 +184,9 @@ FIX = """You repair one self-contained HTML file for a Windows desktop app.
 Confirmed broken controls (a majority of reviewers agree these do nothing):
 {confirmed}
 
+JavaScript errors reported by the browser:
+{errors}
+
 Repair scope for this round: {scope}
 
 Repair rules:
@@ -182,6 +194,9 @@ Repair rules:
 - Stay inside the scope above. Do not redesign or restyle.
 - Wire up event handlers so each listed control does the obvious thing using
   the app's existing state, styling and patterns.
+- Fix every JavaScript error above. A syntax error usually means a missing
+  bracket, quote or comma; a runtime error usually means a value that was used
+  before it existed. Keep the fix small.
 - Do not remove controls. Do not add external scripts, fonts or images.
 - NEVER alter the CSS: the <style> block, any style="" attribute, or any class
   name. The app already looks good. Only the HTML structure and the script may
@@ -193,7 +208,9 @@ Repair rules:
 def fix(leaders: list[str], scan: dict, confirmed: list[str],
         html: str, mode: str = "minimal") -> tuple[str, str] | None:
     """Three leaders propose; the first to return parseable, complete HTML wins."""
-    user = FIX.format(confirmed=json.dumps(confirmed)[:2000], html=html[:60000],
+    user = FIX.format(confirmed=json.dumps(confirmed)[:2000],
+                      errors=json.dumps(scan.get("errors", []))[:2000],
+                      html=html[:60000],
                       scope=SCOPE.get(mode, SCOPE["minimal"]))
     if mode == "rewrite":
         # a full rewrite needs the biggest models first, not the first responder

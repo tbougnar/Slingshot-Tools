@@ -126,32 +126,69 @@ def require_real(name: str, value: str, how: str) -> bool:
     return True
 
 
-def check_groq() -> bool:
-    key = os.environ.get("GROQ_API_KEY", "").strip()
-    if not require_real("groq", key,
-                        "gh secret set GROQ_API_KEY --repo "
-                        "tbougnar/Slingshot-Tools"):
+# ------------------------------------------------------------------- model
+# OpenRouter is the backend this project runs on; Groq is the rollback. Both
+# answer the same OpenAI-shaped /models call, but that call is PUBLIC on
+# OpenRouter: it returns 200 with a bogus token, so it can never tell a good key
+# from a revoked one. The authenticated endpoints below are what actually prove
+# a key works.
+MODEL_BACKENDS = {
+    "openrouter": ("OPENROUTER_API_KEY", "https://openrouter.ai/api/v1/key",
+                   "https://openrouter.ai/keys"),
+    "groq": ("GROQ_API_KEY", "https://api.groq.com/openai/v1/models",
+             "https://console.groq.com/keys"),
+}
+
+
+def _live_backend() -> tuple[str, str, str, str]:
+    """(name, key, models url, key page) for the preferred configured backend."""
+    for name in ("openrouter", "groq"):
+        env, url, keys_page = MODEL_BACKENDS[name]
+        key = os.environ.get(env, "").strip()
+        if key:
+            return name, key, url, keys_page
+    return "", "", "", ""
+
+
+def check_model() -> bool:
+    name, key, url, keys_page = _live_backend()
+    if not name:
+        return bad("model", "no backend key is set",
+                   "gh secret set OPENROUTER_API_KEY --repo "
+                   "tbougnar/Slingshot-Tools (Groq's GROQ_API_KEY still works "
+                   "as a fallback)")
+    var = MODEL_BACKENDS[name][0]
+    if not require_real(name, key,
+                        f"gh secret set {var} --repo tbougnar/Slingshot-Tools"):
         return False
     try:
-        with get("https://api.groq.com/openai/v1/models",
-                 {"Authorization": f"Bearer {key}"}) as r:
+        with get(url, {"Authorization": f"Bearer {key}"}) as r:
             data = json.loads(r.read().decode("utf-8"))
-        return ok("groq", f"{len(data.get('data') or [])} models reachable")
+        if name == "openrouter":
+            info = data.get("data") or {}
+            detail = "authenticated"
+            if info.get("is_free_tier"):
+                detail += " (free tier)"
+            limit = info.get("limit")
+            if limit is not None:
+                detail += f", ${limit} credit limit"
+            return ok(name, detail)
+        return ok(name, f"{len(data.get('data') or [])} models reachable")
     except urllib.error.HTTPError as e:
         if blocked_by_cloudflare(e):
-            return bad("groq",
+            return bad(name,
                        "refused by Cloudflare (403/1010) even with a browser "
                        "header",
                        "this is a network block on the way out, not a bad "
                        "key")
         if e.code in (401, 403):
-            return bad("groq", "the key was rejected",
-                       "make a new one at https://console.groq.com/keys, then "
-                       "gh secret set GROQ_API_KEY --repo "
+            return bad(name, "the key was rejected",
+                       f"make a new one at {keys_page}, then "
+                       f"gh secret set {var} --repo "
                        "tbougnar/Slingshot-Tools")
-        return bad("groq", f"HTTP {e.code}")
+        return bad(name, f"HTTP {e.code}")
     except Exception as e:  # noqa: BLE001
-        return bad("groq", str(e)[:80])
+        return bad(name, str(e)[:80])
 
 
 # -------------------------------------------------------------------- itch
@@ -188,6 +225,13 @@ def check_itch_api() -> bool:
 def check_itch_session() -> bool:
     """Only matters for creating a project; uploads do not need it."""
     raw = os.environ.get("ITCH_SESSION_COOKIE", "").strip()
+    if not raw:
+        # Uploads go through the API key, which is checked separately. A
+        # missing session cookie used to fail this gate even though nothing
+        # the pipeline does needs it, so a working store looked broken.
+        return ok("itch.io session",
+                  "not set (only needed to create a new project; uploads use "
+                  "the API key)")
     if not require_real("itch.io session", raw,
                         "log in at itch.io, F12, Console, "
                         "document.cookie, copy the itchio_token= part, then "
@@ -428,9 +472,17 @@ def check_youtube() -> bool:
         missing = [n for n, v in (("YOUTUBE_CLIENT_ID", cid),
                                   ("YOUTUBE_CLIENT_SECRET", csec),
                                   ("YOUTUBE_REFRESH_TOKEN", tok)) if not v]
-        log(f"YouTube: {', '.join(missing)} not set, so Shorts will render "
-            f"but not upload")
-        return True
+        # Missing upload credentials used to pass silently, so CI stayed green
+        # while every Short was rendered and thrown away. Accept a render-only
+        # channel only when that is stated, not by accident.
+        if (os.environ.get("ALLOW_FREE_ONLY", "") or "").strip().lower() in (
+                "1", "true", "yes"):
+            return ok("youtube", f"{', '.join(missing)} not set; Shorts will "
+                                 "render but not upload (ALLOW_FREE_ONLY)")
+        return bad("youtube", f"{', '.join(missing)} not set, so Shorts "
+                              "cannot upload",
+                   "set the three YOUTUBE_* secrets, or set "
+                   "ALLOW_FREE_ONLY=1 to accept a render-only channel")
 
     body = urllib.parse.urlencode({
         "client_id": cid, "client_secret": csec, "refresh_token": tok,
@@ -523,7 +575,7 @@ def main() -> int:
     log("")
 
     results = {
-        "groq": check_groq(),
+        "model": check_model(),
         "itch user": check_itch_user(),
         "itch api": check_itch_api(),
         "itch session": check_itch_session(),

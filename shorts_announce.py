@@ -6,6 +6,7 @@ indistinguishable from a working one. The message names which step stopped.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import discord_post as dp
@@ -28,6 +29,19 @@ def read(name: str) -> dict | None:
 
 
 def main() -> int:
+    # A dry run renders a preview and must never post anything publicly. The
+    # workflow runs this step with if: always(), so without this guard a
+    # default (dry) run announced "Short not published" to #announcements.
+    # data/dry_run.json is written by the workflow before the render steps.
+    recorded = read("dry_run.json")
+    dry = bool((recorded or {}).get("dry")) if isinstance(recorded, dict) else False
+    if (os.environ.get("DRY_RUN", "") or "").strip().lower() in ("1", "true",
+                                                                 "yes"):
+        dry = True
+    if dry:
+        log("dry run: nothing was published, so nothing is announced")
+        return 0
+
     script = read("shorts_script.json")
     if not script:
         log("no script, so there is nothing to announce")

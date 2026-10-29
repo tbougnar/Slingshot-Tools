@@ -27,7 +27,6 @@ from __future__ import annotations
 
 import os
 import tempfile
-from pathlib import Path
 
 # The names that are a key to something. They are matched by suffix, so a new
 # provider that names its key FOO_API_KEY is covered without being listed.

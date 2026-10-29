@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import importlib
 import json
-import os
 import shutil
 import subprocess
 import sys
@@ -27,29 +26,6 @@ def check(label: str, ok: bool, detail: str = "") -> None:
           ("\n        " + detail) if detail else "")
     if not ok:
         fails.append(label)
-
-
-def clean_env() -> dict:
-    """The environment a child must get so a test cannot spend money.
-
-    improve_daily.py calls the model provider when it has a key, and a
-    scheduled runner has a real GROQ_API_KEY. A child started with the
-    inherited environment therefore makes a real, billable API call, which is
-    the one thing a test must never do. The provider keys and the Discord and
-    itch.io credentials are stripped, so every module under test takes the
-    "no key" path, which is the path that has to be safe anyway.
-    """
-    env = {k: v for k, v in os.environ.items()
-           if not k.endswith("_API_KEY")
-           and k not in ("DISCORD_BOT_TOKEN", "DISCORD_GUILD_ID",
-                         "DISCORD_WEBHOOK_URL", "ITCH_SESSION_COOKIE",
-                         "ITCH_USER", "ITCH_LOGIN", "ITCH_PASSWORD",
-                         "ELEVENLABS_API_KEY", "YOUTUBE_API_KEY",
-                         "BUTLER_API_KEY")}
-    env.setdefault("PATH", "/usr/bin:/bin")
-    env.setdefault("SYSTEMROOT", "C:\\Windows")
-    env.setdefault("HOME", tempfile.gettempdir())
-    return env
 
 
 def run(script: str, cwd: Path) -> tuple[int, str]:

@@ -7,7 +7,6 @@ Three guarantees, all of which are the reason this module exists:
   3. the file survives a crash, so a killed job still leaves a record
 """
 import json
-import os
 import subprocess
 import sys
 import tempfile

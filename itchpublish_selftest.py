@@ -11,7 +11,6 @@ important behaviour in the publishing path, so it is tested directly rather
 than through a workflow.
 """
 import json
-import os
 import pathlib
 import sys
 import tempfile
@@ -744,6 +743,46 @@ except json.JSONDecodeError as e:
 check("and it holds no conflict markers",
       not any(m in _check for m in ("<<<<<<<", ">>>>>>>", "=======")),
       "a merge conflict was committed into the storefront's data")
+
+print("\nA PAGE THAT LETS A BUYER PAY NOTHING IS NOT SELLING\n")
+# The store project was created as pay-what-you-want with no minimum, while the
+# site advertised both products at $3.00. The buy button on the site led to a
+# page whose button said "Download Now". This is the check that stops the site
+# from calling that a sale.
+_PWYW = ('<div class="buy_row"><div class="button_message">'
+         '<a href="/purchase" class="button buy_btn">Download Now</a>'
+         '<span class="buy_message"><span class="sub">Name your own price'
+         '</span></span></div></div>')
+_FLOOR = ('<div class="button_message"><a class="button buy_btn">Buy Now</a>'
+          '<span class="buy_message"><span class="sub">Pay $3.00 or more'
+          '</span></span></div>')
+_FIXED = ('<div class="button_message"><a class="button buy_btn">Buy Now</a>'
+          '<span class="buy_message"><span class="sub">$3.00</span></span>'
+          '</div>')
+_FREE = ('<div class="button_message"><a class="button buy_btn">Download</a>'
+         '<span class="buy_message"><span class="sub">Free</span></span>'
+         '</div>')
+
+check("a pay-what-you-want page with no minimum is not asking for $3.00",
+      ip.asks_for_price(_PWYW, 3.0) is False)
+check("but one with a $3.00 floor is", ip.asks_for_price(_FLOOR, 3.0) is True)
+check("and it is not enough for a $5.00 product",
+      ip.asks_for_price(_FLOOR, 5.0) is False)
+check("a fixed $3.00 page is asking for $3.00",
+      ip.asks_for_price(_FIXED, 3.0) is True)
+check("a page that says Free is not asking for $3.00",
+      ip.asks_for_price(_FREE, 3.0) is False)
+# This used to pass, and that was the bug: an unreadable block was taken as
+# agreement. A money gate that cannot see the price must refuse.
+check("a page whose price block cannot be read is refused, not guessed",
+      ip.asks_for_price("<html><body>nothing here</body></html>", 3.0) is False)
+check("and a page that cannot be fetched is refused",
+      ip.price_is_asked("https://127.0.0.1:1/never", 3.0, attempts=1) is False)
+check("a $5.00 floor does not satisfy a $3.00 advert",
+      ip.asks_for_price(_FLOOR.replace("3.00", "5.00"), 3.0) is False)
+check("and publishing is gated on it", "price_is_asked(url, price)" in
+      (ROOT / "itch_publish.py").read_text(encoding="utf-8"),
+      "the price check is not called, so a free download would still be sold")
 
 print()
 print("FAILURES:", fails if fails else "none")

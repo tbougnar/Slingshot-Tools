@@ -38,7 +38,9 @@ def _get(path: str, key: str) -> tuple[int, str]:
         f"{API}{path}", headers={"Authorization": f"Bearer {key}"})
     try:
         with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
-            return r.status, r.read(4000).decode("utf-8", "replace")
+            # 4 KB truncated a real project listing and the JSON then failed to
+            # parse, so the report said the account had no projects.
+            return r.status, r.read(2_000_000).decode("utf-8", "replace")
     except urllib.error.HTTPError as e:
         return e.code, e.read(2000).decode("utf-8", "replace")
     except Exception as e:  # noqa: BLE001
@@ -127,12 +129,18 @@ def main() -> int:
     if works:
         code, body = _get(works[0], key)
         try:
-            projects = json.loads(body) or []
+            got = json.loads(body)
         except json.JSONDecodeError:
-            projects = []
+            got = []
+        # Some endpoints answer with an object ({"games": [...]}) rather than a
+        # list. Slicing the object raised TypeError and aborted the whole report.
+        if isinstance(got, dict):
+            got = got.get("games") or got.get("projects") or []
+        projects = got if isinstance(got, list) else []
         _out(f"   the working path is {works[0]}: {len(projects)} project(s)")
         for g in projects[:10]:
-            _out(f"        {g.get('url')}")
+            if isinstance(g, dict):
+                _out(f"        {g.get('url') or g.get('title') or g}")
     else:
         _out("   no listing path answered 200, so the account cannot be read")
     _out()
@@ -246,7 +254,10 @@ def main() -> int:
                   "projects": len(projects),
                   "key_accepted_by_butler": key_ok,
                   "cookie_present": bool(cookie)})
-    return 0
+    # The report is only useful as a gate if a refused key can fail it. The
+    # workflow currently runs it as a report (continue-on-error), which is the
+    # caller's choice; the script itself must be able to say "no".
+    return 1 if key_ok is False else 0
 
 
 if __name__ == "__main__":

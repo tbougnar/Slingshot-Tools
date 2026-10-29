@@ -67,6 +67,7 @@ _PATTERNS = [
                r"(\"?\s*[:=]\s*\"?)([^\s\"',}]{6,})"), r"\1\2<redacted>"),
     (re.compile(r"(?i)\bbearer\s+[A-Za-z0-9._\-]{8,}"), "Bearer <redacted>"),
     (re.compile(r"\bgh[pousr]_[A-Za-z0-9]{16,}"), "<redacted>"),
+    (re.compile(r"\bsk-or-v1-[A-Za-z0-9]{16,}"), "<redacted>"),
     (re.compile(r"\bsk-[A-Za-z0-9]{16,}"), "<redacted>"),
     (re.compile(r"\bgsk_[A-Za-z0-9]{16,}"), "<redacted>"),
     (re.compile(r"\bAIza[0-9A-Za-z_\-]{20,}"), "<redacted>"),
@@ -181,7 +182,10 @@ def read(limit: int = 0) -> list[dict]:
     across a rotation instead of starting again from nothing.
     """
     out = []
-    for path in reversed(sorted(ROOT.glob("events.jsonl.*"),
+    # Rotations live next to the live log (data/audit/events.jsonl.N), not in
+    # the repository root. Globbing ROOT found none of them, so every event
+    # before the last rotation silently disappeared from the trail.
+    for path in reversed(sorted(LOG.parent.glob(LOG.name + ".*"),
                                 key=lambda p: p.name)):
         if not path.is_file():
             continue

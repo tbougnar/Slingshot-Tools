@@ -175,7 +175,6 @@ def _site_side_effects() -> list[str]:
     exists to catch: the folder is gitignored, so it never showed up in a
     diff, but Pages serves it and check_exposure.py fails the release over it.
     """
-    import os
     import shutil
     import subprocess
 

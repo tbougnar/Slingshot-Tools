@@ -45,7 +45,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 MAX_ATTEMPT = int(os.environ.get("SELFHEAL_MAX", "3"))
-MODEL = "openai/gpt-oss-120b"
+# The debug team picks its own live models (providers.model_chain); this name is
+# kept only so an older caller that imports it still resolves to something real.
+try:
+    import providers as _providers
+    MODEL = _providers.default_model("debug")
+except (ImportError, SystemExit):
+    MODEL = "openai/gpt-oss-120b"
 
 ALLOWED = {
     "make_app.py",
@@ -61,13 +67,18 @@ ALLOWED = {
 # scripts the guard exists to protect and the gate would not have said so,
 # because the gate was not looking. A file that is protected is not
 # repairable, whatever else says so.
+#
+# The import failing used to be tolerated, which left the protected set empty
+# and the final guard check skipped: the one lane that edits live code failed
+# open. A repair lane that cannot consult the rule set must not run at all.
 try:
     import weekly_guard as _guard
     _PROTECTED = set(_guard.all_protected()) | {
         p for p in _guard.MONEY_AND_DEATH}
-except Exception:  # noqa: BLE001
-    _guard = None
-    _PROTECTED = set()
+except Exception as e:  # noqa: BLE001
+    raise RuntimeError(
+        "selfheal cannot run without weekly_guard: the protected-file rules "
+        f"and the rollback guarantee depend on it ({str(e)[:120]})") from None
 
 FORBIDDEN = [
     r"itch_url",              # where a product is sold
@@ -148,8 +159,11 @@ def ask(diag: dict) -> dict:
         import debug_team2 as team
     except ImportError:
         return {"diagnosis": "debugger team unavailable", "fixes": []}
-    if not os.environ.get("GROQ_API_KEY"):
-        return {"diagnosis": "no GROQ_API_KEY available", "fixes": []}
+    if not os.environ.get("GROQ_API_KEY") \
+            and not os.environ.get("OPENROUTER_API_KEY") \
+            and not os.environ.get("GEMINI_API_KEY") \
+            and not os.environ.get("CEREBRAS_API_KEY"):
+        return {"diagnosis": "no model provider key available", "fixes": []}
 
     props = team.proposals(report, team.DEBUGGERS)
     if not props:
@@ -164,19 +178,37 @@ def ask(diag: dict) -> dict:
                               + " | ".join(d.get("fix", "")[:120] for _, d in props),
                 "fixes": [], "disagreed": [d for _, d in props]}
 
-    chosen = next(d for _, d in props if d is props[0][1])
+    chosen = props[0][1]
+    chosen_model = props[0][0]
     for model, d in props:
         if re.sub(r"\s+", " ", d.get("fix", "").strip().lower())[:160] == key:
-            chosen = d
+            chosen, chosen_model = d, model
             break
 
     files = [f for f in (chosen.get("files") or []) if f in ALLOWED]
     if not files:
         return {"diagnosis": f"proposed fix touches no allowed file: "
                               f"{chosen.get('files')}", "fixes": []}
+
+    # A diagnosis is not a patch. Ask the agreeing debugger for the complete
+    # rewritten file, which safe() then checks and apply() compiles and tests.
+    name = files[0]
+    try:
+        current = (ROOT / name).read_text(encoding="utf-8", errors="replace")
+    except OSError as e:
+        return {"diagnosis": f"the fix targets {name}, which cannot be read: "
+                              f"{str(e)[:80]}", "fixes": []}
+    content = team.rewrite(chosen_model, name, current,
+                           str(chosen.get("fix") or ""))
+    if not content:
+        return {"diagnosis": chosen.get("diagnosis") or "agreed fix",
+                "fixes": [{"file": name, "note": chosen.get("fix", ""),
+                           "content": None}],
+                "research": None}
+
     return {"diagnosis": chosen.get("diagnosis") or "agreed fix",
-            "fixes": [{"file": files[0], "note": chosen.get("fix", ""),
-                       "content": None}],
+            "fixes": [{"file": name, "note": chosen.get("fix", ""),
+                       "content": content}],
             "research": None}
 
 
@@ -192,12 +224,24 @@ def research(diag: dict, tried: list[str]) -> dict:
     files = [f for f in (got.get("files") or []) if f in ALLOWED]
     if not files:
         return {"diagnosis": "research proposed no allowed file", "fixes": []}
+    name = files[0]
+    try:
+        current = (ROOT / name).read_text(encoding="utf-8", errors="replace")
+    except OSError as e:
+        return {"diagnosis": f"research targets {name}, which cannot be read: "
+                              f"{str(e)[:80]}", "fixes": []}
+    content = team.rewrite(got.get("model") or team.DEBUGGERS[0], name, current,
+                           str(got.get("fix") or ""))
     return {"diagnosis": f"research: {got.get('found','')[:160]}",
-            "fixes": [{"file": files[0], "note": got.get("fix", ""), "content": None}]}
+            "fixes": [{"file": name, "note": got.get("fix", ""),
+                       "content": content or None}]}
 
 
 def safe(plan: dict) -> list[dict]:
     """Keep only fixes that are allowed and that violate nothing."""
+    if _guard is None:
+        print("[selfheal] the guard is unavailable - refusing every patch")
+        return []
     keep = []
     for fix in plan.get("fixes") or []:
         name = str(fix.get("file", "")).replace("\\", "/").strip()
@@ -207,8 +251,7 @@ def safe(plan: dict) -> list[dict]:
         # guard is what stands between the lane and the scripts that decide
         # what a customer gets, and a file the guard protects cannot be in
         # the repairable set as well.
-        if _PROTECTED and (name in _PROTECTED
-                            or _guard.is_protected(name)):
+        if name in _PROTECTED or _guard.is_protected(name):
             print(f"[selfheal] refused {name}: it is protected")
             continue
         content = fix.get("content")
@@ -264,7 +307,7 @@ def apply(fixes: list[dict], attempt: int, diagnosis: str) -> bool:
             print(f"[selfheal] proposal is guidance only, not a patch: "
                   f"{f['note'][:90]}")
             print("[selfheal] recording it in the fixbook instead")
-            remember(diagnosis, f)
+            remember(diagnosis, [f])
             return False
         backup = target.read_text(encoding="utf-8", errors="replace")
         backups[f["file"]] = backup
@@ -294,14 +337,20 @@ def apply(fixes: list[dict], attempt: int, diagnosis: str) -> bool:
 
     # The guard has the last word, and it has it before anything is
     # committed. The workflow asks the guard as well, but by then the patch
-    # is already in history and the working tree is clean.
-    if _guard is not None:
-        bad = _guard.violations([f["file"] for f in fixes])
-        if bad:
-            print("[selfheal] refusing to commit: these are protected")
-            for p in bad:
-                print("  -", p)
-            return False
+    # is already in history and the working tree is clean. A violation must
+    # also put the file back: returning False used to leave the forbidden
+    # edit sitting in the tree for the next step to commit.
+    if _guard is None:
+        print("[selfheal] the guard is unavailable - reverting the patch")
+        _revert()
+        return False
+    bad = _guard.violations([f["file"] for f in fixes])
+    if bad:
+        print("[selfheal] refusing to commit: these are protected")
+        for p in bad:
+            print("  -", p)
+        _revert()
+        return False
 
     # Only the patched file is staged. "git add -A" committed whatever else
     # happened to be in the tree, so the commit mixed the patch with

@@ -51,15 +51,28 @@ LESSONS = DATA / "lessons.txt"
 PATTERNS = ROOT / "PATTERNS.md"
 BANNED = ROOT / "data" / "already_built.json"
 
-GROQ_BASE = "https://api.groq.com/openai/v1"
-GROQ_KEY = (os.environ.get("GROQ_API_KEY") or "").strip()
-# One builder, two debuggers. gpt-oss-120b is the strongest coder available, so
-# it writes the app; the other two are reserved for debugging and are only used
-# here if the builder's own model is unreachable.
-CHAT_MODEL = (os.environ.get("GROQ_CHAT_MODEL") or "").strip() or "openai/gpt-oss-120b"
-MODELS = ["openai/gpt-oss-120b", "openai/gpt-oss-20b"]
-CHAT_FALLBACKS = ["openai/gpt-oss-120b", "openai/gpt-oss-20b",
-                     "qwen/qwen3.8-27b"]
+# The builder chain lives in providers.py (OpenRouter first, Groq fallback).
+# This file used to pin Groq ids; under any other backend every one of them is
+# a 404, so the first call of a build died with "model not found".
+def _builder_chain() -> list[str]:
+    try:
+        import providers
+        return providers.model_chain("builder")
+    except SystemExit:
+        return []
+
+
+def _chat_chain() -> list[str]:
+    try:
+        import providers
+        return providers.model_chain("chat")
+    except SystemExit:
+        return []
+
+
+# Filled on each call so the rest of the file and the selftests can read them.
+CHAT_MODEL = ""
+MODELS: list[str] = []
 SITE_URL = (os.environ.get("SITE_URL") or "").strip() or "https://tbougnar.github.io/Slingshot-Tools"
 SITE_BASE = SITE_URL.rstrip("/")
 # itch.io is the store. A product is only shown for sale once its itch_url is
@@ -127,35 +140,31 @@ def log(msg):
 def groq(system, user, max_tokens=4000, temperature=0.8, tries=3):
     """Call whichever model provider is configured.
 
-    Any provider is fine here, so the provider is chosen by whichever
-    credentials exist rather than being hard-wired. Every model is tried in
-    turn because a rate limit on one of them says nothing about the others.
+    The chain comes from providers.py, so the backend is OpenRouter first and
+    Groq only when that key is missing. Every model is tried in turn because a
+    daily cap on one says nothing about the others.
     """
     global CHAT_MODEL
-    if not GROQ_KEY and not os.environ.get("GEMINI_API_KEY") \
-            and not os.environ.get("CEREBRAS_API_KEY") \
-            and not os.environ.get("OPENROUTER_API_KEY"):
-        raise RuntimeError("no model provider is configured")
     import providers
-    # The model that answered last time is tried first, and the rest follow.
-    # Walking the whole list from the top on every call is what burns the
-    # allowance: a rate limited first model means every single generation
-    # pays for its failures before reaching one that works.
-    order = [CHAT_MODEL] + [x for x in MODELS if x != CHAT_MODEL]
+    if not providers.configured():
+        raise RuntimeError("no model provider is configured")
+    order = _builder_chain()
+    # The model that answered last time is tried first, so the next call goes
+    # straight there instead of paying for the same failures again.
+    if CHAT_MODEL and CHAT_MODEL in order:
+        order = [CHAT_MODEL] + [m for m in order if m != CHAT_MODEL]
     last = ""
     for model in order:
-        for attempt in range(2):
-            try:
-                out = providers.chat(model, system, user, temperature,
-                                   max_tokens, role="builder")
-                if out:
-                    # Remember which model answered, so the next call goes
-                    # straight there.
-                    CHAT_MODEL = model
-                    return out
-            except Exception as e:  # noqa: BLE001
-                last = str(e)[:200]
-                time.sleep(1.5 * (attempt + 1))
+        try:
+            out = providers.chat(model, system, user, temperature,
+                                 max_tokens, tries=tries, role="builder")
+            if out:
+                # Remember which model answered, so the next call goes
+                # straight there.
+                CHAT_MODEL = model
+                return out
+        except Exception as e:  # noqa: BLE001
+            last = str(e)[:200]
     raise RuntimeError(f"every model failed: {last}")
 
 def _json_string_body(text: str) -> str | None:
@@ -454,43 +463,6 @@ def _as_json(raw):
     return None
 
 
-def groq_json_any(system, user, models=None, **kw):
-    """Try each model in turn for a small structured reply.
-
-    Pinning one model made the whole build fail when that model would not answer
-    a short JSON question, which is a far easier task than writing an app.
-    """
-    import providers
-    order = []
-    try:
-        order = providers.models("debug")
-    except Exception:  # noqa: BLE001
-        pass
-    for m in MODELS:
-        if m not in order:
-            order.append(m)
-    if models:
-        order = [x for x in models if x] + order
-    last = ""
-    for model in order:
-        try:
-            raw = providers.chat(model, system, user,
-                                 kw.pop("temperature", 0.4) if not kw else 0.4,
-                                 kw.get("max_tokens", 3000))
-        except TypeError:
-            raw = None
-        except Exception as e:  # noqa: BLE001
-            last = str(e)[:160]
-            raw = None
-        if not raw:
-            continue
-        got = _as_json(raw)
-        if got:
-            log(f"concept chosen by {model}")
-            return got
-    raise RuntimeError(f"no model returned usable JSON ({last})")
-
-
 def load_built():
     """Everything already built, so nothing is generated twice.
 
@@ -699,14 +671,12 @@ def build_html_raw(concept, lessons, attempt=1):
     # difference between a failed run and a slow one. The local meter is empty
     # at the start of a run, so the wait has to be driven by the error itself.
     for attempt in range(8):
-        for model in [CHAT_MODEL] + [m for m in MODELS if m != CHAT_MODEL]:
-            try:
-                raw = groq(system, user, max_tokens=16000, temperature=0.35)
-            except Exception as e:  # noqa: BLE001
-                last = str(e)[:200]
-                raw = None
-            if not raw:
-                continue
+        try:
+            raw = groq(system, user, max_tokens=16000, temperature=0.35)
+        except Exception as e:  # noqa: BLE001
+            last = str(e)[:200]
+            raw = None
+        if raw:
             doc = _salvage_html(raw)
             if doc:
                 if raw.strip().startswith("<!DOCTYPE") or raw.strip().startswith("<html"):
@@ -754,11 +724,33 @@ def build_html(concept, lessons, attempt=1):
 
 
 def _set_tier(html, tier):
-    """Flip the edition in the generated file."""
-    out = html.replace('const TIER = "full";', f'const TIER = "{tier}";', 1)
-    if out == html:
-        out = re.sub(r'(const\s+TIER\s*=\s*")[^"]*(")', rf'\g<1>{tier}\g<2>', html, count=1)
+    """Flip the edition in the generated file.
+
+    Both quote styles are handled on purpose. A model writes
+    ``const TIER = 'full'`` as often as it writes double quotes, and the old
+    pattern only matched double quotes, so a free edition could ship with the
+    paid limits still switched on.
+    """
+    pattern = r'(const\s+TIER\s*=\s*)(["\'])([^"\']*)\2'
+    out, n = re.subn(
+        pattern,
+        lambda m: f"{m.group(1)}{m.group(2)}{tier}{m.group(2)}",
+        html, count=1)
+    if n == 0:
+        # Some generated apps omit ``const``. Match the assignment itself,
+        # but never the comparison ``TIER === 'full'``.
+        out, n = re.subn(
+            r'(\bTIER\s*=\s*)(["\'])([^"\']*)\2',
+            lambda m: f"{m.group(1)}{m.group(2)}{tier}{m.group(2)}",
+            html, count=1)
     return out
+
+
+def _tier_value(html):
+    """The edition constant the file declares, or None when it has none."""
+    m = re.search(
+        r'(?:(?:const|let|var)\s+)?\bTIER\s*=\s*["\'](basic|full)["\']', html)
+    return m.group(1) if m else None
 
 
 def write_app(concept, html, tier="full"):
@@ -785,7 +777,20 @@ def write_app(concept, html, tier="full"):
     # gitignored and nothing showed it in a diff. Only the two files this
     # function owns are replaced.
     (out / "app").mkdir(parents=True, exist_ok=True)
-    (out / "app" / "index.html").write_text(_set_tier(html, tier), encoding="utf-8")
+    edition = _set_tier(html, tier)
+    if _tier_value(edition) is None:
+        # Refuse to write an app whose edition cannot be decided. Writing it
+        # anyway put an unlimited app in the public folder, which is the paid
+        # product given away. Failing here is loud and recoverable; shipping
+        # is not.
+        raise RuntimeError(
+            "the app has no TIER constant, so the free edition cannot be "
+            "limited to the basic tier")
+    if _tier_value(edition) != tier:
+        raise RuntimeError(
+            f"could not set TIER to {tier!r}; the file still says "
+            f"{_tier_value(edition)!r}")
+    (out / "app" / "index.html").write_text(edition, encoding="utf-8")
     meta = {**concept, "slug": slug, "tier": tier, "base_slug": concept["slug"]}
     (out / "concept.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
     return out
@@ -804,6 +809,9 @@ _TIER_FROM_URL = re.compile(
 def html_looks_fine(html):
     problems = []
     notes = []
+    # Callers read this attribute after the call. It was computed and thrown
+    # away, so every "note: ..." line in a build log was dead code.
+    html_looks_fine.notes = notes
     if re.search(r"https?://(?!www\.w3\.org)", html):
         problems.append("external URL referenced")
     if "<script src=" in html:
@@ -820,6 +828,13 @@ def html_looks_fine(html):
                      "default only, which is acceptable")
     if "localStorage" not in html and "indexedDB" not in html:
         problems.append("missing localStorage (the app would not save anything)")
+    # Without this constant the builder cannot produce a limited free edition:
+    # the paid file and the free file would be the same product. Checked here
+    # so the app is retried instead of being written and then failing later.
+    if _tier_value(html) is None:
+        problems.append(
+            "no TIER constant, so the free edition cannot be limited to the "
+            "basic tier and the paid product would be given away")
     # The edition must be decided in the file, not by the address bar. Every
     # generated app used to read it from the query string, because the pattern
     # library taught it that, and the twenty-five free editions that shipped
@@ -1166,16 +1181,21 @@ def build_installer(app_dir: Path, concept):
 
 
 def already_listed(base_slug: str) -> bool:
-    """Is this product already for sale on itch.io?
+    """Is this product already proven to be for sale on itch.io?
 
-    A rebuild must not silently hide a product that is on sale. If the catalog
-    already carries an itch_url for this family, the paid tier stays published.
+    A shared store URL is not proof. Every full entry carries the same
+    project URL, so treating any URL as evidence made this true for products
+    that were never uploaded and advertised a tier with nothing to buy. The
+    paid entry must itself be marked published, which only publish_paid.py
+    does after the build and the price have both been verified.
     """
     try:
         entries = json.loads(CATALOG.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return False
     return any((e.get("base_slug") or e.get("slug")) == base_slug
+               and e.get("tier") == "full"
+               and e.get("published") is True
                and (e.get("itch_url") or "").startswith("https://")
                for e in entries if isinstance(e, dict))
 
@@ -1469,8 +1489,14 @@ def publish(concept, app_dir, installer, tier="full", brand="", differences=None
                              title=brand or concept["title"], tag=concept["tag"]),
         "tags": clean_tags(concept.get("tags", []), tag=concept["tag"],
                            title=brand or concept["title"]),
-        "url": (f"{SITE_URL.rstrip('/')}/apps/{concept['slug']}/" if tier == "basic"
-                else f"{SITE_URL.rstrip('/')}/apps/{concept['slug']}-basic/"),
+        # A full edition has no public page of its own: it is sold through
+        # itch.io and the build is never copied into site/. Pointing url at the
+        # basic app's page was a link that silently showed the free product to
+        # anyone who followed it, and it made the catalog claim a page existed
+        # for the paid edition. The store locator for a paid edition is
+        # itch_url, written by set_itch_url.py / itch_publish.record().
+        "url": (f"{SITE_URL.rstrip('/')}/apps/{concept['slug']}/"
+                if tier == "basic" else ""),
         "download": "",
         "price": (0.0 if tier == "basic" else
                   max(PRICE_FLOOR, min(PRICE_CEILING,
@@ -1487,6 +1513,17 @@ def publish(concept, app_dir, installer, tier="full", brand="", differences=None
         # delivered only after PayPal confirms payment.
         print(f"[publish] paid build kept out of the public site "
               f"({installer.name}); delivered after payment", flush=True)
+    # Replacing an entry must not throw away what another step proved. The
+    # store URL is written by set_itch_url.py / itch_publish.record(), and
+    # verify_app re-publishes the full entry with published=was_live. Dropping
+    # itch_url there left a "published for sale" entry with no page to buy
+    # from, which the exposure gate refuses. The same applies to the built
+    # marker.
+    previous = next((a for a in apps if a.get("slug") == concept["slug"]
+                     and isinstance(a, dict)), {})
+    for keep in ("itch_url", "built"):
+        if previous.get(keep) and not entry.get(keep):
+            entry[keep] = previous[keep]
     apps = [a for a in apps if a.get("slug") != concept["slug"]]
     apps.insert(0, entry)
     CATALOG.write_text(json.dumps(apps, indent=2), encoding="utf-8")
@@ -1495,8 +1532,13 @@ def publish(concept, app_dir, installer, tier="full", brand="", differences=None
 
 
 def main():
-    if not GROQ_KEY:
-        log("no GROQ_API_KEY - nothing to do")
+    try:
+        import providers
+        ready = providers.configured()
+    except Exception:  # noqa: BLE001
+        ready = False
+    if not ready:
+        log("no model provider key - nothing to do")
         return 0
     lessons = LESSONS.read_text(encoding="utf-8") if LESSONS.exists() else ""
     lessons = (lessons + "\n\nPAST BUGS (id + symptom only):\n"
@@ -1583,7 +1625,8 @@ def main():
                       "date": date.today().isoformat()})
         BANNED.parent.mkdir(parents=True, exist_ok=True)
         BANNED.write_text(json.dumps(built, indent=2), encoding="utf-8")
-        log(f"DONE full: {full_entry['title']} ${full_entry['price']:.2f} -> {full_entry['url']}")
+        log(f"DONE full: {full_entry['title']} ${full_entry['price']:.2f} -> "
+            f"{full_entry.get('itch_url') or '(store page not listed yet)'}")
         log(f"DONE basic: {basic_entry['title']} free -> {basic_entry['url']}")
         return 0
     log("both attempts failed the quality gate")

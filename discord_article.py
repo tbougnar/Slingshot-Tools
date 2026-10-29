@@ -28,16 +28,10 @@ network calls. Open the page and it works.
 **What the free edition does**
 Everything you need for the job itself. It runs straight in the browser and
 your data never leaves your device.
-
-**What the full edition adds**
-The full edition is a native Windows app: a real installer, a desktop shortcut,
-and no browser tab to hunt down. It also carries the extra features listed on
-the product page.
-
+{paid_section}
 **Get it**
 - Free: {free_url}
-- Full edition: {buy_url}
-
+{full_section}
 One new tool lands every month. Use `/vote` in the server to pick what comes
 next.
 """
@@ -64,12 +58,23 @@ def clean(body: str) -> str:
 def fallback_article(tool: dict) -> str:
     tag = (tool.get("tags") or ["utility"])[0]
     tag_title = str(tag).replace("-", " ").strip().capitalize() or "This tool"
+    # Only mention the paid edition when there is a real page to buy it from.
+    # The fallback used to write a link to checkout.html with no product, so a
+    # committed article advertised an edition that could not be bought.
+    buy = tool.get("buy_url") or ""
+    paid_section = (
+        "\n**What the full edition adds**\n"
+        "The full edition is a native Windows app: a real installer, a desktop "
+        "shortcut,\nand no browser tab to hunt down. It also carries the extra "
+        "features listed on\nthe product page.\n" if buy else "")
+    full_section = f"- Full edition: {buy}\n" if buy else ""
     return FALLBACK.format(
         title=tool.get("title", "Slingshot Tool"),
         blurb=tool.get("blurb", "A small, focused tool."),
         tag_title=tag_title,
         free_url=tool.get("free_url") or dd.SITE_URL,
-        buy_url=tool.get("buy_url") or f"{dd.SITE_URL}/checkout.html",
+        paid_section=paid_section,
+        full_section=full_section,
     )
 
 
@@ -99,13 +104,13 @@ def _model_article(tool: dict) -> str:
     """Ask the builder model for the write-up; any failure is not fatal."""
     try:
         import providers
-        model = os.environ.get("ARTICLE_MODEL") or "openai/gpt-oss-20b"
-        body = providers.groq_chat(
-            model=model,
-            system=("You write short product announcements for a Discord "
-                    "server. Plain markdown, no emoji, no preamble, never "
-                    "invent features that were not described to you."),
-            user=(
+        model = os.environ.get("ARTICLE_MODEL") or providers.default_model("chat")
+        body = providers.chat(
+            model,
+            ("You write short product announcements for a Discord "
+             "server. Plain markdown, no emoji, no preamble, never "
+             "invent features that were not described to you."),
+            (
                 "Write a short article for this tool. Cover what problem it "
                 "solves, what the free edition does, and what the full "
                 f"edition adds. Under 220 words.\n\n"
@@ -114,9 +119,7 @@ def _model_article(tool: dict) -> str:
                 f"Tags: {', '.join(tool.get('tags') or [])}\n"
                 f"Price: ${tool.get('price', 0):.2f}\n"
                 f"Free download: {tool.get('free_url')}"),
-            temperature=0.4,
-            max_tokens=700,
-        )
+            0.7, 900, role="debug")
         return body if isinstance(body, str) else ""
     except Exception as e:  # noqa: BLE001
         log(f"model unavailable ({e})")
@@ -140,23 +143,32 @@ def main() -> int:
         return 0
 
     body = ""
-    if os.environ.get("GROQ_API_KEY"):
+    try:
+        import providers
+        ready = providers.configured()
+    except Exception:  # noqa: BLE001
+        ready = False
+    if ready:
         body = clean(_model_article(tool))
     if not body:
         body = fallback_article(tool)
         log("using the deterministic write-up")
 
-    dd.save_article(tool["base"], body)
-    log(f"wrote {len(body)} characters for {tool['base']}")
+    # A committed article is public marketing copy. Saving one whose buy link
+    # goes nowhere is the same defect as a dead buy button, so nothing is saved
+    # or posted until the paid edition is genuinely on sale. A dry run only
+    # prints, and is allowed to preview an article before that.
+    if not tool.get("buy_url") and not dry:
+        log("paid tier is not live yet - not saving or posting the article")
+        return 0
+
+    if not dry:
+        dd.save_article(tool["base"], body)
+        log(f"wrote {len(body)} characters for {tool['base']}")
 
     if dry:
         print(json.dumps(article_message(tool, body), indent=2,
                          ensure_ascii=False))
-        return 0
-
-    # only advertise the paid edition once it is genuinely on sale
-    if not tool.get("buy_url"):
-        log("paid tier is not live yet - not posting the article")
         return 0
 
     if dp.post("articles", article_message(tool, body)):

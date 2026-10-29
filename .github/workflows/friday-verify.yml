@@ -29,6 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
       SITE_URL: ${{ vars.SITE_URL }}
       PRICE_FLOOR: '1.00'
@@ -92,7 +93,10 @@ jobs:
         run: python check_repo_hygiene.py
 
       - name: Nothing protected was touched
-        run: python weekly_guard.py check
+        # The release lane is the one job that may write the catalogue and
+        # the generated app folders. Without this allowance every successful
+        # publish tripped the guard and the new app was never committed.
+        run: python weekly_guard.py check --allow-release
 
       # The installer job runs on a fresh Windows checkout, so everything this
       # job produced (catalog, free edition, paid source, published manifest)
@@ -105,7 +109,7 @@ jobs:
           git commit -q -m "feat: verified new Slingshot Tool" || echo "nothing to commit"
           git fetch origin main
           git rebase origin/main || git -c rebase.autoStash=true pull --rebase origin main
-          git fetch origin main && git pull --rebase origin main && git push || (git pull --rebase origin main && git push) || echo "push failed"
+          git fetch origin main && git pull --rebase origin main && git push || (git pull --rebase origin main && git push)
 
       # paid/ is gitignored on purpose, so the paid build can never be public.
       # Pass it to the Windows job as a private artifact instead of through git.
@@ -142,6 +146,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 45
     env:
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
       PRICE_FLOOR: '1.00'
       PRICE_CEILING: '10.00'
@@ -327,6 +332,7 @@ jobs:
         run: python discord_article.py
         continue-on-error: true
         env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
@@ -360,7 +366,7 @@ jobs:
           git config user.email "bot@users.noreply.github.com"
           git add -A
           git commit -q -m "build: windows installer" || echo "nothing to commit"
-          git fetch origin main && git pull --rebase origin main && git push || (git pull --rebase origin main && git push) || echo "push failed"
+          git fetch origin main && git pull --rebase origin main && git push || (git pull --rebase origin main && git push)
 
       - name: Commit and publish the site
         run: |
@@ -368,7 +374,7 @@ jobs:
           git config user.email "bot@users.noreply.github.com"
           git add -A
           git commit -q -m "feat: verified new Slingshot Tool" || echo "nothing to commit"
-          git fetch origin main && git pull --rebase origin main && git push || (git pull --rebase origin main && git push) || echo "push failed"
+          git fetch origin main && git pull --rebase origin main && git push || (git pull --rebase origin main && git push)
 
       # This runs last on purpose. The free edition has shipped by now, which
       # is what we want: one dead destination must not cost the customer the

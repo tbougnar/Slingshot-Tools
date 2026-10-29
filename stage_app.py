@@ -99,11 +99,26 @@ def main() -> int:
         return 0
     make_app.log(f"concept: {concept['title']} ({concept['slug']})")
 
+    html = ""
+    issues = []
     for attempt in range(1, ATTEMPTS + 1):
         # Ask for the file itself. The JSON path asks a model to wrap a large
         # document in an object, and that parse is the single thing every run
         # has been dying on, even though a working raw path already existed.
-        html, mode, _ = make_app.build_html_raw(concept, lessons, attempt=attempt)
+        try:
+            html, mode, _ = make_app.build_html_raw(concept, lessons,
+                                                    attempt=attempt)
+        except RuntimeError as e:
+            # build_html_raw retries internally and then raises. Nothing
+            # caught it here, so the rejection block below never ran: no
+            # NOT_VERIFIED event and no rejected script for the self-heal job.
+            make_app.log(f"attempt {attempt}: the model produced nothing "
+                         f"usable ({str(e)[:100]})")
+            auditlog.retried("generate", job=concept["slug"],
+                             reason=f"attempt {attempt} produced no usable app",
+                             evidence={"error": str(e)[:200]})
+            html = ""
+            continue
         # The raw path asks the model for the file and nothing else, so the
         # product's name, the list of what the paid edition adds, and the two
         # descriptions all have to come from elsewhere. They used to be
@@ -116,16 +131,12 @@ def main() -> int:
         # read from the generated file. No model call, which matters because
         # this path exists to spend as little allowance as possible.
         brand = str(concept.get("title") or "").strip()
-        diffs = make_app.paid_features(html)
-        free_blurb = ""
-        paid_blurb = ""
-        if diffs:
-            paid_blurb = (f"Everything the free edition does, and "
-                          f"{', '.join(diffs).lower()}.")
         # The model escapes single quotes that are not inside a string, which
         # is not valid javascript, and whether one is an artefact or a real
         # escape cannot be told apart without parsing. So the variants are
-        # tried and the first one that node accepts is used.
+        # tried and the first one that node accepts is used. This has to run
+        # before the paid features are read, because a doubly-escaped limit
+        # table does not parse and would look like "no paid features".
         html, parsed = make_app.best_variant(html)
         if not parsed:
             make_app.log(f"attempt {attempt}: no escaping variant of the "
@@ -147,6 +158,23 @@ def main() -> int:
             continue
         if why:
             make_app.log(f"attempt {attempt} warning: {why}")
+        # The shop asks for money, so the product has to say what the money
+        # buys. An empty list means the paid edition is the free one, which
+        # used to be published with a generic description on both cards.
+        diffs = make_app.paid_features(html)
+        if not diffs:
+            make_app.log(f"attempt {attempt} rejected: the paid edition adds "
+                         f"nothing the free edition does not have")
+            auditlog.retried("generate", job=concept["slug"],
+                             reason=f"attempt {attempt} has no paid features "
+                                    f"to sell",
+                             evidence={"bytes": len(html)})
+            continue
+        free_blurb = (f"{brand} as a free offline tool: one job done "
+                      f"properly, no account, and your data stays on your "
+                      f"device.")
+        paid_blurb = (f"Everything the free edition does, and "
+                      f"{', '.join(diffs).lower()}.")
         make_app.log(f"attempt {attempt} ok ({len(html)} bytes, brand={brand!r})")
         auditlog.succeeded("generate", job=concept["slug"],
                            reason="the app passed the staging gate and the "
@@ -157,9 +185,21 @@ def main() -> int:
 
         # write_app appends "-basic" itself for the basic tier, so passing an
         # already-suffixed slug produced "password-manager-basic-basic"
-        basic_dir = make_app.write_app({**concept, "brand": brand},
-                                       html, tier="basic")
-        full_dir = make_app.write_app({**concept, "brand": brand}, html, tier="full")
+        try:
+            basic_dir = make_app.write_app({**concept, "brand": brand},
+                                           html, tier="basic")
+            full_dir = make_app.write_app({**concept, "brand": brand}, html,
+                                          tier="full")
+        except RuntimeError as e:
+            # The tier gate refuses to write an app whose free edition would
+            # be the full product. Try another sample rather than publishing
+            # an unlocked build.
+            make_app.log(f"attempt {attempt} rejected by the tier gate: "
+                         f"{str(e)[:120]}")
+            auditlog.retried("generate", job=concept["slug"],
+                             reason=f"attempt {attempt} failed the tier gate",
+                             evidence={"error": str(e)[:200]})
+            continue
 
         # Now the installer, in the same job.
         #

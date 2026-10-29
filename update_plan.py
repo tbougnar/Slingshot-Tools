@@ -105,8 +105,17 @@ def target_date(today: date | None = None) -> date:
 
 
 def _model() -> str:
-    return (providers.models("debug") or {}).get("debug", "") \
-        or __import__("os").environ.get("GROQ_CHAT_MODEL", "")
+    """One model id for the live backend (OpenRouter first, Groq fallback).
+
+    providers.models() returns a list. Calling .get("debug") on it raised
+    AttributeError, every call was swallowed by the except below, and the plan
+    silently fell back to the fixed menu -- so the "AI picks the update" feature
+    never actually ran.
+    """
+    try:
+        return providers.best_model("debug")
+    except SystemExit:
+        return ""
 
 
 def ask() -> dict | None:
@@ -116,7 +125,7 @@ def ask() -> dict | None:
     the fixed menu rather than shipping a month with no plan.
     """
     menu = themes()
-    if not providers.groq_available():
+    if not providers.configured():
         log("no model available, using the fixed menu")
         return None
 
@@ -203,10 +212,15 @@ def plan() -> dict:
 
     try:
         hist.parent.mkdir(parents=True, exist_ok=True)
+        # The file does not exist on the first run, and read_text() raised
+        # FileNotFoundError (an OSError) which this except swallowed, so
+        # data/update_history.json was never created at all.
+        old = json.loads(hist.read_text(encoding="utf-8")) if hist.exists() else []
+        if not isinstance(old, list):
+            old = []
         hist.write_text(json.dumps(
             [{"id": choice["id"], "title": choice["title"],
-              "date": when.isoformat()}] +
-            json.loads(hist.read_text(encoding="utf-8")), indent=2),
+              "date": when.isoformat()}] + old, indent=2),
             encoding="utf-8")
     except (OSError, json.JSONDecodeError):
         # history is a nicety; a plan without it is still a plan

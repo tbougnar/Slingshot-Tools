@@ -5,8 +5,6 @@ from __future__ import annotations
 import json
 import os
 import re
-import time
-import urllib.request
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -20,9 +18,10 @@ CATALOG = SITE / "apps.json"
 LESSONS = ROOT / "data" / "coach_lessons.txt"
 STATS = ROOT / "data" / "stats.json"
 
-GROQ_BASE = "https://api.groq.com/openai/v1"
-GROQ_KEY = (os.environ.get("GROQ_API_KEY") or "").strip()
-CHAT_MODEL = (os.environ.get("GROQ_CHAT_MODEL") or "").strip() or "qwen/qwen3.8-27b"
+# The model backend, its base URL, key and free-model chain all live in
+# providers.py (OpenRouter first, Groq as fallback). This file used to carry
+# its own Groq URL and key, which is why a provider change meant editing ten
+# files and why a stale model id failed only at run time.
 ITCH_PAGE = (os.environ.get("ITCH_PAGE") or "").strip() or "slingshot-tools"
 
 
@@ -31,39 +30,25 @@ def log(m):
 
 
 def groq_json(system, user, max_tokens=1200, temperature=0.4):
-    body = json.dumps({
-        "model": CHAT_MODEL,
-        "messages": [{"role": "system", "content": system},
-                     {"role": "user", "content": user}],
-        "max_tokens": max_tokens,
-        "temperature": temperature,
-    }).encode()
-    headers = {
-        "Authorization": f"Bearer {GROQ_KEY}",
-        "Content-Type": "application/json",
-        "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                       "AppleWebKit/537.36 (KHTML, like Gecko) "
-                       "Chrome/124.0.0.0 Safari/537.36"),
-        "Accept": "application/json",
-    }
-    deadline = time.monotonic() + 600
-    attempt = 0
-    last = "unknown"
-    while attempt < 5 and time.monotonic() < deadline:
-        attempt += 1
-        try:
-            req = urllib.request.Request(f"{GROQ_BASE}/chat/completions",
-                                         data=body, headers=headers)
-            with urllib.request.urlopen(req, timeout=180) as r:
-                out = json.loads(r.read().decode())
-            raw = out["choices"][0]["message"]["content"]
-            m = re.search(r"\{[\s\S]*\}", raw or "")
-            return json.loads(m.group()) if m else {}
-        except Exception as e:  # noqa: BLE001
-            last = str(e)[:200]
-            time.sleep(10)
-    log(f"coach model unavailable: {last}")
-    return {}
+    """Structured reply from the live backend. Returns {} on any failure.
+
+    providers.chat walks the free-model chain and handles a per-day cap, so
+    the retry loop that used to sleep here is gone.
+    """
+    try:
+        import providers
+        raw = providers.chat(providers.best_model("chat"), system, user,
+                             temperature, max_tokens, role="debug")
+    except Exception as e:  # noqa: BLE001
+        log(f"coach model unavailable: {str(e)[:120]}")
+        return {}
+    m = re.search(r"\{[\s\S]*\}", raw or "")
+    if not m:
+        return {}
+    try:
+        return json.loads(m.group())
+    except (json.JSONDecodeError, ValueError):
+        return {}
 
 
 def itch_signals():

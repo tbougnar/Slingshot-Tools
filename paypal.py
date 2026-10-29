@@ -15,14 +15,13 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+from urllib.parse import quote
 
 ROOT = Path(__file__).resolve().parent
-# The folder is only made when something actually writes a licence into it.
-# Creating it here meant merely importing this module, which paypal_check.py
-# does at module scope, put a directory inside the published site. GitHub
-# Pages serves site/, and check_exposure.py refuses the whole site if this
-# folder exists, so an import could fail the release gate on its own.
-LICENSE_DIR = ROOT / "site" / "licenses"
+# Licences hold buyer emails and keys, so they must never live under the
+# published site. GitHub Pages serves site/, and the old path would have
+# published every buyer's key the first time one was issued.
+LICENSE_DIR = ROOT / "data" / "licenses"
 ADDRESS = {
     "address_line_1": "1 Rue des Oasis",
     "admin_area_2": "Casablanca",
@@ -102,8 +101,11 @@ def create_order(slug: str, title: str, price: float, description: str = "") -> 
             "brand_name": "Slingshot Tools",
             "user_action": "PAY_NOW",
             "shipping_preference": "NO_SHIPPING",
+            # Both URLs point at a page that exists. The return URL used to be
+            # site/full.html, which was deleted with the old payment worker, so
+            # every buyer landed on a 404 after paying.
             "return_url": (os.environ.get("SITE_URL") or "").rstrip("/")
-            + "/full.html",
+            + f"/checkout.html?paid=1&slug={quote(slug, safe='')}",
             "cancel_url": (os.environ.get("SITE_URL") or "").rstrip("/")
             + "/checkout.html?cancelled=1",
         },
@@ -129,22 +131,34 @@ def order_paid(order_id: str) -> bool:
 
 # ---------------------------------------------------------------- keys
 def _sign(slug: str, raw: str) -> str:
+    secret = (os.environ.get("LICENSE_SECRET") or "").strip()
+    if not secret:
+        if live():
+            # A public fallback secret lets anyone forge a valid key, and it
+            # would be used to sign real orders. Refuse rather than pretend.
+            raise SystemExit("LICENSE_SECRET must be set to issue live licences")
+        secret = "slingshot-dev"
     body = f"slingshot|{slug}|{raw}"
-    return hmac.new((os.environ.get("LICENSE_SECRET") or "slingshot-dev").encode(),
-                    body.encode(), hashlib.sha256).hexdigest()[:8]
+    return hmac.new(secret.encode(), body.encode(), hashlib.sha256).hexdigest()[:8]
 
 
 def new_key(slug: str) -> str:
-    raw = secrets.token_urlsafe(24)
+    # token_hex has no hyphens. token_urlsafe could emit one, and verify_key
+    # splits on hyphens, so about 40% of issued keys were rejected by the
+    # verifier that was meant to accept them.
+    raw = secrets.token_hex(16)
     return f"SS-{raw[:16]}-{raw[16:]}-{_sign(slug, raw)}"
 
 
 def verify_key(key: str, slug: str) -> bool:
     parts = key.split("-")
-    if len(parts) != 4 or parts[0] != "SS":
+    if len(parts) < 3 or parts[0] != "SS":
         return False
-    raw = parts[1] + parts[2]
-    return hmac.compare_digest(_sign(slug, raw), parts[3])
+    # The signature is the last segment, so old keys containing a hyphen in
+    # the payload still verify instead of being rejected as malformed.
+    sig = parts[-1]
+    raw = "".join(parts[1:-1])
+    return hmac.compare_digest(_sign(slug, raw), sig)
 
 
 def save_key(slug: str, key: str, order_id: str, email: str = "") -> None:

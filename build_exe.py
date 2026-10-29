@@ -41,6 +41,43 @@ DIST = ROOT / "dist"
 ICON_PNG = ROOT / "site" / "icon-512.png"
 
 
+def write_meta(app_dir: Path, title: str) -> Path:
+    """Put the product's own metadata in the bundle, before PyInstaller copies it.
+
+    The frozen launcher reads ``app/app.json`` for the window title and for the
+    slug the update check looks up. No build step wrote it for a paid app, so
+    every paid window said "Slingshot Tool" and asked the catalogue about "".
+    Left alone if a build already supplied one.
+    """
+    import json
+
+    meta_path = app_dir / "app" / "app.json"
+    meta: dict = {}
+    if meta_path.exists():
+        try:
+            meta = json.loads(meta_path.read_text(encoding="utf-8-sig"))
+        except (OSError, ValueError):
+            meta = {}
+    if not isinstance(meta, dict):
+        meta = {}
+
+    concept: dict = {}
+    try:
+        got = json.loads((app_dir / "concept.json").read_text(encoding="utf-8-sig"))
+        concept = got if isinstance(got, dict) else {}
+    except (OSError, ValueError):
+        concept = {}
+
+    meta.setdefault("title", title)
+    meta.setdefault("slug", str(concept.get("slug") or "").strip()
+                    or title.lower().replace(" ", "-"))
+    meta.setdefault("version", str(concept.get("version") or "").strip()
+                    or "1.0.0")
+    meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2) + "\n",
+                         encoding="utf-8")
+    return meta_path
+
+
 def make_ico(png: Path, out: Path) -> Path | None:
     """Windows needs a real .ico; a 512px png is not enough for the shell."""
     try:
@@ -60,6 +97,7 @@ def build_app(app_dir: Path, title: str) -> Path | None:
         return None
 
     (app_dir / "app").mkdir(parents=True, exist_ok=True)
+    write_meta(app_dir, title)
     ico = app_dir / "app" / "icon.ico"
     if not ico.exists():
         ico = make_ico(ICON_PNG, ico) if ICON_PNG.exists() else None
@@ -91,7 +129,8 @@ def build_app(app_dir: Path, title: str) -> Path | None:
         cmd += ["--icon", str(ico)]
     cmd.append(str(LAUNCHER))
 
-    r = subprocess.run(cmd, capture_output=True, text=True, timeout=2400)
+    r = subprocess.run(cmd, capture_output=True, text=True,
+                       encoding="utf-8", errors="replace", timeout=2400)
     exe = out / title / f"{title}.exe"
     if not exe.exists():
         print(f"[pyi] FAILED rc={r.returncode}", flush=True)

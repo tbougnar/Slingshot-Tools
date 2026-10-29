@@ -8,38 +8,19 @@ the rate limit actually allows.
 from __future__ import annotations
 
 import json
-import os
 import re
 
 
-BASE = "https://api.groq.com/openai/v1"
-CHAT_MODELS = ["openai/gpt-oss-120b", "openai/gpt-oss-20b"]
-HEADERS = {
-    "Authorization": "Bearer {key}",
-    "Content-Type": "application/json",
-    "Accept": "application/json",
-    "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                   "(KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36"),
-    "Accept-Encoding": "gzip, deflate",
-    "Referer": "https://console.groq.com/",
-}
 # 16384 is the hard ceiling Groq accepts; asking for more is refused outright.
 MAX_TOKENS = 16000
-# qwen is limited to about 1000 output tokens a minute on this tier, and a
-# larger request is refused as "Request too large" rather than truncated.
+# Per-model output caps on the Groq tier. OpenRouter ids are not listed and get
+# the safe default below, which every free model in the chain can produce.
 MODEL_LIMITS = {"qwen/qwen3.8-27b": 900, "openai/gpt-oss-20b": 8000,
                 "openai/gpt-oss-120b": 8000}
 
 
 def budget(model: str, want: int) -> int:
     return max(200, min(want, MODEL_LIMITS.get(model, 4000)))
-
-
-def _headers() -> dict:
-    key = os.environ.get("GROQ_API_KEY", "").strip()
-    if not key:
-        raise RuntimeError("GROQ_API_KEY is not set")
-    return {k: v.format(key=key) if "{key}" in v else v for k, v in HEADERS.items()}
 
 
 def chat(model: str, system: str, user: str, max_tokens: int = 4000,
@@ -145,7 +126,15 @@ PATCH_MODELS = ["openai/gpt-oss-20b", "openai/gpt-oss-120b"]
 
 def plan_patches(html: str, controls: list[str],
                  models: list[str] | None = None) -> list[dict] | None:
-    models = models or PATCH_MODELS
+    if not models:
+        # The chain belongs to the live backend. The old default was two Groq
+        # ids, which are 404s on OpenRouter, so every patch attempt returned
+        # nothing and the repair step looked like "no fix found".
+        try:
+            import providers
+            models = providers.model_chain("debug")
+        except SystemExit:
+            models = []
     known = ""
     try:
         import buglog
