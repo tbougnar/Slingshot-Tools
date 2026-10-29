@@ -38,6 +38,33 @@ def _rel(p: Path) -> str:
         return ""
 
 
+def _clear_stale_candidate() -> None:
+    """Delete a candidate left behind by an earlier run.
+
+    data/candidate.json is a tracked file. A run that produced nothing used to
+    leave the previous run's candidate in place, so the verifier treated last
+    week's app as this week's work and republished it: a live product came back
+    with its differences wiped, its description replaced and its date bumped,
+    and the catalog said a new tool had shipped when none had. A no-op week
+    must reach the verifier as no candidate at all.
+    """
+    out = make_app.DATA / "candidate.json"
+    try:
+        if out.exists():
+            out.unlink()
+            try:
+                shown = out.relative_to(make_app.ROOT).as_posix()
+            except ValueError:
+                # DATA is inside the repo in every real run; a test or a
+                # redirected build can put it elsewhere, and logging that
+                # must not be what stops the cleanup.
+                shown = out.name
+            make_app.log(f"removed the stale candidate from an earlier run: "
+                         f"{shown}")
+    except OSError as e:
+        make_app.log(f"could not remove the stale candidate: {str(e)[:60]}")
+
+
 def main() -> int:
     import buglog
     import tokenmeter
@@ -96,6 +123,7 @@ def main() -> int:
         print("[stage] there is nothing new to build: every concept has been "
               "made already")
         print("[stage] the site keeps what it has, and the week is a no-op")
+        _clear_stale_candidate()
         return 0
     make_app.log(f"concept: {concept['title']} ({concept['slug']})")
 
@@ -275,6 +303,7 @@ def main() -> int:
         reason="every attempt failed the staging gate, so no candidate was "
                "produced; the previous release stays live",
         evidence={"attempts": ATTEMPTS, "last_issues": issues})
+    _clear_stale_candidate()
     return 0
 
 

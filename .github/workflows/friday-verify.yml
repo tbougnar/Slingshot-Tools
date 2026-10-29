@@ -82,8 +82,11 @@ jobs:
 
       # Only when there is a paid build to hand over. With no candidate the
       # verifier writes nothing to paid/, and "No files were found" failed the
-      # job on every week where generation produced nothing.
+      # job on every week where generation produced nothing. It also used to
+      # run on a no-op week and republish whatever candidate was still tracked
+      # from an earlier run, so the gate is on the candidate, not just the job.
       - name: Verify in a real browser, repair, and publish only if clean
+        if: steps.fresh.outputs.fresh == 'yes'
         run: python verify_app.py
 
       - name: Confirm nothing paid is public

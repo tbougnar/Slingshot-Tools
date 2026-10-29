@@ -142,6 +142,40 @@ check("the rejection block always has a script and issues to report",
       and re.search(r"^    issues = \[\]$", _stage, re.M) is not None,
       "html/issues are defined before the first attempt")
 
+print("\nA NO-OP WEEK CANNOT REPUBLISH LAST WEEK'S CANDIDATE\n")
+# data/candidate.json is tracked. A run that produced nothing left the previous
+# run's candidate in the tree, the verifier treated it as this week's work, and
+# a live product was rewritten with an empty differences list and a new date.
+check("the stager deletes a stale candidate when it makes nothing",
+      _stage.count("_clear_stale_candidate()") >= 2,
+      "both the no-op branch and the all-attempts-failed branch must clear it")
+check("and that cleanup removes the candidate file itself",
+      'out = make_app.DATA / "candidate.json"' in _stage
+      and "out.unlink()" in _stage)
+_rt = pathlib.Path(tempfile.mkdtemp(prefix="stale-candidate-"))
+try:
+    import stage_app
+    _old_data = make_app.DATA
+    try:
+        make_app.DATA = _rt
+        (_rt / "candidate.json").write_text("{}", encoding="utf-8")
+        stage_app._clear_stale_candidate()
+        check("the cleanup actually deletes it",
+              not (_rt / "candidate.json").exists())
+    finally:
+        make_app.DATA = _old_data
+finally:
+    import shutil
+    shutil.rmtree(_rt, ignore_errors=True)
+_verify_yml = source(".github/workflows/friday-verify.yml")
+_verify_step = re.search(
+    r"- name: Verify in a real browser.*?\n(.*?)\n      - name:", _verify_yml,
+    re.S)
+check("the verifier only runs when there is a fresh candidate",
+      _verify_step is not None
+      and "steps.fresh.outputs.fresh == 'yes'" in _verify_step.group(1),
+      "without the gate a no-op week verifies and publishes the stale file")
+
 print("\nTHE INSTALLER REPORTS THE PRODUCT, NOT THE VENDOR\n")
 _nsi = source("build_installer_app.py")
 check("the product name is templated", 'Name "{name}"' in _nsi)

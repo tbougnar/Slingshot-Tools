@@ -2384,6 +2384,33 @@ FOUND = [
      "the picker now returns one of the 10 missing concepts and a full "
      "catalog still returns None",
      ""),
+
+    ("a no-op build republished an old candidate and rewrote a live product",
+     "HIGH", "release", ["stage_app.py",
+                         ".github/workflows/friday-verify.yml"],
+     "VERIFIED_FIXED",
+     "data/candidate.json is tracked, so a build that produced nothing left "
+     "the previous run's candidate in the tree. The verify job then treated "
+     "it as this week's work, published it, and a live product (password "
+     "manager) came back with its differences replaced by an empty list, its "
+     "description swapped for a generic one and its date moved to today. The "
+     "catalog announced a new tool on a week when none was built, and the "
+     "free concept.json for that product was overwritten too.",
+     "run 40956067940 logged 'every one of the 44 concepts has been built' "
+     "and produced nothing, yet its verify run committed 'feat: verified new "
+     "Slingshot Tool' and changed site/apps.json",
+     "dispatch the Friday build on a week with nothing new to make, then "
+     "read the verify job",
+     "stage_app deletes a stale candidate on both no-op paths, so a week that "
+     "builds nothing reaches the verifier as no candidate. The verify step in "
+     "friday-verify.yml is also gated on steps.fresh.outputs.fresh == 'yes', "
+     "so even a tracked candidate cannot trigger a publish on its own. The "
+     "damaged metadata was restored from the commit before the bad run.",
+     "verifygate_selftest.py checks both call sites, calls the cleanup on a "
+     "temporary candidate, and checks the verify step carries the fresh gate.",
+     "the no-op run leaves no candidate, so the verifier does nothing and the "
+     "live product keeps its differences and date",
+     ""),
 ]
 
 
