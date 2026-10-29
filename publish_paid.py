@@ -204,6 +204,11 @@ def main() -> int:
     log(f"{slug} is now live at ${price:.2f}")
     log(f"  free : {next((a.get('url') for a in family if a.get('tier') == 'basic'), '(none)')}")
     log(f"  full : {url}")
+    # The store state is the offline evidence that this product's build was
+    # seen on the page. Every other path that marks a paid tier published
+    # records it here; this one did not, so the audit's own check could not
+    # tell a hand-published product from one advertised with no download.
+    ip.remember(slug, url)
     # The one action in this repository that puts a product on sale for money
     # was the only one that wrote no audit event. Every failure path did, so
     # the trail showed attempts that all failed and never a sale.

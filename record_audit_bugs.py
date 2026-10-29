@@ -2411,6 +2411,48 @@ FOUND = [
      "the no-op run leaves no candidate, so the verifier does nothing and the "
      "live product keeps its differences and date",
      ""),
+
+    ("the Windows runner decoded butler's output with the wrong code page",
+     "HIGH", "publishing", ["itch_publish.py"], "VERIFIED_FIXED",
+     "upload() ran butler with subprocess.run(..., text=True). On Windows "
+     "Python decodes that pipe with the console code page, and butler writes "
+     "progress bytes cp1252 cannot represent. The reader thread raised "
+     "UnicodeDecodeError, which buried butler's own output, and the publish "
+     "step then checked the page seconds after the push and reported the new "
+     "product was not on the store. The upload had in fact succeeded: Batch "
+     "file renamer-Setup.exe was listed on the page a minute later. The paid "
+     "edition was left unsold and the release was marked incomplete.",
+     "run 40959947799: 'UnicodeDecodeError: charmap codec can't decode byte "
+     "0x90' in itch_publish.upload, then 'the page answers but does not list "
+     "Batch file renamer-Setup.exe'; the live page listed it afterwards",
+     "run itch_publish.py on a Windows runner with a real installer",
+     "butler's output is captured as bytes and decoded with utf-8/replace, so "
+     "no byte can abort the reader. The build check drops any earlier answer "
+     "and retries for about a minute, because itch.io publishes a build "
+     "asynchronously after butler returns.",
+     "itchpublish_selftest.py checks the upload body has no text=True, that it "
+     "decodes with replace, and that the publication check retries.",
+     "the upload output is readable and the build is found on the page",
+     ""),
+
+    ("the store check only knew two product names, and would have failed the "
+     "next release",
+     "LOW", "tests", ["itchpublish_selftest.py", "publish_paid.py"],
+     "VERIFIED_FIXED",
+     "The check that every advertised paid product has a build on the store "
+     "was an allowlist of the two products already uploaded. The first new "
+     "product to be published would have failed the suite on every "
+     "subsequent run, and the failure would have looked like a store fault. "
+     "publish_paid.py also marked a paid tier published without recording it "
+     "in the store state, so the offline evidence could not be kept in step.",
+     "read the check: it allows only base64-tool and password-manager",
+     "publish any third paid product, then run itchpublish_selftest.py",
+     "The check derives its answer from data/itch.json, which is written only "
+     "after the build is seen on the page and the price is charged, and "
+     "publish_paid.py now records its products there too.",
+     "itchpublish_selftest.py checks published tiers against the store state.",
+     "a third published product passes the suite",
+     ""),
 ]
 
 

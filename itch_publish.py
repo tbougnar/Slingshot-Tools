@@ -719,8 +719,12 @@ def upload(installer: Path, slug: str, version: str,
         env["BUTLER_API_KEY"] = KEY
     log(f"butler: pushing to {target}")
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=1800,
-                           env=env)
+        # Bytes, not text. On the Windows runner Python decodes a text pipe with
+        # the console code page, and butler writes progress bytes that cp1252
+        # cannot represent. The reader thread raised UnicodeDecodeError, which
+        # hid butler's own output and left the caller unable to tell a failed
+        # push from a good one. Decode explicitly, and never fail on a byte.
+        r = subprocess.run(cmd, capture_output=True, timeout=1800, env=env)
     except (OSError, subprocess.SubprocessError) as e:
         log(f"butler could not run: {e}")
         return False
@@ -731,7 +735,8 @@ def upload(installer: Path, slug: str, version: str,
             except OSError:
                 pass
 
-    out = ((r.stdout or "") + (r.stderr or "")).strip()
+    out = ((r.stdout or b"") + (r.stderr or b"")).decode(
+        "utf-8", "replace").strip()
     for line in out.splitlines()[-12:]:
         if line.strip():
             print(f"  {line.strip()}")
@@ -974,7 +979,13 @@ def publish(slug: str, title: str, price: float, version: str = "") -> bool:
     # product, so it answers whatever else is on it. Advertising a product
     # whose build is not actually listed means taking money for a download
     # nobody can be given, so this product's own file has to be on the page.
-    if not build_is_listed(url, installer.name):
+    #
+    # butler returns as soon as the bytes are accepted; itch.io publishes the
+    # build a little later. The first run of this checked once, seconds after
+    # the push, concluded the file was absent, and left a product that WAS
+    # uploaded unsold. Drop any earlier answer and give publication time.
+    _PROBE_CACHE.pop(f"{url}|{installer.name}", None)
+    if not build_is_listed(url, installer.name, attempts=10):
         log(f"4. the page answers but does not list {installer.name}, so this "
             "product is not being sold")
         log("   something else may occupy the build's channel, or itch.io has "

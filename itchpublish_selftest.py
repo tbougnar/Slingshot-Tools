@@ -632,11 +632,30 @@ check("publishing checks this product's own file is on the page",
       "something nobody can be given")
 
 cat3 = json.loads((ROOT / "site" / "apps.json").read_text(encoding="utf-8"))
+_store3 = json.loads((ROOT / "data" / "itch.json").read_text(encoding="utf-8"))
 check("and every advertised paid product has a build on the store",
-      all(e.get("published") is not True or e.get("base_slug") in {
-          "base64-tool", "password-manager"} for e in cat3
-          if e.get("tier") == "full"),
+      all(e.get("base_slug") in _store3 for e in cat3
+          if e.get("tier") == "full" and e.get("published") is True),
       "a product is on sale whose build the store does not have")
+
+print("\nA WINDOWS RUN CANNOT DECODE ITS WAY OUT OF AN UPLOAD\n")
+# Run 40959947799 uploaded file-renamer with butler and then crashed the pipe
+# reader: text=True decodes with the console code page on Windows, and butler
+# writes bytes cp1252 cannot represent. The upload succeeded, the traceback hid
+# that, and step 4 - which ran immediately - said the file was not on the page.
+_src_up = (ROOT / "itch_publish.py").read_text(encoding="utf-8")
+_up_body = _src_up.split("def upload", 1)[1].split("def ", 1)[0]
+check("butler's output is captured as bytes, not console text",
+      "capture_output=True" in _up_body and "text=True" not in _up_body,
+      "text=True breaks on the Windows runner's code page")
+check("and decoded without failing on a byte",
+      '.decode(\n        "utf-8", "replace")' in _up_body
+      or '"utf-8", "replace"' in _up_body)
+_pub_body = _src_up.split("def publish(", 1)[1]
+check("the page is given time to publish the build",
+      "attempts=10" in _pub_body
+      and 'pop(f"{url}|{installer.name}", None)' in _pub_body,
+      "the check runs seconds after butler returns and concludes too early")
 
 print("\nONE PRODUCT'S INSTALLER IS NEVER ANOTHER'S\n")
 # Building chess-clock reused invoice-maker-Setup.exe out of the shared dist/
