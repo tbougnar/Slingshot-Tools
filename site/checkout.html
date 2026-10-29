@@ -25,7 +25,7 @@
 <body>
 <div class="card">
   <h1 id="h">Full edition</h1>
-  <p class="sub">Checkout is handled by itch.io, our store. It takes card, PayPal, Apple Pay and Google Pay.</p>
+  <p class="sub">Checkout is handled by itch.io, our store. It takes card and PayPal.</p>
   <div class="row"><span id="lbl">Full edition</span><span class="amt" id="amt">$0.00</span></div>
   <a class="go" id="go" href="#">Continue to checkout</a>
   <div id="soon" class="note" style="display:none">
@@ -63,12 +63,29 @@ if(cancelled){
   n.textContent='Payment was cancelled. Nothing was charged. You can try again whenever you are ready.';
   n.style.display='block';
 }else if(paid){
+  // itch.io takes the payment and keeps the download on the product page. This
+  // branch used to promise an emailed download link and licence key, neither of
+  // which this project sends: a buyer who came back here was told to wait for
+  // an email that never arrives. It now names the store page instead.
   document.getElementById('go').style.display='none';
   document.getElementById('amt').style.display='none';
   document.getElementById('ss').style.display='none';
   document.getElementById('how').style.display='none';
   const n=document.getElementById('soon');
-  n.innerHTML='<b>Payment received.</b><br>Your download link and licence key have been emailed to you. If it has not arrived in a few minutes, check your spam folder or ask in the Discord server.';
+  const store=/^https:\/\/[^/]+\.itch\.io\/[^\s"'<>]+$/.test(itch)?itch:'https://slingshot-tools.itch.io/slingshot-tools';
+  n.textContent='';
+  const b=document.createElement('b');
+  b.textContent='Payment received.';
+  n.appendChild(b);
+  n.appendChild(document.createElement('br'));
+  n.appendChild(document.createTextNode('Download the Full edition from the store page, using the same account you paid with: '));
+  const link=document.createElement('a');
+  link.href=store;
+  link.rel='noopener';
+  link.textContent=store;
+  n.appendChild(link);
+  n.appendChild(document.createElement('br'));
+  n.appendChild(document.createTextNode('If it is not there, ask in the Discord server and we will sort it out.'));
   n.style.display='block';
 }else if(itch&&/^https:\/\/[^/]+\.itch\.io\//.test(itch)){
   const a=document.getElementById('go');

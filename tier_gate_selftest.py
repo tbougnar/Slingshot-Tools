@@ -27,9 +27,12 @@ what shipped the bug:
 
     python tier_gate_selftest.py
 """
+import json
 import pathlib
 import re
+import shutil
 import sys
+import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
@@ -261,16 +264,51 @@ check("the staging gate refuses an app whose edition comes from the URL",
 # customer was buying.
 _built = {b.get("slug") for b in make_app.load_built()}
 _check = make_app.pick_concept("")
-if _built and len(_built) >= len(make_app.CATEGORIES):
-    check("the builder does not pick a product that is already built",
-          _check is None,
-          f"it picked {_check and _check.get('slug')}, which is already on "
-          "the site")
-else:
-    check("the builder does not pick a product that is already built",
-          _check is None or _check.get("slug") not in _built,
-          f"it picked {_check and _check.get('slug')}, which is already on "
-          "the site")
+_wrong = (_check is not None and (_check.get("slug") in _built or
+                                   (_built and len(_built) >= len(
+                                       make_app.CATEGORIES))))
+check("the builder does not pick a product that is already built",
+      not _wrong,
+      f"it picked {_check.get('slug')}, which is already on the site"
+      if _wrong else "")
+
+# A build record is not proof that a product exists. Ten concepts were listed
+# in data/already_built.json while the catalog held no entry for them, so the
+# pool was empty and the generator refused to make anything, for ever. A build
+# QA rejected could never be retried.
+print("\nA REJECTED BUILD DOES NOT COUNT AS DONE\n")
+_rt = pathlib.Path(tempfile.mkdtemp(prefix="picker-selftest-"))
+try:
+    _cat, _rec = make_app.CATALOG, make_app.BANNED
+    _cats = make_app.CATEGORIES
+    try:
+        make_app.CATALOG = _rt / "apps.json"
+        make_app.BANNED = _rt / "already_built.json"
+        make_app.CATEGORIES = [
+            ("never-published", "A tool that was generated and then rejected"),
+            ("on-the-site", "A tool that is already on the site")]
+        make_app.CATALOG.write_text(json.dumps([{
+            "slug": "on-the-site", "base_slug": "on-the-site",
+            "tier": "basic", "published": True}]), encoding="utf-8")
+        make_app.BANNED.write_text(json.dumps([
+            {"slug": "never-published", "title": "Rejected",
+             "date": "2026-01-01"}]), encoding="utf-8")
+        _picked = make_app.pick_concept("")
+        check("a concept recorded as built but never published is offered "
+              "again", bool(_picked)
+              and _picked.get("slug") == "never-published", str(_picked))
+        make_app.CATALOG.write_text(json.dumps([
+            {"slug": "never-published", "base_slug": "never-published",
+             "tier": "basic", "published": True},
+            {"slug": "on-the-site", "base_slug": "on-the-site",
+             "tier": "basic", "published": True}]), encoding="utf-8")
+        check("and a concept that is on the site is never rebuilt",
+              make_app.pick_concept("") is None)
+    finally:
+        make_app.CATALOG, make_app.BANNED = _cat, _rec
+        make_app.CATEGORIES = _cats
+finally:
+    shutil.rmtree(_rt, ignore_errors=True)
 
 print("\nEVERY APP LOADS AND WORKS\n")
 try:

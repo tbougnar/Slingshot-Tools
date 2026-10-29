@@ -2340,6 +2340,50 @@ FOUND = [
      "survive.",
      "the test shows the itch URL and built marker on the new entry",
      ""),
+
+    ("a payment return told the buyer an emailed download link was on its way",
+     "MEDIUM", "storefront", ["site/checkout.html"], "VERIFIED_FIXED",
+     "The paid state on checkout.html said 'Your download link and licence "
+     "key have been emailed to you'. The storefront hands payment to itch.io, "
+     "which keeps the download on the product page, and nothing in this "
+     "project sends that email or issues a licence key for an itch sale. A "
+     "buyer who returned to the page waited for a message that never came.",
+     "the paid=1 branch wrote innerHTML claiming an emailed link and key",
+     "pay on itch.io, open checkout.html?paid=1, and wait for the email",
+     "The paid state says the payment was received, links to the store page "
+     "under the same account, and points at Discord if the download is "
+     "missing. The link is validated against the itch.io host shape and "
+     "inserted as text, not as HTML.",
+     "site_js_selftest.py checks that the paid state contains no promise of "
+     "an email and that the store link is validated and inserted as text.",
+     "the checkout page shows the store link and never claims an email",
+     ""),
+
+    ("the factory refused to build anything because a rejected app counted "
+     "as done",
+     "HIGH", "generation", ["make_app.py"], "VERIFIED_FIXED",
+     "load_built() merged data/already_built.json with the catalog and "
+     "treated the union as built. Ten concepts were in that record with no "
+     "catalog entry, so the pool was empty and every run printed 'every one "
+     "of the 44 concepts has been built'. A build that QA rejected, or a "
+     "publish that was rolled back, could never be retried, and the promised "
+     "monthly tool could never appear.",
+     "read-only proof: site/apps.json held 34 families while "
+     "data/already_built.json named 10 more that were on no page; "
+     "pick_concept returned None and the Friday job logged 'nothing new to "
+     "build'",
+     "dispatch Friday's generation with the catalog intact and read the "
+     "stage log",
+     "The catalog is the truth about what exists. already_built.json is read "
+     "only when the catalog is missing or unreadable, so a recorded but "
+     "unpublished concept is offered again and a concept on the site is "
+     "never rebuilt.",
+     "tier_gate_selftest.py builds a temporary catalog and record, checks "
+     "that the unpublished concept is offered, then adds it to the catalog "
+     "and checks the pool is empty.",
+     "the picker now returns one of the 10 missing concepts and a full "
+     "catalog still returns None",
+     ""),
 ]
 
 

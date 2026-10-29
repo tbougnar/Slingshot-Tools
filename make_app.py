@@ -464,38 +464,48 @@ def _as_json(raw):
 
 
 def load_built():
-    """Everything already built, so nothing is generated twice.
+    """Everything that is actually on the site, so nothing is generated twice.
 
-    `data/already_built.json` is the record the pipeline appends to, but a
-    reset or a hand edit can drop entries. The public catalog is the other
-    half of the truth, so both are merged: a tool that is on the site counts
-    as built even if the record lost it.
+    ``data/already_built.json`` records what older runs produced, and it is NOT
+    proof that a product exists. Ten concepts were listed there while the
+    catalog held no entry for them, and merging the two halves emptied the
+    pool: the generator said "every concept has been built" on every run, so
+    those ten could never be retried, and a build QA rejected or a publish
+    that was rolled back became permanent.
+
+    The catalog is the truth about what exists. The record is read only when
+    the catalog is missing or unreadable, where it is the only evidence left.
     """
     built = []
     seen = set()
-    if BANNED.exists():
-        try:
-            built = json.loads(BANNED.read_text(encoding="utf-8"))
-        except json.JSONDecodeError:
-            built = []
-    for b in built:
-        slug = b.get("slug") if isinstance(b, dict) else None
-        if slug:
-            seen.add(slug)
 
+    entries = None
     if CATALOG.exists():
         try:
-            entries = json.loads(CATALOG.read_text(encoding="utf-8"))
-        except json.JSONDecodeError:
-            entries = []
-        if isinstance(entries, list):
-            for a in entries:
-                if not isinstance(a, dict):
-                    continue
-                base = strip_tier_suffix_slug(a.get("base_slug") or a.get("slug"))
-                if base and base not in seen:
-                    seen.add(base)
-                    built.append({"slug": base, "source": "catalog"})
+            got = json.loads(CATALOG.read_text(encoding="utf-8"))
+            if isinstance(got, list):
+                entries = got
+        except (OSError, json.JSONDecodeError):
+            entries = None
+    if entries is not None:
+        for a in entries:
+            if not isinstance(a, dict):
+                continue
+            base = strip_tier_suffix_slug(a.get("base_slug") or a.get("slug"))
+            if base and base not in seen:
+                seen.add(base)
+                built.append({"slug": base, "source": "catalog"})
+        return built
+
+    if BANNED.exists():
+        try:
+            for b in json.loads(BANNED.read_text(encoding="utf-8")):
+                slug = b.get("slug") if isinstance(b, dict) else None
+                if slug and slug not in seen:
+                    seen.add(slug)
+                    built.append({"slug": slug, "source": "record"})
+        except (OSError, json.JSONDecodeError, TypeError):
+            pass
     return built
 
 

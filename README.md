@@ -18,14 +18,10 @@ Every tool ships in two editions:
 | Runs on | Any browser | Windows, as a real app |
 | Setup | None — open the page | One installer |
 
-Same app, same look. The Full edition removes the caps and adds:
-
-- **Export and import** — move your data between machines
-- **Extra themes** — more than the default
-- **Bulk actions** — do a lot at once instead of one by one
-- **History** — a record of what you have done
-- **A real Windows app** — no browser tab, Desktop and Start Menu shortcuts
-- **A proper installer** — one click, standard uninstall
+Same app, same look. The Full edition removes the caps and adds the extras the
+live catalog lists for that tool — typically export and import, extra themes,
+bulk actions and a history — and it is a real Windows app, with Desktop and
+Start Menu shortcuts and a standard uninstall.
 
 The full edition is a native app. The free edition is a single HTML file.
 
@@ -33,7 +29,8 @@ The full edition is a native app. The free edition is a single HTML file.
 
 - The **Basic** edition is free. Open it in any browser, or download it and use
   it offline.
-- The **Full** edition is bought on the site and delivered after payment.
+- The **Full** edition is bought on [itch.io](https://slingshot-tools.itch.io/slingshot-tools),
+  our store, and downloaded from there straight after payment.
 
 Every tool works offline once you have it. No account, no sign-up.
 

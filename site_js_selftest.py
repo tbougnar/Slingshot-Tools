@@ -17,6 +17,9 @@ Both are pure text problems, so both are caught here. The escaping is
 deliberately awkward-looking and the reason is written down, because the tidy
 version of that line is the bug.
 
+The payment-return copy on checkout.html is checked here too, because it is
+the one page a buyer sees after paying and it claimed an email nobody sends.
+
     python site_js_selftest.py
 """
 import pathlib
@@ -186,6 +189,26 @@ check("it refuses to show outside the window",
 check("an unparseable date is ignored", "isNaN(when)" in html)
 # the countdown injects the update title, so it has to be escaped
 check("the countdown escapes what it injects", "esc(title)" in html)
+
+# ------------------------------------------------------------- checkout page
+# The site hands payment to itch.io, which keeps the download on the product
+# page. The payment return used to say a download link and a licence key had
+# been emailed, and nothing in this project sends either, so a buyer who
+# landed there waited for an email that never came.
+co = SITE.parent / "checkout.html"
+check("the checkout page exists", co.exists())
+co_html = co.read_text(encoding="utf-8") if co.exists() else ""
+check("a payment return does not promise an email nobody sends",
+      "have been emailed" not in co_html
+      and "licence key have been" not in co_html,
+      "the paid state still claims an emailed link and licence key")
+check("and it points the buyer at the store page instead",
+      "Download the Full edition from the store page" in co_html
+      and "slingshot-tools.itch.io/slingshot-tools" in co_html)
+check("the store link it builds is validated, not injected",
+      'test(itch)?itch:' in co_html and "n.textContent=''" in co_html,
+      "the itch URL must start with https://<name>.itch.io/ and be inserted "
+      "as text")
 
 print()
 print("FAILURES:", fails if fails else "none")
