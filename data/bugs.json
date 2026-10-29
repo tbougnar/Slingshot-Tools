@@ -2273,5 +2273,24 @@
   "verification": "a reader can find and store the cookie",
   "uncertainty": "",
   "opened": "2026-10-29T22:00:08+00:00"
+ },
+ {
+  "id": "BUG-123",
+  "symptom": "a paid download introduced itself as the free edition",
+  "severity": "HIGH",
+  "component": "release",
+  "files": [
+   "make_app.py",
+   "rebuild_paid.py"
+  ],
+  "status": "VERIFIED_FIXED",
+  "root_cause": "Both editions are one generated file with the TIER constant flipped, but models write the edition into the footer as ordinary text. At least two products do: Batch file renamer's footer read 'RenameFlow (c) 2024 - Free basic edition' and coin-toss's pitched 'Free basic edition: quick flips ... Paid edition: ...'. Flipping TIER only changed the code, so the installer built by the real pipeline opened with 'Free basic edition' on the screen of someone who had just paid $3 for it. The repair lane had the same fault twice over: rebuild_paid reconstructed the paid file with _set_tier alone, so re-uploading a product would have reproduced the wrong footer even after this was fixed in write_app.",
+  "evidence": "installed the CI-built Batch file renamer-Setup.exe silently and read the running window with UI Automation: 'RenameFlow c 2024 - Free basic edition.' while the file's own TIER constant said full",
+  "repro": "install the paid installer and read the footer; then compare the free and paid copies of the same app",
+  "fix": "make_app now decides an edition in one place, set_edition, used by write_app and by rebuild_paid. For the paid edition it renames a free-edition label to 'Full edition', drops a two-edition sales pitch back to just the paid half, and removes any sentence claiming the free edition's limits. Script and style blocks are untouched, because the basic-only upgrade note lives there and the paid edition never runs it. If a free-edition claim somehow survives, the build is refused rather than sold. The generator's spec now requires the footer to name the edition from TIER, with no static free/basic wording.",
+  "regression_test": "tier_gate_selftest.py checks the label rewrite, the pitch rewrite, the limit-claim removal, that the basic edition's copy is untouched, and that rebuild_paid uses set_edition. The rebuilt installer was installed on this PC and its window now reads 'Full edition'.",
+  "verification": "a paid install shows only paid-edition wording",
+  "uncertainty": "",
+  "opened": "2026-10-29T22:25:29+00:00"
  }
 ]

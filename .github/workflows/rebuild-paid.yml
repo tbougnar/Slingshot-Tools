@@ -1,0 +1,73 @@
+name: Slingshot — rebuild and re-upload one paid installer
+
+# The Friday lane only ever builds the week's new app, and paid/ is gitignored,
+# so a product whose installer is missing, stale or wrong has no way back
+# through it. Both editions are the same generated file with one constant
+# flipped, and the free edition is committed under site/apps/, so the paid
+# edition can be rebuilt exactly from what is already public and uploaded again
+# under the same build name.
+#
+#     gh workflow run rebuild-paid.yml -f slug=file-renamer
+#
+# It refuses a product that is missing from the catalogue, has no committed free
+# edition, or is priced outside the floor and ceiling. It replaces the store
+# build; it does not put anything on sale, which is publish_paid.py's job and
+# still waits for the store to charge the advertised price.
+
+on:
+  workflow_dispatch:
+    inputs:
+      slug:
+        description: "catalogue slug of the paid product, e.g. file-renamer"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: slingshot-rebuild-paid
+  cancel-in-progress: false
+
+jobs:
+  rebuild:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      PRICE_FLOOR: '1.00'
+      PRICE_CEILING: '10.00'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build tools
+        run: |
+          choco install nsis -y --no-progress
+          $makensis = "$env:ProgramFiles\NSIS\makensis.exe"
+          if (-not (Test-Path $makensis)) {
+            $makensis = "${env:ProgramFiles(x86)}\NSIS\makensis.exe"
+          }
+          if (-not (Test-Path $makensis)) {
+            Write-Output "::error::NSIS installed but makensis.exe was not found"
+            exit 1
+          }
+          Add-Content -Path $env:GITHUB_PATH -Value (Split-Path $makensis)
+          python -m pip install --quiet pillow requests pyinstaller pywebview
+
+      - name: Install butler, itch.io's uploader
+        shell: bash
+        run: |
+          curl -sSL -o butler.zip https://broth.itch.zone/butler/windows-amd64/LATEST/archive/default
+          7z x butler.zip -obutler -y
+          echo "$PWD/butler" >> $GITHUB_PATH
+
+      - name: Rebuild the paid edition and replace the store build
+        run: python rebuild_paid.py "${{ inputs.slug }}"
+        env:
+          ITCH_USER: ${{ vars.ITCH_USER }}
+          ITCH_STORE_URL: ${{ vars.ITCH_STORE_URL }}
+          ITCH_API_KEY: ${{ secrets.ITCH_API_KEY }}

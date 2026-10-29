@@ -641,6 +641,11 @@ HARD RULES
 - The full edition has no limits and shows no upgrade prompts at all.
 - Add "export my data" and "import my data" (JSON) controls in the full edition.
 - No analytics, no tracking, no network.
+- The footer must name the edition from TIER, not in static text. Write
+  <span id="edition"></span> and fill it in the script with
+  TIER === 'full' ? 'Full edition' : 'Free edition'. Never write the words
+  "free edition" or "basic edition" as static copy: the same file ships as both
+  editions, so static wording is a lie in one of them.
 
 CONTENT RULES
 - Invent a short, friendly brand name for the app.
@@ -763,6 +768,95 @@ def _tier_value(html):
     return m.group(1) if m else None
 
 
+_EDITION_WORD = re.compile(
+    r"\bfree\s+basic\s+edition\b|\b(?:free|basic|paid|full)\s+edition\b",
+    re.I)
+
+# Words that turn a mention of the free edition into a claim about what it
+# cannot do. Renaming such a sentence produces "the full edition is limited to
+# three files", which is false in the other direction, so it is removed.
+_EDITION_LIMIT = re.compile(
+    r"\b(?:limit(?:ed|s)?|only|can't|cannot|upgrade|max(?:imum)?|trial|"
+    r"three|3)\b", re.I)
+
+
+def _paid_copy(segment: str) -> str:
+    """One stretch of visible html, worded for the edition that pays."""
+    if not _EDITION_WORD.search(segment):
+        return segment
+    if re.search(r"\bpaid\s+edition\b", segment, re.I):
+        # "Free basic edition: quick flips for a few items. Paid edition:
+        # unlimited flips, export and history." is a pitch for the pair. In the
+        # paid file the first sentence describes something the buyer does not
+        # have, and "Paid edition:" is a label addressed to a shopper who has
+        # already paid. Drop both; what remains is true of this edition.
+        segment = re.sub(
+            r"\b(?:free\s+)?basic\s+edition\b[^.<]*\.\s*", "", segment,
+            flags=re.I)
+        segment = re.sub(r"\bfree\s+edition\b[^.<]*\.\s*", "", segment,
+                         flags=re.I)
+        segment = re.sub(r"\bpaid\s+edition:\s*(\w)",
+                         lambda m: m.group(1).upper(), segment, flags=re.I)
+
+    # Work on text nodes only, so an attribute or a tag name is never touched.
+    tokens = re.split(r"(<[^>]+>)", segment)
+    for i in range(0, len(tokens), 2):
+        text = tokens[i]
+        if not _EDITION_WORD.search(text):
+            continue
+        if _EDITION_LIMIT.search(text):
+            tokens[i] = ""
+        else:
+            # A label such as "Brand - Free basic edition" is simply the wrong
+            # name for the file the customer downloaded. Rename it, keeping the
+            # sentence case.
+            tokens[i] = _EDITION_WORD.sub(
+                lambda m: ("Full" if m.group(0)[:1].isupper() else "full")
+                + " edition", text)
+    return "".join(tokens)
+
+
+
+def _set_edition_copy(html, tier):
+    """Make the visible edition wording true for the edition being written.
+
+    Both editions are one file with one constant changed, but a model writes the
+    edition into the footer as ordinary text: "RenameFlow - Free basic edition".
+    Flipping TIER alone shipped a paid download that introduced itself as the
+    free edition to the person who had just paid for it.
+
+    Only visible text is touched. The same words inside <script> belong to the
+    basic-only upgrade note, which the paid edition never runs.
+    """
+    if tier != "full":
+        return html
+    parts = re.split(r"(<script\b.*?</script>|<style\b.*?</style>)", html,
+                     flags=re.I | re.S)
+    for i in range(0, len(parts), 2):
+        parts[i] = _paid_copy(parts[i])
+    out = "".join(parts)
+    visible = " ".join(re.split(
+        r"(<script\b.*?</script>|<style\b.*?</style>)", out,
+        flags=re.I | re.S)[0::2])
+    if re.search(r"\b(?:free|basic)\s+edition\b", visible, re.I):
+        # Fail closed. A paid build that calls itself free is a refund and a
+        # one-star review; better to refuse the build than to sell it.
+        raise RuntimeError(
+            "the paid edition still describes itself as the free or basic "
+            "edition, so it will not be shipped")
+    return out
+
+
+def set_edition(html, tier):
+    """The one place a generated file's edition is decided.
+
+    write_app, the verifier and rebuild_paid all need the same answer. When
+    rebuild_paid flipped the constant on its own, a rebuilt paid download kept
+    the free edition's footer and was uploaded that way.
+    """
+    return _set_edition_copy(_set_tier(html, tier), tier)
+
+
 def write_app(concept, html, tier="full"):
     """Write one edition.
 
@@ -787,7 +881,7 @@ def write_app(concept, html, tier="full"):
     # gitignored and nothing showed it in a diff. Only the two files this
     # function owns are replaced.
     (out / "app").mkdir(parents=True, exist_ok=True)
-    edition = _set_tier(html, tier)
+    edition = set_edition(html, tier)
     if _tier_value(edition) is None:
         # Refuse to write an app whose edition cannot be decided. Writing it
         # anyway put an unlimited app in the public folder, which is the paid

@@ -111,6 +111,47 @@ for p in ALL:
               "flipping TIER changed nothing, so paid equals free")
         continue
 
+# ------------------------------------ the paid build must not call itself free
+# Both editions are one file with one constant flipped, and models write the
+# edition into the footer as ordinary text. The uploaded Batch file renamer
+# installer, built by the real pipeline, opened with
+# "RenameFlow - Free basic edition" on a $3 download.
+print("\nA PAID DOWNLOAD DOES NOT INTRODUCE ITSELF AS THE FREE EDITION\n")
+_labelled = ("<html><body><footer><p>Brand &copy; 2024 - Free basic edition. "
+             "<a href='#'>Toggle theme</a></p></footer><script>const TIER="
+             "\"basic\";const note='Free edition: limited to 3 files.';"
+             "</script></body></html>")
+_paid = make_app._set_edition_copy(make_app._set_tier(_labelled, "full"),
+                                   "full")
+check("a free-edition label is renamed in the paid build",
+      "Full edition" in _paid and not re.search(
+          r"free\s+basic\s+edition", _paid, re.I))
+check("and the script is left alone", "const note='Free edition" in _paid,
+      "basic-only copy in dead code is not visible to a buyer")
+check("the free edition keeps its own wording",
+      make_app._set_edition_copy(_labelled, "basic") == _labelled)
+
+_pitch = ("<html><body><footer>Free basic edition: quick flips for a few "
+          "items. Paid edition: unlimited flips, export and history."
+          "</footer></body></html>")
+_pp = make_app._set_edition_copy(_pitch, "full")
+check("a two-edition pitch loses the free sentence and the shopper label",
+      "quick flips" not in _pp and "Paid edition" not in _pp
+      and "Unlimited flips, export and history." in _pp,
+      _pp.split("<footer>")[1][:90] if "<footer>" in _pp else _pp[:90])
+
+_bad = ("<html><body><p>The free edition is limited to three files.</p>"
+        "</body></html>")
+_fixed = make_app._set_edition_copy(_bad, "full")
+check("a false limit claim is removed, not relabelled",
+      "limited" not in _fixed
+      and not re.search(r"free\s+edition", _fixed, re.I),
+      _fixed[:80])
+_rb = (ROOT / "rebuild_paid.py").read_text(encoding="utf-8")
+check("the repair lane flips the edition the same way the builder does",
+      'set_edition(html, "full")' in _rb and "_set_tier(" not in _rb,
+      "rebuild_paid uploaded a paid build whose footer still said free")
+
 # ------------------------------------------------ the script has to parse
 # The chess-board app was served with one stray brace in its script, so the
 # whole file failed to parse and the app did nothing at all: no board, no

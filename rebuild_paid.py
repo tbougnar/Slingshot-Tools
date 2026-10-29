@@ -5,7 +5,7 @@ missing has no way back: its paid source lives in paid/, which is gitignored
 and never committed, and nothing regenerates a product that already exists.
 
 This closes that gap. Both editions of a product are the same generated file
-with one constant changed (make_app._set_tier), and the basic edition *is*
+with one constant changed (make_app.set_edition), and the basic edition *is*
 committed under site/apps/. So the paid edition can be reconstructed exactly,
 from source that is in the repository, rather than by asking the model to
 invent the product a second time.
@@ -63,7 +63,7 @@ def reconstruct(slug: str, concept: dict) -> Path:
     the basic edition already carries the full edition's code with the tier set
     to basic. Flipping it back is the whole reconstruction.
     """
-    from make_app import _set_tier
+    from make_app import set_edition
 
     basic = SITE_APPS / f"{slug}-basic"
     src = basic / "app" / "index.html"
@@ -78,7 +78,7 @@ def reconstruct(slug: str, concept: dict) -> Path:
     if out.exists():
         shutil.rmtree(out)
     (out / "app").mkdir(parents=True, exist_ok=True)
-    (out / "app" / "index.html").write_text(_set_tier(html, "full"),
+    (out / "app" / "index.html").write_text(set_edition(html, "full"),
                                              encoding="utf-8")
     for name in ("icon.png",):
         src_icon = basic / name
