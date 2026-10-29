@@ -21,7 +21,8 @@
     ],
     "published": false,
     "badge": "New",
-    "date": "2026-10-29"
+    "date": "2026-10-29",
+    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools"
   },
   {
     "slug": "file-renamer-basic",
