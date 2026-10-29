@@ -1,15 +1,9 @@
 {
   "slug": "file-renamer-basic",
+  "brand": "Batch file renamer",
   "title": "Batch file renamer",
   "tag": "file",
-  "blurb": "batch file renamer with find and replace and numbering",
-  "tags": [
-    "batch",
-    "file",
-    "renamer",
-    "with"
-  ],
-  "brand": "Batch file renamer",
+  "blurb": "Batch file renamer as a free offline tool: one job done properly, no account, and your data stays on your device.",
   "tier": "basic",
   "base_slug": "file-renamer"
 }

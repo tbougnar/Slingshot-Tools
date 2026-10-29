@@ -1,5 +1,53 @@
 [
   {
+    "slug": "file-renamer",
+    "base_slug": "file-renamer",
+    "title": "Batch file renamer",
+    "tier": "full",
+    "tag": "file",
+    "blurb": "Everything the free edition does, and export and import your data, every theme.",
+    "tags": [
+      "file",
+      "batch",
+      "renamer"
+    ],
+    "url": "",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [
+      "Export and import your data",
+      "Every theme"
+    ],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-29"
+  },
+  {
+    "slug": "file-renamer-basic",
+    "base_slug": "file-renamer",
+    "title": "Batch file renamer (Basic)",
+    "tier": "basic",
+    "tag": "file",
+    "blurb": "Batch file renamer as a free offline tool: one job done properly, no account, and your data stays on your device.",
+    "tags": [
+      "file",
+      "batch",
+      "renamer"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/file-renamer-basic/",
+    "download": "",
+    "price": 0.0,
+    "free": true,
+    "differences": [
+      "Export and import your data",
+      "Every theme"
+    ],
+    "published": true,
+    "badge": "New",
+    "date": "2026-10-29"
+  },
+  {
     "slug": "password-manager",
     "base_slug": "password-manager",
     "title": "Offline password manager",

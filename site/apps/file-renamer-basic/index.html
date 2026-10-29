@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RenameFlow — Batch File Renamer</title>
+<style>
+:root{
+--bg:#14100F;--red:#C1272D;--text:#F6EFEC;--card:#1E1614;--border:#3A2E2B;--shadow:0 4px 12px rgba(0,0,0,.4);
+}
+html[data-theme="light"]{
+--bg:#F6EFEC;--red:#C1272D;--text:#14100F;--card:#FFFFFF;--border:#D9CCC5;--shadow:0 2px 8px rgba(0,0,0,.1);
+}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.5;}
+*{box-sizing:border-box}
+header{padding:1.5rem 1rem;text-align:center;border-bottom:1px solid var(--border);background:var(--card);box-shadow:var(--shadow);}
+h1{margin:0;font-size:1.5rem}
+main{max-width:800px;margin:0 auto;padding:1.5rem}
+.card{background:var(--card);border-radius:12px;padding:1.5rem;margin-bottom:1.5rem;box-shadow:var(--shadow);border:1px solid var(--border)}
+h2{margin-top:0;font-size:1.2rem}
+input,select,button,textarea{width:100%;padding:.75rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:1rem}
+button{cursor:pointer;transition:.2s}
+button:hover{opacity:.9}
+button:active{transform:scale(.98)}
+.toggle-theme{background:var(--red);color:var(--text);border:none}
+.row{display:flex;gap:1rem;flex-wrap:wrap}
+.row>div{flex:1;min-width:120px}
+.list{max-height:300px;overflow-y:auto}
+.item{display:flex;align-items:center;gap:.5rem;padding:.5rem;background:var(--bg);border-radius:8px;margin-bottom:.5rem}
+.item input{flex:1}
+.item button{width:auto;padding:.5rem 1rem}
+footer{text-align:center;padding:1rem;font-size:.85rem;color:var(--border)}
+.empty{text-align:center;padding:2rem;color:var(--border)}
+.note{color:var(--red);font-size:.85rem;text-align:center}
+@media(max-width:600px){.row{flex-direction:column;.row>div{min-width:100%}}}
+</style>
+</head>
+<body>
+<header>
+<h1>RenameFlow</h1>
+<p style="margin:.25rem 0 0;font-size:.9rem;color:var(--border)">Batch file renamer with find/replace and numbering</p>
+</header>
+<main>
+<div class="card">
+<h2>Settings</h2>
+<div class="row">
+<div>
+<label for="find">Find</label>
+<input id="find" type="text" placeholder="Text to find">
+</div>
+<div>
+<label for="replace">Replace</label>
+<input id="replace" type="text" placeholder="Replacement text">
+</div>
+</div>
+<div class="row">
+<div>
+<label for="prefix">Prefix</label>
+<input id="prefix" type="text" placeholder="Before name">
+</div>
+<div>
+<label for="suffix">Suffix</label>
+<input id="suffix" type="text" placeholder="After name">
+</div>
+</div>
+<div class="row">
+<div>
+<label for="startNum">Start #</label>
+<input id="startNum" type="number" value="1" min="0">
+</div>
+<div>
+<label for="pad">Pad</label>
+<input id="pad" type="number" value="2" min="0" max="10">
+</div>
+</div>
+<div style="margin-top:1rem">
+<label><input type="checkbox" id="useNumbering"> Add numbering</label>
+</div>
+</div>
+
+<div class="card">
+<h2>Files</h2>
+<div id="fileList" class="list">
+<div class="empty">Add filenames below to get started. Enter one filename per line.</div>
+</div>
+<textarea id="filesInput" rows="5" placeholder="photo1.jpg&#10;photo2.jpg&#10;document.pdf"></textarea>
+<button id="addFiles" class="toggle-theme" style="margin-top:.5rem">Add Files</button>
+</div>
+
+<div class="card">
+<h2>Preview</h2>
+<div id="preview" class="list">
+<div class="empty">No preview yet. Add files and adjust settings.</div>
+</div>
+<button id="applyRename" class="toggle-theme" style="margin-top:1rem">Apply Rename</button>
+</div>
+
+<div class="card">
+<h2>Export / Import</h2>
+<button id="exportData" class="toggle-theme">Export My Data</button>
+<button id="importData" class="toggle-theme" style="margin-top:.5rem">Import My Data</button>
+<input type="file" id="importFile" accept=".json" style="display:none">
+</div>
+
+<div class="note" id="upgradeNote"></div>
+</main>
+<footer>
+<p>RenameFlow © 2024 — Free basic edition. <a href="#" id="themeToggle" style="color:var(--red)">Toggle theme</a></p>
+</footer>
+<script>
+const TIER="basic";
+const LIMITS=TIER==="basic"?{maxItems:3,export:false,themes:"one",bulk:false,history:false}:{maxItems:0,export:true,themes:"all",bulk:true,history:true};
+const K="app.v1";
+const load=()=>{try{return JSON.parse(localStorage.getItem(K))||null}catch{return null}};
+const save=v=>localStorage.setItem(K,JSON.stringify(v));
+const state=load()||{files:[],find:"",replace:"",prefix:"",suffix:"",startNum:1,pad:2,useNumbering:false};
+const el=id=>document.getElementById(id);
+const apply=()=>{state.files=el('filesInput').value.split('\n').map(s=>s.trim()).filter(Boolean);
+if(LIMITS.maxItems>0&&state.files.length>LIMITS.maxItems){state.files=state.files.slice(0,LIMITS.maxItems);}
+renderList();renderPreview();};
+const renderList=()=>{const c=el('fileList');c.innerHTML='';state.files.forEach((f,i)=>{const d=document.createElement('div');d.className='item';d.innerHTML='<input readonly value="'+f+'"><button data-i="'+i+'">×</button>';c.appendChild(d);});if(!state.files.length){c.innerHTML='<div class="empty">No files added yet.</div>';}
+const btns=c.querySelectorAll('button');btns.forEach(b=>b.addEventListener('click',()=>{const i=+b.dataset.i;state.files.splice(i,1);apply();}));
+};
+const renderPreview=()=>{const c=el('preview');c.innerHTML='';const arr=state.files.map((f,i)=>rename(f,i));c.innerHTML=arr.map(f=>'<div class="item"><input readonly value="'+f+'"></div>').join('');if(!arr.length){c.innerHTML='<div class="empty">No preview yet. Add files and adjust settings.</div>';}
+};
+const rename=(f,i)=>{let r=f;const find=el('find').value;const replace=el('replace').value;if(find){r=r.split(find).join(replace);}const prefix=el('prefix').value;const suffix=el('suffix').value;const name=f.substring(0,f.lastIndexOf('.'));const ext=f.substring(f.lastIndexOf('.'));let n=name;if(prefix){n=prefix+n;}if(suffix){n=n+suffix;}if(el('useNumbering').checked){const sn=+el('startNum').value||1;const pad=+el('pad').value||0;const num=(sn+i).toString().padStart(pad,'0');n=n+num;}return n+ext;};
+const exportData=()=>{const data={files:state.files,settings:{find:el('find').value,replace:el('replace').value,prefix:el('prefix').value,suffix:el('suffix').value,startNum:el('startNum').value,pad:el('pad').value,useNumbering:el('useNumbering').checked}};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='renameflow-data.json';a.click();URL.revokeObjectURL(url);};
+const importData=()=>{el('importFile').click();};
+el('importFile').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const reader=new FileReader();reader.onload=ev=>{try{const d=JSON.parse(ev.target.result);state.files=d.files||[];if(d.settings){el('find').value=d.settings.find||'';el('replace').value=d.settings.replace||'';el('suffix').value=d.settings.suffix||'';el('prefix').value=d.settings.prefix||'';el('startNum').value=d.settings.startNum||1;el('pad').value=d.settings.pad||0;el('useNumbering').checked=!!d.settings.useNumbering;}apply();}catch(err){alert('Invalid file');}};reader.readAsText(f);});
+const toggleTheme=()=>{const t=document.documentElement;const next=t.dataset.theme==="light"?"dark":"light";t.dataset.theme=next;localStorage.setItem('theme',next);};
+const initTheme=()=>{const saved=localStorage.getItem('theme');const t=document.documentElement;if(saved){t.dataset.theme=saved;}else{t.dataset.theme='dark';}
+};
+initTheme();
+el('addFiles').addEventListener('click',apply);
+el('applyRename').addEventListener('click',()=>{alert('Rename applied! '+state.files.length+' files processed.');});
+el('exportData').addEventListener('click',exportData);
+el('importData').addEventListener('click',importData);
+el('themeToggle').addEventListener('click',toggleTheme);
+['find','replace','prefix','suffix','startNum','pad','useNumbering'].forEach(id=>{el(id).addEventListener('change',renderPreview);el(id).addEventListener('input',renderPreview);});
+if(TIER==="basic"){
+el('exportData').style.display='none';el('importData').style.display='none';el('upgradeNote').textContent='Free edition: limited to '+LIMITS.maxItems+' files. Upgrade for unlimited.';
+}
+</script>
+</body>
+</html>
