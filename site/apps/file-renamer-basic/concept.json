@@ -1,0 +1,15 @@
+{
+  "slug": "file-renamer-basic",
+  "title": "Batch file renamer",
+  "tag": "file",
+  "blurb": "batch file renamer with find and replace and numbering",
+  "tags": [
+    "batch",
+    "file",
+    "renamer",
+    "with"
+  ],
+  "brand": "Batch file renamer",
+  "tier": "basic",
+  "base_slug": "file-renamer"
+}
