@@ -227,6 +227,10 @@ def main() -> int:
             auditlog.retried("generate", job=concept["slug"],
                              reason=f"attempt {attempt} failed the tier gate",
                              evidence={"error": str(e)[:200]})
+            # The free edition may already have been written when the paid one
+            # failed, and site/ is published. Nothing links to an uncatalogued
+            # folder, but it still answers.
+            make_app.discard_unpublished(concept["slug"])
             continue
 
         # Now the installer, in the same job.
@@ -281,6 +285,10 @@ def main() -> int:
         return 0
 
     make_app.log("no new product was produced this run")
+    # Nothing was staged, so nothing of this concept may stay in the published
+    # folder. An earlier attempt can have written the free half before the
+    # paid half was refused.
+    make_app.discard_unpublished(concept["slug"])
     # Not a failure of the release. This job generates one app a week; a week
     # where the model produced nothing usable should leave the previous week's
     # tool live and let the rest of the automation carry on, rather than

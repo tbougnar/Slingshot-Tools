@@ -6,7 +6,6 @@ so verifying in the same minute as generating starves the debugger team.
 from __future__ import annotations
 
 import json
-import shutil
 import sys
 from pathlib import Path
 
@@ -33,25 +32,7 @@ def discard(stage: dict, stage_file: Path) -> None:
     import make_app
 
     stage_file.unlink(missing_ok=True)
-    slug = str(stage.get("slug") or "")
-    if not slug:
-        return
-    try:
-        apps = json.loads(make_app.CATALOG.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        apps = []
-    if any(isinstance(a, dict) and a.get("slug") == f"{slug}-basic"
-           and a.get("published") for a in apps):
-        print(f"[verify] {slug} is already published; leaving its folder alone")
-        return
-    folder = make_app.SITE_APPS / f"{slug}-basic"
-    if folder.is_dir() and make_app.SITE_APPS in folder.parents:
-        shutil.rmtree(folder, ignore_errors=True)
-        try:
-            shown = folder.relative_to(make_app.ROOT)
-        except ValueError:
-            shown = folder
-        print(f"[verify] removed {shown} so a rejected app is not served")
+    make_app.discard_unpublished(str(stage.get("slug") or ""))
 
 
 def main() -> int:

@@ -136,7 +136,17 @@ jobs:
         run: python pricing.py
 
       - name: Save the candidate for the verifier
+        shell: bash
         run: |
+          # site/ is the folder Pages publishes. A run that staged nothing has
+          # no business committing anything there: a rejected attempt can leave
+          # its free half behind, uncatalogued and unlinked, and still answer
+          # 200. discard_unpublished() in the generator handles the ordinary
+          # paths; this is the net for a crash, a timeout or a kill.
+          if [ ! -f data/candidate.json ]; then
+            git clean -fdq site/ || true
+            git checkout -- site/ 2>/dev/null || true
+          fi
           git add -A
           git -c user.name="slingshot-bot" -c user.email="bot@users.noreply.github.com" commit -q -m "candidate: staged for verification" || echo "nothing to commit"
           git push || (git pull --rebase origin main && git push)

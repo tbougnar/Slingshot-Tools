@@ -430,6 +430,57 @@ try:
 except Exception as _e:  # noqa: BLE001
     print("skip  no browser available:", str(_e)[:70])
 
+# --------------------------------------- a refused edition leaves no folder
+# site/ is published. A Friday run that produced nothing at all still left a
+# complete free edition of invoice-maker in site/apps, because write_app made
+# the folder before deciding the edition and the paid half then failed the tier
+# gate. The folder was in no catalogue, so nothing linked to it, but it
+# answered 200 on the live site.
+print("\nA REFUSED EDITION LEAVES NOTHING IN THE PUBLISHED FOLDER\n")
+_was_apps, _was_paid = make_app.APPS_DIR, make_app.PAID_DIR
+_was_site, _was_cat = make_app.SITE_APPS, make_app.CATALOG
+_scratch = pathlib.Path(tempfile.mkdtemp(prefix="refuse-"))
+try:
+    make_app.APPS_DIR = _scratch / "site" / "apps"
+    make_app.SITE_APPS = make_app.APPS_DIR
+    make_app.PAID_DIR = _scratch / "paid"
+    make_app.CATALOG = _scratch / "apps.json"
+    make_app.CATALOG.write_text("[]", encoding="utf-8")
+    _concept = {"slug": "no-tier-app", "title": "No Tier"}
+    _no_tier = "<html><body><script>const LIMITS = {a: 1};</script></body></html>"
+    _raised = False
+    try:
+        make_app.write_app(_concept, _no_tier, tier="basic")
+    except RuntimeError:
+        _raised = True
+    check("an app whose edition cannot be decided is refused", _raised)
+    check("and no free edition is left in the published folder",
+          not (make_app.APPS_DIR / "no-tier-app-basic").exists(),
+          str(make_app.APPS_DIR / "no-tier-app-basic"))
+
+    # the same folder is cleared after a run that produced nothing
+    _left = make_app.APPS_DIR / "no-tier-app-basic" / "app"
+    _left.mkdir(parents=True)
+    (_left / "index.html").write_text("<html></html>", encoding="utf-8")
+    make_app.discard_unpublished("no-tier-app")
+    check("a product that was never staged is taken off the site",
+          not (make_app.APPS_DIR / "no-tier-app-basic").exists())
+
+    # and an app that is on sale keeps its folder
+    _live = make_app.APPS_DIR / "on-sale-basic" / "app"
+    _live.mkdir(parents=True)
+    (_live / "index.html").write_text("<html></html>", encoding="utf-8")
+    make_app.CATALOG.write_text(json.dumps([
+        {"slug": "on-sale-basic", "base_slug": "on-sale", "tier": "basic",
+         "published": True}]), encoding="utf-8")
+    make_app.discard_unpublished("on-sale")
+    check("a published product is never taken off the site",
+          (make_app.APPS_DIR / "on-sale-basic").exists())
+finally:
+    make_app.APPS_DIR, make_app.PAID_DIR = _was_apps, _was_paid
+    make_app.SITE_APPS, make_app.CATALOG = _was_site, _was_cat
+    shutil.rmtree(_scratch, ignore_errors=True)
+
 print(f"\nchecked {len(SOURCES)} free editions for a paid-tier bypass")
 print("FAILURES:", fails if fails else "none")
 sys.exit(1 if fails else 0)

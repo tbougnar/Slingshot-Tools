@@ -880,7 +880,11 @@ def write_app(concept, html, tier="full"):
     # destroyed the build that was there, silently, because paid/ is
     # gitignored and nothing showed it in a diff. Only the two files this
     # function owns are replaced.
-    (out / "app").mkdir(parents=True, exist_ok=True)
+    #
+    # The edition is decided before the folder exists. Creating it first and
+    # then refusing left an empty (or, when only the paid edition failed, a
+    # complete) free edition in the folder Pages publishes: the folder is not
+    # in the catalogue, so nothing links to it, but it answers 200.
     edition = set_edition(html, tier)
     if _tier_value(edition) is None:
         # Refuse to write an app whose edition cannot be decided. Writing it
@@ -894,6 +898,7 @@ def write_app(concept, html, tier="full"):
         raise RuntimeError(
             f"could not set TIER to {tier!r}; the file still says "
             f"{_tier_value(edition)!r}")
+    (out / "app").mkdir(parents=True, exist_ok=True)
     (out / "app" / "index.html").write_text(edition, encoding="utf-8")
     meta = {**concept, "slug": slug, "tier": tier, "base_slug": concept["slug"]}
     (out / "concept.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
@@ -1695,6 +1700,57 @@ def publish(concept, app_dir, installer, tier="full", brand="", differences=None
     CATALOG.write_text(json.dumps(apps, indent=2), encoding="utf-8")
     log(f"catalog now has {len(apps)} app(s)")
     return entry
+
+
+def discard_unpublished(slug: str) -> bool:
+    """Take an app that is not on sale off the folder Pages publishes.
+
+    A generated free edition is written into site/apps before anybody has
+    verified it, and site/apps is published. A folder nobody links to still
+    answers 200 at /apps/<slug>-basic/app/index.html, so a build that was
+    rejected, or one whose second edition failed halfway, is live to anyone
+    who guesses the path while the catalogue and every exposure check look
+    clean. That happened twice: the invoice-maker candidate verify refused,
+    and the next week's generation, which produced nothing at all but left
+    the free half behind.
+
+    The catalogue is the authority on what is on sale. An app whose free
+    edition is listed and published is never touched: a later failed check
+    must not take a live product off the site. Returns True when a folder was
+    removed.
+    """
+    slug = str(slug or "").strip()
+    slug = str(slug or "").strip()
+    if slug.endswith("-basic"):
+        slug = slug[:-6]
+    if not slug:
+        return False
+    try:
+        apps = json.loads(CATALOG.read_text(encoding="utf-8"))
+        if not isinstance(apps, list):
+            apps = []
+    except (OSError, json.JSONDecodeError):
+        apps = []
+    for a in apps:
+        if not isinstance(a, dict) or not a.get("published"):
+            continue
+        base = strip_tier_suffix_slug(a.get("base_slug") or a.get("slug"))
+        if base == slug:
+            log(f"{slug} is published; leaving its folder alone")
+            return False
+    folder = SITE_APPS / f"{slug}-basic"
+    try:
+        if not folder.is_dir() or SITE_APPS not in folder.parents:
+            return False
+        shutil.rmtree(folder, ignore_errors=True)
+        try:
+            shown = folder.relative_to(ROOT)
+        except ValueError:
+            shown = folder
+        log(f"removed {shown} because that product is not on sale")
+        return not folder.exists()
+    except OSError:
+        return False
 
 
 def main():

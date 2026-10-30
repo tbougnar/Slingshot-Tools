@@ -2635,6 +2635,44 @@ FOUND = [
      "the invoice-maker candidate now scans clean while a genuinely dead "
      "control in the same suite is still caught",
      ""),
+
+    ("a run that produced nothing still published a half-built app",
+     "HIGH", "release", ["stage_app.py", "make_app.py", "verify_app.py",
+                         ".github/workflows/friday-build.yml",
+                         "tier_gate_selftest.py"],
+     "VERIFIED_FIXED",
+     "The next Friday run produced no product at all: five attempts, each "
+     "refused by the staging gate or the tier gate, ending with 'no new "
+     "product was produced this run'. It still committed and deployed a "
+     "complete free edition of Invoice generator under site/apps. "
+     "write_app creates the folder before it decides the edition, so the "
+     "basic write succeeded, the paid write then failed the tier gate for "
+     "having no TIER constant, and the loop moved to the next attempt with "
+     "the free half left on disk. The next run's hygiene check caught it - "
+     "site/apps/invoice-maker-basic is not a known free edition - and failed "
+     "the verify job, but by then the folder was committed and Pages was "
+     "serving it at /apps/invoice-maker-basic/app/index.html, where its "
+     "script did not even run.",
+     "the generate log ends with 'no new product was produced this run' but "
+     "the candidate commit ce9b456 adds site/apps/invoice-maker-basic/"
+     "app/index.html; tier_gate_selftest then failed with 'invoice-maker-basic: "
+     "the script did not run' against the deployed folder",
+     "run stage_app on a model reply with no TIER constant, then look at "
+     "site/apps and at the live URL after the commit",
+     "write_app decides the edition before creating any folder, so a refusal "
+     "leaves nothing behind. make_app.discard_unpublished(slug) removes the "
+     "free edition of a product the catalogue does not list as published, and "
+     "stage_app calls it when the tier gate refuses and when a run produces "
+     "nothing. verify_app.discard now delegates to the same helper. The "
+     "candidate commit also runs git clean and git checkout on site/ when no "
+     "candidate was staged, so a crash or a timeout cannot commit one either.",
+     "tier_gate_selftest proves a refused edition creates no folder, that "
+     "discard_unpublished removes a product that was never staged, and that "
+     "it never touches one that is published. The deployed folder was removed "
+     "and the live URL rechecked.",
+     "the leftover folder was removed from main and the suite went from 36 "
+     "editions with one broken back to 35 clean",
+     ""),
 ]
 
 
