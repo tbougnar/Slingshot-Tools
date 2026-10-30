@@ -2431,5 +2431,43 @@
   "verification": "the upload was confirmed present on the live store page after the crash, which is what made the reporting bug visible",
   "uncertainty": "",
   "opened": "2026-10-30T15:57:59+00:00"
+ },
+ {
+  "id": "BUG-131",
+  "symptom": "the scanner spent the app's free-tier quota and called the last buttons dead",
+  "severity": "HIGH",
+  "component": "qa",
+  "files": [
+   "app_scanner.py",
+   "scanner_selftest.py"
+  ],
+  "status": "VERIFIED_FIXED",
+  "root_cause": "Scanning the live free editions found URL Decode reported dead on the Base64 tool, which is on sale for $3. The button works. The free edition keeps three items and silently ignores a fourth, and the scanner clicked Encode, Decode and URL Encode first, filling the cap; URL Decode then added nothing, changed nothing and was called broken. Every free edition has a cap of this kind, so the scanner condemned the whole catalogue for behaving as designed - the same class of defect as the date field and the shared upgrade notice, one layer deeper: not the page's markup but the app's accumulated state decided the verdict.",
+  "evidence": "python live_scan.py against https://tbougnar.github.io/.../base64-tool-basic/app/index.html returned dead=['BUTTON:URL Decode (handler present but nothing happened)']; clicking URL Decode on a fresh page added an item every time, and localStorage showed three stored items after the scanner's three earlier clicks",
+  "repro": "scan any free edition that caps how much it stores and has more controls than the cap",
+  "fix": "Each control is now judged on its own page load: the scanner clears the origin's storage, reloads, and clicks one control, so no quota, counter or hidden panel from an earlier click can change the verdict. The mutation count and the storage snapshot are therefore always measured from a clean start.",
+  "regression_test": "scanner_selftest scans a page whose four buttons all add an item but stop silently after three - none may be dead and the app must pass the gate - and a page where the second button really does nothing, which must still be reported dead.",
+  "verification": "all four live free editions for the tools on the store (invoice-maker, file-renamer, password-manager, base64-tool) now scan clean",
+  "uncertainty": "the full 36-app live sweep is running; a failure there is a separate finding, not a regression of this one",
+  "opened": "2026-10-30T16:22:30+00:00"
+ },
+ {
+  "id": "BUG-132",
+  "symptom": "a paid Export button was reported dead for saving a file",
+  "severity": "HIGH",
+  "component": "qa",
+  "files": [
+   "app_scanner.py",
+   "scanner_selftest.py"
+  ],
+  "status": "VERIFIED_FIXED",
+  "root_cause": "The paid build of the Invoice generator was refused with 'Export Data (JSON) (handler present but nothing happened)'. The button works: it builds a Blob, clicks a link with a download attribute and saves the file, deliberately changing nothing on the page. The scanner judged a response by DOM mutations and storage only, so every working export in a paid edition was a dead control - and export is the paid feature the catalogue advertises.",
+  "evidence": "python app_scanner.py on the paid-build artifact from run 41084347472 returned dead=['BUTTON:Export Data (JSON)']; Playwright's expect_download caught invoiceforge.json (52 bytes) from the same click",
+  "repro": "scan a paid edition whose only response to a click is a saved file",
+  "fix": "PROBE counts a created object URL, a click on a link that has a download attribute, and window.open as responses, alongside DOM mutations and storage. The handler-presence check and the missing-handler report now also recognise an id the app's script mentions, so a listener added with addEventListener is no longer announced as absent.",
+  "regression_test": "scanner_selftest scans a page whose Export builds a blob and clicks a download link - it must not be dead and must not be listed as missing a handler - and a page whose Export handler does nothing, which must still be reported dead.",
+  "verification": "the paid Invoice generator artifact now scans clean, and the real download was confirmed with Playwright",
+  "uncertainty": "",
+  "opened": "2026-10-30T16:22:30+00:00"
  }
 ]
