@@ -13,10 +13,14 @@
   },
   "base64-tool": {
     "url": "https://slingshot-tools.itch.io/slingshot-tools",
-    "at": 1792154009
+    "at": 1793392736
   },
   "password-manager": {
     "url": "https://slingshot-tools.itch.io/slingshot-tools",
-    "at": 1792162384
+    "at": 1793392726
+  },
+  "file-renamer": {
+    "url": "https://slingshot-tools.itch.io/slingshot-tools",
+    "at": 1793392724
   }
 }
