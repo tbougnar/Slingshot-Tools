@@ -6,6 +6,7 @@ so verifying in the same minute as generating starves the debugger team.
 from __future__ import annotations
 
 import json
+import shutil
 import sys
 from pathlib import Path
 
@@ -15,6 +16,42 @@ import qa_loop
 
 # how many dead controls we will ship with rather than ship nothing
 TOLERATED = 1
+
+
+def discard(stage: dict, stage_file: Path) -> None:
+    """Take a rejected candidate off the public site as well as out of the queue.
+
+    The staged app lives under site/, which is the folder Pages publishes, so
+    it answers 200 at /apps/<slug>-basic/app/index.html even though nothing
+    links to it. The invoice-maker candidate that failed every repair round was
+    reachable that way, with a Save button that did nothing, until its folder
+    was removed by hand.
+
+    A folder that belongs to an app already on sale is never touched: a
+    re-verified product must not disappear because a later check failed.
+    """
+    import make_app
+
+    stage_file.unlink(missing_ok=True)
+    slug = str(stage.get("slug") or "")
+    if not slug:
+        return
+    try:
+        apps = json.loads(make_app.CATALOG.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        apps = []
+    if any(isinstance(a, dict) and a.get("slug") == f"{slug}-basic"
+           and a.get("published") for a in apps):
+        print(f"[verify] {slug} is already published; leaving its folder alone")
+        return
+    folder = make_app.SITE_APPS / f"{slug}-basic"
+    if folder.is_dir() and make_app.SITE_APPS in folder.parents:
+        shutil.rmtree(folder, ignore_errors=True)
+        try:
+            shown = folder.relative_to(make_app.ROOT)
+        except ValueError:
+            shown = folder
+        print(f"[verify] removed {shown} so a rejected app is not served")
 
 
 def main() -> int:
@@ -44,8 +81,9 @@ def main() -> int:
     if not candidate.exists():
         print(f"[verify] staged file is gone: {candidate}")
         # There is nothing to verify, so the candidate is not left behind for
-        # the next run to pick up again.
-        stage_file.unlink(missing_ok=True)
+        # the next run to pick up again, and any half-written folder of it is
+        # taken off the public site.
+        discard(stage, stage_file)
         return 1
 
     print(f"[verify] checking {stage['title']} ({stage['slug']})")
@@ -102,8 +140,9 @@ def main() -> int:
                 # It is a tracked file, so leaving it there means the
                 # next run verifies the same rejected app again, and it
                 # keeps widening the release gate's exemption for that
-                # folder name for as long as it exists.
-                stage_file.unlink(missing_ok=True)
+                # folder name for as long as it exists. Its site folder goes
+                # too: an unpublishable app must not answer on the live site.
+                discard(stage, stage_file)
                 return 1
     html = candidate.read_text(encoding="utf-8", errors="replace")
     concept = {"slug": stage["slug"], "brand": stage["brand"],

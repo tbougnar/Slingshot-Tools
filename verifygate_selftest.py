@@ -176,6 +176,55 @@ check("the verifier only runs when there is a fresh candidate",
       and "steps.fresh.outputs.fresh == 'yes'" in _verify_step.group(1),
       "without the gate a no-op week verifies and publishes the stale file")
 
+# ------------------------------------------------- a rejection must clean up
+# site/ is the published folder. The invoice-maker candidate failed every
+# repair round, and its file still answered 200 at
+# /apps/invoice-maker-basic/app/index.html because only candidate.json was
+# deleted. Nothing linked to it, but a broken app was live.
+print("\nA REJECTED APP IS TAKEN OFF THE PUBLIC SITE\n")
+import json as _json
+import shutil as _shutil
+
+import verify_app
+
+_reject = pathlib.Path(tempfile.mkdtemp(prefix="reject-selftest-"))
+_real_apps, _real_cat = make_app.SITE_APPS, make_app.CATALOG
+try:
+    make_app.SITE_APPS = _reject / "site" / "apps"
+    make_app.CATALOG = _reject / "apps.json"
+    make_app.CATALOG.write_text("[]", encoding="utf-8")
+
+    _folder = make_app.SITE_APPS / "bad-app-basic"
+    (_folder / "app").mkdir(parents=True)
+    (_folder / "app" / "index.html").write_text("<html></html>",
+                                                encoding="utf-8")
+    _stage_file = _reject / "candidate.json"
+    _stage_file.write_text("{}", encoding="utf-8")
+    verify_app.discard({"slug": "bad-app"}, _stage_file)
+    check("a rejected candidate's site folder is removed",
+          not _folder.exists())
+    check("and the candidate file is gone", not _stage_file.exists())
+
+    _live = make_app.SITE_APPS / "live-app-basic"
+    (_live / "app").mkdir(parents=True)
+    (_live / "app" / "index.html").write_text("<html></html>",
+                                              encoding="utf-8")
+    make_app.CATALOG.write_text(
+        _json.dumps([{"slug": "live-app-basic", "published": True}]),
+        encoding="utf-8")
+    _stage2 = _reject / "candidate2.json"
+    _stage2.write_text("{}", encoding="utf-8")
+    verify_app.discard({"slug": "live-app"}, _stage2)
+    check("a published app is never removed by a failed check", _live.exists())
+    check("but its candidate file is still cleared", not _stage2.exists())
+finally:
+    make_app.SITE_APPS, make_app.CATALOG = _real_apps, _real_cat
+    _shutil.rmtree(_reject, ignore_errors=True)
+check("a failed verification still commits its cleanup",
+      re.search(r"- name: Commit verification results\n        if: always\(\)",
+                _verify_yml) is not None,
+      "a rejection used to skip the commit, leaving the failed app on the site")
+
 print("\nTHE INSTALLER REPORTS THE PRODUCT, NOT THE VENDOR\n")
 _nsi = source("build_installer_app.py")
 check("the product name is templated", 'Name "{name}"' in _nsi)

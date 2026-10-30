@@ -2541,6 +2541,40 @@ FOUND = [
      "the suite passes with the corrected catalogue, and the paid features "
      "of all 35 families are covered by their listings",
      ""),
+
+    ("a rejected app stayed on the public site",
+     "MEDIUM", "release", ["verify_app.py", ".github/workflows/friday-verify.yml",
+                            "verifygate_selftest.py"],
+     "VERIFIED_FIXED",
+     "The Friday run generated Invoice generator, the browser scan found two "
+     "dead controls - Save Invoice did nothing and Import My Data had no "
+     "handler - and four repair rounds failed to fix them. verify_app "
+     "correctly refused to publish and deleted data/candidate.json, but the "
+     "staged app itself lives under site/apps/<slug>-basic, which is the "
+     "folder GitHub Pages publishes. It answered 200 at "
+     "/apps/invoice-maker-basic/app/index.html with a Save button that did "
+     "nothing. Nothing linked to it, so the catalogue and every exposure "
+     "check looked clean while a broken page was reachable to anyone who "
+     "guessed the path. The commit step that would have recorded a deletion "
+     "was skipped too, because it ran only after the failed verify step.",
+     "gh run view 41067281975 --log-failed showed 'NOT publishing: 2 dead "
+     "control(s)'; fetching https://tbougnar.github.io/Slingshot-Tools/apps/"
+     "invoice-maker-basic/app/index.html returned 200, while "
+     "/apps/invoice-maker-basic/ was 404 and apps.json held no entry",
+     "after a refused Friday build, open the staged app's URL on the live "
+     "site",
+     "verify_app.discard() deletes the rejected candidate's site folder as "
+     "well as candidate.json, and never touches a folder whose free edition "
+     "is already published, so a failed re-check cannot take a live product "
+     "off the site. The exposure, hygiene, guard and commit steps in "
+     "friday-verify.yml now run even when verification fails, so the "
+     "deletion is committed and Pages redeploys without the app.",
+     "verifygate_selftest.py calls discard() against temp folders: an "
+     "unpublished candidate is removed with its file, a published edition "
+     "survives, and the workflow's commit step is asserted to run on failure.",
+     "the rejected folder was removed from site/, and the live URL was "
+     "rechecked after the Pages redeploy",
+     ""),
 ]
 
 
