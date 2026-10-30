@@ -1,5 +1,53 @@
 [
   {
+    "slug": "invoice-maker",
+    "base_slug": "invoice-maker",
+    "title": "Invoice generator",
+    "tier": "full",
+    "tag": "invoice",
+    "blurb": "Everything the free edition does, and unlimited items, export and import your data, every theme.",
+    "tags": [
+      "invoice",
+      "generator"
+    ],
+    "url": "",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [
+      "Unlimited items",
+      "Export and import your data",
+      "Every theme"
+    ],
+    "published": false,
+    "badge": "New",
+    "date": "2026-10-30"
+  },
+  {
+    "slug": "invoice-maker-basic",
+    "base_slug": "invoice-maker",
+    "title": "Invoice generator (Basic)",
+    "tier": "basic",
+    "tag": "invoice",
+    "blurb": "Invoice generator as a free offline tool: one job done properly, no account, and your data stays on your device.",
+    "tags": [
+      "invoice",
+      "generator"
+    ],
+    "url": "https://tbougnar.github.io/Slingshot-Tools/apps/invoice-maker-basic/",
+    "download": "",
+    "price": 0.0,
+    "free": true,
+    "differences": [
+      "Unlimited items",
+      "Export and import your data",
+      "Every theme"
+    ],
+    "published": true,
+    "badge": "New",
+    "date": "2026-10-30"
+  },
+  {
     "slug": "file-renamer",
     "base_slug": "file-renamer",
     "title": "Batch file renamer",

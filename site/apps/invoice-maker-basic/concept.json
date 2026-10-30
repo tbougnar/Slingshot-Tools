@@ -1,15 +1,9 @@
 {
   "slug": "invoice-maker-basic",
+  "brand": "Invoice generator",
   "title": "Invoice generator",
   "tag": "invoice",
-  "blurb": "invoice generator that exports clean PDF-ready HTML",
-  "tags": [
-    "invoice",
-    "generator",
-    "that",
-    "exports"
-  ],
-  "brand": "Invoice generator",
+  "blurb": "Invoice generator as a free offline tool: one job done properly, no account, and your data stays on your device.",
   "tier": "basic",
   "base_slug": "invoice-maker"
 }

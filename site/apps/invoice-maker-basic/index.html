@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InvoiceForge — Invoice Generator</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#14100F;color:#F6EFEC;line-height:1.5}
+html[data-theme="light"]{background:#F6EFEC;color:#14100F}
+header{padding:1.5rem 1rem;text-align:center;border-bottom:1px solid #C1272D}
+header h1{font-size:1.6rem;font-weight:700}
+main{max-width:800px;margin:0 auto;padding:1.5rem}
+.card{background:rgba(255,255,255,.05);border:1px solid #C1272D;border-radius:12px;padding:1.25rem;margin-bottom:1.25rem;box-shadow:0 4px 12px rgba(0,0,0,.3)}
+html[data-theme="light"] .card{background:rgba(0,0,0,.03);box-shadow:0 2px 6px rgba(0,0,0,.08)}
+h2{font-size:1.15rem;margin-bottom:.75rem;color:#C1272D}
+label{display:block;font-size:.85rem;margin-bottom:.35rem}
+input,select,textarea{width:100%;padding:.6rem;border:1px solid #C1272D;border-radius:8px;background:rgba(255,255,255,.08);color:#F6EFEC;font-size:.9rem}
+html[data-theme="light"] input,html[data-theme="light"] select,html[data-theme="light"] textarea{background:#fff;color:#14100F}
+button{cursor:pointer;border:none;background:#C1272D;color:#F6EFEC;padding:.6rem 1rem;border-radius:8px;font-size:.9rem;font-weight:600;transition:.2s}
+button:hover{opacity:.85}
+button.secondary{background:transparent;border:1px solid #C1272D}
+button.secondary:hover{opacity:.85}
+button:disabled{opacity:.4;cursor:not-allowed}
+table{width:100%;border-collapse:collapse;margin-top:.75rem}
+th,td{padding:.5rem;text-align:left;border-bottom:1px solid #C1272D;font-size:.85rem}
+th{color:#C1272D}
+.empty{text-align:center;padding:2rem;color:#aaa;font-style:italic}
+.toggle-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem}
+footer{text-align:center;padding:1.5rem;font-size:.8rem;color:#aaa}
+@media(max-width:600px){main{padding:1rem}.card{padding:1rem}}
+</style>
+</head>
+<body>
+<header>
+<h1>InvoiceForge</h1>
+<p style="font-size:.85rem;color:#aaa">Clean invoices, PDF-ready HTML export</p>
+</header>
+<main>
+<div class="card">
+<div class="toggle-row">
+<label for="themeToggle">Dark mode</label>
+<input type="checkbox" id="themeToggle">
+</div>
+<h2>Invoice Details</h2>
+<label for="clientName">Client Name</label>
+<input type="text" id="clientName" placeholder="Acme Corp">
+<label for="clientEmail">Client Email</label>
+<input type="email" id="clientEmail" placeholder="client@example.com">
+<label for="invoiceNumber">Invoice Number</label>
+<input type="text" id="invoiceNumber" placeholder="INV-001">
+<label for="invoiceDate">Invoice Date</label>
+<input type="date" id="invoiceDate">
+<label for="dueDate">Due Date</label>
+<input type="date" id="dueDate">
+</div>
+<div class="card">
+<h2>Line Items</h2>
+<table>
+<thead>
+<tr><th>Description</th><th>Qty</th><th>Price</th><th>Total</th><th>Action</th></tr>
+</thead>
+<tbody id="itemList">
+<tr><td colspan="5" class="empty">No items yet. Add one below.</td></tr>
+</tbody>
+</table>
+<div id="addItemForm" style="display:none">
+<label for="desc">Description</label>
+<input type="text" id="desc" placeholder="Service or product">
+<label for="qty">Quantity</label>
+<input type="number" id="qty" min="1" value="1">
+<label for="price">Unit Price</label>
+<input type="number" id="price" min="0" step="0.01" value="0">
+<button id="addBtn">Add Item</button>
+</div>
+<button id="addItemToggle" class="secondary">+ Add Item</button>
+</div>
+<div class="card">
+<h2>Invoice Summary</h2>
+<table>
+<tr><td>Subtotal</td><td id="subtotal">$0.00</td></tr>
+<tr><td>Tax (10%)</td><td id="tax">$0.00</td></tr>
+<tr><td><strong>Total</strong></td><td><strong id="total">$0.00</strong></td></tr>
+</table>
+</div>
+<div class="card">
+<h2>Actions</h2>
+<button id="generateBtn">Generate Invoice</button>
+<button id="exportBtn" class="secondary">Export Data (JSON)</button>
+<button id="importBtn" class="secondary">Import Data (JSON)</button>
+<input type="file" id="importFile" accept=".json" style="display:none">
+</div>
+<div id="output"></div>
+</main>
+<footer>
+<span id="edition"></span>
+</footer>
+<script>
+const TIER = "basic";
+const BASIC_LIMITS = { maxItems: 3, export: false, themes: "one", bulk: false, history: false };
+const LIMITS = TIER === "basic" ? BASIC_LIMITS : { maxItems: Infinity, export: true, themes: "all", bulk: true, history: true };
+const K = 'app.v1';
+const load = () => { try { return JSON.parse(localStorage.getItem(K)) || null } catch { return null } };
+const save = v => localStorage.setItem(K, JSON.stringify(v));
+const state = load() || { client: {}, items: [], theme: 'dark' };
+const el = id => document.getElementById(id);
+const fmt = n => '$' + Number(n || 0).toFixed(2);
+const recalc = () => {
+  let sub = 0;
+  state.items.forEach(i => { sub += (Number(i.qty) || 0) * (Number(i.price) || 0); });
+  const tax = sub * 0.1;
+  el('subtotal').textContent = fmt(sub);
+  el('tax').textContent = fmt(tax);
+  el('total').textContent = fmt(sub + tax);
+};
+const renderItems = () => {
+  const list = el('itemList');
+  if (state.items.length === 0) {
+    list.innerHTML = '<tr><td colspan="5" class="empty">No items yet. Add one below.</td></tr>';
+  } else {
+    list.innerHTML = state.items.map((i, idx) => `<tr><td>${i.desc}</td><td>${i.qty}</td><td>${fmt(i.price)}</td><td>${fmt(Number(i.qty)*Number(i.price))}</td><td><button onclick="removeItem(${idx})" class="secondary">Remove</button></td></tr>`).join('');
+  }
+  recalc();
+};
+const removeItem = idx => { state.items.splice(idx, 1); save(state); renderItems(); };
+const toggleAddForm = () => { const f = el('addItemForm'); f.style.display = f.style.display === 'none' ? 'block' : 'none'; };
+const addItem = () => {
+  if (state.items.length >= LIMITS.maxItems && TIER === 'basic') {
+    alert('Basic edition limited to ' + LIMITS.maxItems + ' items. Upgrade for unlimited.');
+    return;
+  }
+  const desc = el('desc').value.trim();
+  const qty = Number(el('qty').value);
+  const price = Number(el('price').value);
+  if (!desc || isNaN(qty) || isNaN(price)) return alert('Please fill all fields.');
+  state.items.push({ desc, qty, price });
+  el('desc').value = ''; el('qty').value = 1; el('price').value = 0;
+  el('addItemForm').style.display = 'none';
+  save(state); renderItems();
+};
+const generateInvoice = () => {
+  const client = state.client;
+  const itemsHtml = state.items.map(i => `<tr><td>${i.desc}</td><td>${i.qty}</td><td>${fmt(i.price)}</td><td>${fmt(Number(i.qty)*Number(i.price))}</td></tr>`).join('');
+  let sub = 0; state.items.forEach(i => sub += Number(i.qty)*Number(i.price));
+  const tax = sub*0.1;
+  const total = sub+tax;
+  const html = `<div style="font-family:sans-serif;color:#000;padding:2rem;border:1px solid #ccc"><h1>Invoice</h1><p><strong>${client.name||''}</strong><br>${client.email||''}</p><p>Date: ${client.date||''} | Due: ${client.due||''} | #${client.num||''}</p><table style="width:100%;border-collapse:collapse"><thead><tr><th>Description</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead><tbody>${itemsHtml}</tbody></table><p style="text-align:right"><strong>Total: ${fmt(total)}</strong></p></div>`;
+  el('output').innerHTML = '<iframe style="width:100%;height:400px;border:1px solid #C1272D" name="preview"></iframe>';
+  const w = window.open('', 'preview');
+  w.document.write(html);
+  w.document.close();
+};
+const exportData = () => {
+  if (!LIMITS.export && TIER === 'basic') return alert('Export disabled in basic edition.');
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'invoiceforge.json';
+  a.click(); URL.revokeObjectURL(url);
+};
+const importData = () => {
+  if (!LIMITS.export && TIER === 'basic') return alert('Import disabled in basic edition.');
+  el('importFile').click();
+};
+const handleImport = e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => { try { state = JSON.parse(ev.target.result); save(state); renderItems(); } catch { alert('Invalid file.'); } };
+  reader.readAsText(file);
+};
+const setTheme = t => { document.documentElement.dataset.theme = t; state.theme = t; save(state); };
+const toggleTheme = () => setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+const init = () => {
+  if (state.theme) document.documentElement.dataset.theme = state.theme;
+  el('themeToggle').addEventListener('change', toggleTheme);
+  el('themeToggle').checked = document.documentElement.dataset.theme === 'light';
+  el('clientName').value = state.client.name || '';
+  el('clientEmail').value = state.client.email || '';
+  el('invoiceNumber').value = state.client.num || '';
+  el('invoiceDate').value = state.client.date || '';
+  el('dueDate').value = state.client.due || '';
+  ['clientName','clientEmail','invoiceNumber','invoiceDate','dueDate'].forEach(id => {
+    el(id).addEventListener('change', () => {
+      const map = { clientName:'name', clientEmail:'email', invoiceNumber:'num', invoiceDate:'date', dueDate:'due' };
+      state.client[map[id]] = el(id).value;
+      save(state);
+    });
+  });
+  el('addItemToggle').addEventListener('click', toggleAddForm);
+  el('addBtn').addEventListener('click', addItem);
+  el('generateBtn').addEventListener('click', generateInvoice);
+  el('exportBtn').addEventListener('click', exportData);
+  el('importBtn').addEventListener('click', importData);
+  el('importFile').addEventListener('change', handleImport);
+  el('edition').textContent = TIER === 'full' ? 'Full edition' : 'Free edition';
+  renderItems();
+};
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+</script>
+</body>
+</html>
