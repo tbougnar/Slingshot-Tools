@@ -1,0 +1,14 @@
+{
+ "slug": "invoice-maker",
+ "brand": "Invoice generator",
+ "title": "Invoice generator",
+ "tag": "invoice",
+ "differences": [
+  "Export and import your data",
+  "Every theme"
+ ],
+ "free_blurb": "Invoice generator as a free offline tool: one job done properly, no account, and your data stays on your device.",
+ "paid_blurb": "Everything the free edition does, and export and import your data, every theme.",
+ "candidate": "site/apps/invoice-maker-basic/app/index.html",
+ "paid_dir": "paid/invoice-maker"
+}

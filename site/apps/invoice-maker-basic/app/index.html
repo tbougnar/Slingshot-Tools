@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InvoiceForge</title>
+<style>
+:root{
+  --bg:#F6EFEC;
+  --text:#14100F;
+  --red:#C1272D;
+  --card:#ffffff;
+  --shadow:0 4px 12px rgba(0,0,0,0.08);
+}
+html[data-theme="dark"]{
+  --bg:#14100F;
+  --text:#F6EFEC;
+  --red:#C1272D;
+  --card:#1a1412;
+  --shadow:0 4px 12px rgba(0,0,0,0.3);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  line-height:1.6;
+  padding:20px;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+header{
+  width:100%;
+  max-width:800px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:24px;
+}
+header h1{
+  font-size:1.8rem;
+  font-weight:700;
+  color:var(--red);
+}
+.theme-toggle{
+  background:var(--red);
+  color:#fff;
+  border:none;
+  padding:8px 16px;
+  border-radius:8px;
+  cursor:pointer;
+  font-size:0.9rem;
+}
+main{
+  width:100%;
+  max-width:800px;
+}
+.card{
+  background:var(--card);
+  border-radius:12px;
+  box-shadow:var(--shadow);
+  padding:24px;
+  margin-bottom:20px;
+}
+.card h2{
+  font-size:1.3rem;
+  margin-bottom:16px;
+  color:var(--red);
+}
+.form-group{
+  margin-bottom:16px;
+}
+label{
+  display:block;
+  margin-bottom:6px;
+  font-weight:600;
+  font-size:0.9rem;
+}
+input,textarea,select{
+  width:100%;
+  padding:10px 12px;
+  border:1px solid #ddd;
+  border-radius:8px;
+  font-size:0.95rem;
+  background:var(--bg);
+  color:var(--text);
+}
+input:focus,textarea:focus,select:focus{
+  outline:none;
+  border-color:var(--red);
+  box-shadow:0 0 0 2px rgba(193,39,45,0.2);
+}
+button{
+  background:var(--red);
+  color:#fff;
+  border:none;
+  padding:10px 20px;
+  border-radius:8px;
+  cursor:pointer;
+  font-size:0.95rem;
+  font-weight:600;
+  transition:background 0.2s;
+}
+button:hover{
+  background:#a01f25;
+}
+button.secondary{
+  background:transparent;
+  border:1px solid var(--red);
+  color:var(--red);
+}
+button.secondary:hover{
+  background:rgba(193,39,45,0.1);
+}
+button:disabled{
+  opacity:0.5;
+  cursor:not-allowed;
+}
+.invoice-list{
+  list-style:none;
+}
+.invoice-item{
+  padding:12px;
+  border-bottom:1px solid #eee;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.invoice-item:last-child{
+  border-bottom:none;
+}
+.invoice-title{
+  font-weight:600;
+}
+.invoice-meta{
+  font-size:0.8rem;
+  color:#888;
+  margin-top:4px;
+}
+.empty-state{
+  text-align:center;
+  padding:40px 20px;
+  color:#888;
+}
+.empty-state p{
+  margin-top:12px;
+}
+footer{
+  margin-top:auto;
+  width:100%;
+  max-width:800px;
+  text-align:center;
+  padding:20px;
+  font-size:0.85rem;
+  color:#888;
+}
+.upgrade-note{
+  text-align:center;
+  padding:12px;
+  background:rgba(193,39,45,0.1);
+  border-radius:8px;
+  margin-top:12px;
+  font-size:0.85rem;
+}
+@media(max-width:600px){
+  .card{padding:16px}
+  header h1{font-size:1.5rem}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>InvoiceForge</h1>
+  <button class="theme-toggle" id="themeToggle">Toggle Theme</button>
+</header>
+<main>
+  <div class="card">
+    <h2>Create Invoice</h2>
+    <form id="invoiceForm">
+      <div class="form-group">
+        <label for="clientName">Client Name</label>
+        <input type="text" id="clientName" required>
+      </div>
+      <div class="form-group">
+        <label for="clientEmail">Client Email</label>
+        <input type="email" id="clientEmail">
+      </div>
+      <div class="form-group">
+        <label for="invoiceNumber">Invoice Number</label>
+        <input type="text" id="invoiceNumber" required>
+      </div>
+      <div class="form-group">
+        <label for="invoiceDate">Invoice Date</label>
+        <input type="date" id="invoiceDate" required>
+      </div>
+      <div class="form-group">
+        <label for="dueDate">Due Date</label>
+        <input type="date" id="dueDate" required>
+      </div>
+      <div class="form-group">
+        <label for="items">Line Items (JSON array)</label>
+        <textarea id="items" rows="4" placeholder='[{"name":"Service","qty":1,"price":100}]'></textarea>
+      </div>
+      <div class="form-group">
+        <label for="notes">Notes</label>
+        <textarea id="notes" rows="3"></textarea>
+      </div>
+      <button type="submit">Save Invoice</button>
+    </form>
+  </div>
+  <div class="card">
+    <h2>Your Invoices</h2>
+    <ul class="invoice-list" id="invoiceList">
+      <li class="empty-state">
+        <p>No invoices yet. Fill out the form above to create your first invoice.</p>
+      </li>
+    </ul>
+  </div>
+  <div class="card">
+    <h2>Export / Import</h2>
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <button id="exportBtn" class="secondary">Export My Data</button>
+      <button id="importBtn" class="secondary">Import My Data</button>
+      <input type="file" id="importFile" accept=".json" style="display:none">
+    </div>
+    <div id="upgradeNote" class="upgrade-note" style="display:none">
+      Upgrade to Full edition for unlimited invoices, export, and history.
+    </div>
+  </div>
+</main>
+<footer>
+  <span id="edition"></span>
+</footer>
+<script>
+const TIER = "basic";
+const BASIC_LIMITS = { maxItems: 3, export: false, themes: "one", bulk: false, history: false };
+const LIMITS = TIER === "basic" ? BASIC_LIMITS : { maxItems: 0, export: true, themes: "all", bulk: true, history: true };
+
+const K = 'app.v1';
+const load = () => { try { return JSON.parse(localStorage.getItem(K)) || { invoices: [] } } catch { return { invoices: [] } } };
+const save = v => localStorage.setItem(K, JSON.stringify(v));
+
+const applyTheme = () => {
+  const saved = localStorage.getItem('theme') || 'light';
+  document.documentElement.dataset.theme = saved;
+};
+applyTheme();
+
+document.getElementById('themeToggle').addEventListener('click', () => {
+  const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = next;
+  localStorage.setItem('theme', next);
+});
+
+document.getElementById('edition').textContent = TIER === 'full' ? 'Full edition' : 'Free edition';
+
+const renderInvoices = () => {
+  const state = load();
+  const list = document.getElementById('invoiceList');
+  if (!state.invoices.length) {
+    list.innerHTML = '<li class="empty-state"><p>No invoices yet. Fill out the form above to create your first invoice.</p></li>';
+    return;
+  }
+  list.innerHTML = '';
+  state.invoices.forEach((inv, i) => {
+    const li = document.createElement('li');
+    li.className = 'invoice-item';
+    li.innerHTML = '<div><div class="invoice-title">' + inv.clientName + ' — ' + inv.invoiceNumber + '</div><div class="invoice-meta">' + inv.invoiceDate + ' · $' + inv.total + '</div></div><button onclick="viewInvoice(' + i + ')">View</button>';
+    list.appendChild(li);
+  });
+};
+
+const viewInvoice = (i) => {
+  const state = load();
+  const inv = state.invoices[i];
+  if (!inv) return;
+  let html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Invoice ' + inv.invoiceNumber + '</title><style>body{font-family:sans-serif;padding:40px;color:#333}table{width:100%;border-collapse:collapse}td,th{border:1px solid #ddd;padding:8px;text-align:left}th{background:#f4f4f4}.red{color:#C1272D}</style></head><body>';
+  html += '<h1 class="red">Invoice ' + inv.invoiceNumber + '</h1>';
+  html += '<p><strong>' + inv.clientName + '</strong><br>' + (inv.clientEmail || '') + '</p>';
+  html += '<p>Date: ' + inv.invoiceDate + ' | Due: ' + inv.dueDate + '</p>';
+  html += '<table><tr><th>Description</th><th>Qty</th><th>Price</th><th>Total</th></tr>';
+  (inv.items || []).forEach(item => {
+    html += '<tr><td>' + item.name + '</td><td>' + item.qty + '</td><td>$' + item.price + '</td><td>$' + (item.qty * item.price).toFixed(2) + '</td></tr>';
+  });
+  html += '</table>';
+  html += '<p style="margin-top:20px"><strong>Total: $' + inv.total.toFixed(2) + '</strong></p>';
+  if (inv.notes) html += '<p>' + inv.notes + '</p>';
+  html += '</body></html>';
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+};
+
+document.getElementById('invoiceForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const state = load();
+  if (TIER === 'basic' && state.invoices.length >= LIMITS.maxItems) {
+    document.getElementById('upgradeNote').style.display = 'block';
+    return;
+  }
+  let items = [];
+  try { items = JSON.parse(document.getElementById('items').value || '[]'); } catch { items = []; }
+  const total = items.reduce((s, it) => s + (it.qty * it.price), 0);
+  const inv = {
+    clientName: document.getElementById('clientName').value,
+    clientEmail: document.getElementById('clientEmail').value,
+    invoiceNumber: document.getElementById('invoiceNumber').value,
+    invoiceDate: document.getElementById('invoiceDate').value,
+    dueDate: document.getElementById('dueDate').value,
+    items,
+    notes: document.getElementById('notes').value,
+    total
+  };
+  state.invoices.push(inv);
+  save(state);
+  renderInvoices();
+  e.target.reset();
+});
+
+document.getElementById('exportBtn').addEventListener('click', () => {
+  if (!LIMITS.export) {
+    document.getElementById('upgradeNote').style.display = 'block';
+    return;
+  }
+  const state = load();
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'invoiceforge-data.json';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('importBtn').addEventListener('click', () => {
+  if (!LIMITS.export) {
+    document.getElementById('upgradeNote').style.display = 'block';
+    return;
+  }
+  document.getElementById('importFile').click();
+});
+
+document.getElementById('importFile').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      save(data);
+      renderInvoices();
+    } catch {
+      alert('Invalid JSON file.');
+    }
+  };
+  reader.readAsText(file);
+});
+
+renderInvoices();
+</script>
+</body>
+</html>

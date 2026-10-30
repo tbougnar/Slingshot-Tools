@@ -1,0 +1,15 @@
+{
+  "slug": "invoice-maker-basic",
+  "title": "Invoice generator",
+  "tag": "invoice",
+  "blurb": "invoice generator that exports clean PDF-ready HTML",
+  "tags": [
+    "invoice",
+    "generator",
+    "that",
+    "exports"
+  ],
+  "brand": "Invoice generator",
+  "tier": "basic",
+  "base_slug": "invoice-maker"
+}
