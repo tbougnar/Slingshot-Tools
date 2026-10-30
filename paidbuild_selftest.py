@@ -346,6 +346,39 @@ finally:
     make_app.CATALOG = _real_cat
     shutil.rmtree(_keep_dir, ignore_errors=True)
 
+# The catalogue entry is what a customer reads. The model writes the
+# differences, and it can leave out the cap the free edition stops at, which
+# is what happened on the two live listings. publish therefore reads the paid
+# file it is given and adds the cap itself.
+print("\nA PUBLISHED LISTING NAMES THE CAP THE FREE EDITION STOPS AT\n")
+_cap_dir = pathlib.Path(tempfile.mkdtemp(prefix="paid-copy-selftest-"))
+_real_cat2 = make_app.CATALOG
+try:
+    make_app.CATALOG = _cap_dir / "apps.json"
+    (_cap_dir / "app").mkdir()
+    (_cap_dir / "app" / "index.html").write_text(
+        '<script>const LIMITS=TIER==="basic"?{maxItems:3,export:false}:'
+        '{maxItems:0,export:true};</script>', encoding="utf-8")
+    _capped = make_app.publish(
+        {"slug": "capped-tool", "base_slug": "capped-tool",
+         "title": "Capped tool", "tag": "util", "blurb": "A tool."},
+        _cap_dir, None, tier="full",
+        differences=["Export and import your data"])
+    _cd = _capped.get("differences") or []
+    check("a published paid listing leads with the cap it lifts",
+          bool(_cd) and _cd[0] == "Unlimited items (the free edition stops "
+                                 "at 3)",
+          str(_cd))
+    _on_disk = json.loads(
+        make_app.CATALOG.read_text(encoding="utf-8"))[0]
+    check("and the written catalogue carries it too",
+          (_on_disk.get("differences") or [None])[0]
+          == "Unlimited items (the free edition stops at 3)",
+          str(_on_disk.get("differences")))
+finally:
+    make_app.CATALOG = _real_cat2
+    shutil.rmtree(_cap_dir, ignore_errors=True)
+
 print()
 print("FAILURES:", fails if fails else "none")
 sys.exit(1 if fails else 0)
