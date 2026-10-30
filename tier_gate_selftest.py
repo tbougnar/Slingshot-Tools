@@ -152,6 +152,32 @@ check("the repair lane flips the edition the same way the builder does",
       'set_edition(html, "full")' in _rb and "_set_tier(" not in _rb,
       "rebuild_paid uploaded a paid build whose footer still said free")
 
+# ------------------------------------ the shop must say what the money buys
+# Batch file renamer sold for $3 with the differences "Export and import your
+# data" and "Every theme", while the free edition stops at three files. The
+# cap is the reason to pay and it was the one thing the catalogue omitted.
+print("\nTHE PAID PITCH NAMES THE CAP THE FREE EDITION STOPS AT\n")
+_three = ('<script>const LIMITS=TIER==="basic"?{maxItems:3,export:false,'
+          'themes:"one"}'
+          ':{maxItems:0,export:true,themes:"all"};</script>')
+_d = make_app.paid_differences(
+    _three, ["Export and import your data", "Every theme"])
+check("a capped free edition puts the cap first in the paid pitch",
+      bool(_d) and "3" in _d[0] and _d[0].lower().startswith("unlimited"),
+      str(_d)[:100])
+check("the model's own differences are kept after it",
+      _d[1:] == ["Export and import your data", "Every theme"], str(_d)[:100])
+check("the limit table marks 0 in the paid branch as unlimited",
+      "Unlimited items" in make_app.paid_features(_three),
+      str(make_app.paid_features(_three)))
+check("an app that already says unlimited is not told twice",
+      make_app.paid_differences(
+          _three, ["Unlimited files, export and every theme"]) ==
+      ["Unlimited files, export and every theme"])
+check("an uncapped free edition gets no invented claim",
+      make_app.paid_differences("<script>const X=1;</script>", ["Exports"])
+      == ["Exports"])
+
 # ------------------------------------------------ the script has to parse
 # The chess-board app was served with one stray brace in its script, so the
 # whole file failed to parse and the app did nothing at all: no board, no
@@ -255,9 +281,27 @@ if _cat:
         if not _src.exists():
             continue
         _real = make_app.paid_features(_src.read_text(encoding="utf-8"))
-        if _full.get("differences") != _real:
-            _drift.append(f"{_base}: says {_full.get('differences')} and the "
-                          f"app has {_real}")
+        # The catalogue may word a feature for a customer, so the check is
+        # that it says each one at all. It used to demand the exact label
+        # list, which could only pass if a human copied the labels by hand -
+        # and it let "unlimited" be missing for as long as the list happened
+        # to match the app's own blind spot.
+        _need = {
+            "Unlimited items":
+                r"unlimited|no limit|as many|without (?:a )?limit",
+            "Export and import your data": r"export",
+            "Import your data": r"import",
+            "Every theme": r"theme",
+            "Bulk actions": r"bulk",
+            "Keeps a history": r"history",
+        }
+        _said = " ".join(str(d) for d in (_full.get("differences") or []))
+        for _label in _real:
+            _pattern = _need.get(_label, re.escape(_label.split()[0]))
+            if not re.search(_pattern, _said, re.I):
+                _drift.append(f"{_base}: never mentions {_label!r}")
+        if not _full.get("differences"):
+            _drift.append(f"{_base}: the paid edition has no differences list")
         if _full.get("blurb") == _basic.get("blurb"):
             _drift.append(f"{_base}: both editions say the same thing")
     check("the catalogue says what each paid edition really adds",

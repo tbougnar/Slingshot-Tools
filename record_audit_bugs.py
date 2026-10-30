@@ -2504,6 +2504,43 @@ FOUND = [
      "on this PC and its window now reads 'Full edition'.",
      "a paid install shows only paid-edition wording",
      ""),
+
+    ("the shop never named the limit the money lifts",
+     "HIGH", "release", ["make_app.py", "site/apps.json",
+                          "tier_gate_selftest.py"],
+     "VERIFIED_FIXED",
+     "Two paid listings, Batch file renamer and Markdown editor, said the $3 "
+     "bought 'Export and import your data' and 'Every theme'. Both apps stop "
+     "the free edition at three items, and neither listing said so. The cap "
+     "is the main reason to pay $3 instead of using the free edition, so the "
+     "shop was asking for money and withholding the one benefit that "
+     "explains it. paid_features() did read the limit table, but the newer "
+     "generator writes 'no limit' as maxItems: 0 in the paid branch, and a "
+     "literal 0 compares as stricter than the free edition's 3, so the "
+     "'Unlimited items' difference was silently dropped from every such app. "
+     "The catalogue check only demanded the same labels the function "
+     "returned, so it agreed with the omission instead of catching it.",
+     "python -c \"import make_app,pathlib; "
+     "print(make_app.paid_features(pathlib.Path('site/apps/file-renamer-basic/"
+     "app/index.html').read_text()))\" printed only export and themes while "
+     "the free edition stops at three files, and the live apps.json entry "
+     "listed the same two items for $3.00",
+     "read the paid card on the live site for a capped free edition and ask "
+     "what the price buys",
+     "paid_features now reads maxItems: 0 in the paid branch as unlimited. "
+     "make_app.paid_differences puts an honest 'Unlimited items (the free "
+     "edition stops at N)' first in a paid edition's differences list when "
+     "the model's own copy left the cap out, and publish() applies it to "
+     "every paid build. The two affected catalogue entries now name the cap "
+     "in both their blurb and their differences.",
+     "tier_gate_selftest.py checks the cap is read, that the sentence is "
+     "inserted first and not duplicated, that an uncapped app gets no "
+     "invented claim, and that every paid catalogue entry mentions each real "
+     "paid feature (by meaning, not by exact label, so the check cannot agree "
+     "with an omission again).",
+     "the suite passes with the corrected catalogue, and the paid features "
+     "of all 35 families are covered by their listings",
+     ""),
 ]
 
 

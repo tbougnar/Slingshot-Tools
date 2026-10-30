@@ -1411,25 +1411,15 @@ def clean_tags(*candidates, tag="", title="", limit=4):
     return ordered[:limit] or ["utility"]
 
 
-def paid_features(html: str) -> list[str]:
-    """What the paid edition has that the free one does not.
+def _limit_branches(html: str) -> tuple[dict, dict, dict]:
+    """The full and basic branches of the app's limit table, as raw text.
 
-    The app's own limit table already says. Every generated app declares the
-    same shape, the full branch being the permissive one:
-
-        const LIM = TIER === 'full'
-          ? {max: Infinity, export: true, themes: "all", ...}
-          : {max: BASIC_LIMITS.maxItems, export: BASIC_LIMITS.export, ...};
-
-    so the difference between the two branches IS the list of what a
-    customer pays for. It was never read, and the paid edition was
-    published with the same description as the free one and an empty
-    differences list, so the shop asked for three dollars and never said
-    what the three dollars were for.
-
-    Reading it here costs no model call, which matters because the raw
-    generation path exists precisely to spend as little allowance as
-    possible.
+    The table comes in three shapes. Most apps declare the paid branch
+    first, "TIER === 'full' ? {paid} : {basic}", some declare the free
+    branch first with the paid one in an object, "TIER === 'basic' ?
+    BASIC_LIMITS : {paid}", and some decide one key at a time, "{max:
+    TIER === 'full' ? Infinity : BASIC_LIMITS.maxItems, ...}". All three
+    are read the same way.
     """
     def _pairs(text: str) -> dict:
         out = {}
@@ -1445,12 +1435,6 @@ def paid_features(html: str) -> list[str]:
     if lm:
         limits = _pairs(lm.group(1))
 
-    # The table comes in three shapes. Most apps declare the paid branch
-    # first, "TIER === 'full' ? {paid} : {basic}", some declare the free
-    # branch first with the paid one in an object, "TIER === 'basic' ?
-    # BASIC_LIMITS : {paid}", and some decide one key at a time, "{max:
-    # TIER === 'full' ? Infinity : BASIC_LIMITS.maxItems, ...}". All three
-    # are read the same way.
     full: dict = {}
     basic: dict = {}
     m = re.search(r"const\s+\w+\s*=\s*TIER\s*===\s*['\"](basic|full)['\"]\s*\?\s*"
@@ -1480,31 +1464,59 @@ def paid_features(html: str) -> list[str]:
                 full[key], basic[key] = a, b
             else:
                 full[key], basic[key] = b, a
+    return full, basic, limits
+
+
+def _limit_value(text: str, limits: dict) -> object:
+    text = text.strip()
+    if text == "true":
+        return True
+    if text == "false":
+        return False
+    if text == "Infinity":
+        return None          # unlimited
+    if text.startswith("BASIC_LIMITS."):
+        raw = limits.get(text.split(".", 1)[1], "")
+        if raw == "true":
+            return True
+        if raw == "false":
+            return False
+        if raw == "Infinity":
+            return None
+        try:
+            return int(raw)
+        except (TypeError, ValueError):
+            return None
+    try:
+        return int(text)
+    except (TypeError, ValueError):
+        return text.strip("'\"")
+
+
+def paid_features(html: str) -> list[str]:
+    """What the paid edition has that the free one does not.
+
+    The app's own limit table already says. Every generated app declares the
+    same shape, the full branch being the permissive one:
+
+        const LIM = TIER === 'full'
+          ? {max: Infinity, export: true, themes: "all", ...}
+          : {max: BASIC_LIMITS.maxItems, export: BASIC_LIMITS.export, ...};
+
+    so the difference between the two branches IS the list of what a
+    customer pays for. It was never read, and the paid edition was
+    published with the same description as the free one and an empty
+    differences list, so the shop asked for three dollars and never said
+    what the three dollars were for.
+
+    Reading it here costs no model call, which matters because the raw
+    generation path exists precisely to spend as little allowance as
+    possible.
+    """
+    full, basic, limits = _limit_branches(html)
 
     def _value(text: str) -> object:
-        text = text.strip()
-        if text == "true":
-            return True
-        if text == "false":
-            return False
-        if text == "Infinity":
-            return None          # unlimited
-        if text.startswith("BASIC_LIMITS."):
-            raw = limits.get(text.split(".", 1)[1], "")
-            if raw == "true":
-                return True
-            if raw == "false":
-                return False
-            if raw == "Infinity":
-                return None
-            try:
-                return int(raw)
-            except (TypeError, ValueError):
-                return None
-        try:
-            return int(text)
-        except (TypeError, ValueError):
-            return text.strip("'\"")
+        return _limit_value(text, limits)
 
     labels = {
         "max": ("Unlimited items",
@@ -1531,6 +1543,13 @@ def paid_features(html: str) -> list[str]:
         paid = False
         if fv is None and bval is not None:
             paid = True                      # unlimited against a limit
+        elif (isinstance(fv, int) and key in ("max", "maxItems") and fv == 0
+              and isinstance(bval, int) and bval > 0):
+            # The newer generator writes "no limit" as 0 in the full branch
+            # (maxItems: 0). Read as a number that looks stricter than the
+            # free edition's three, so the main reason to pay was the one
+            # thing the shop never said.
+            paid = True
         elif fv is True and bval is not True:
             paid = True
         elif fv == "all" and bval != "all":
@@ -1551,6 +1570,38 @@ def paid_features(html: str) -> list[str]:
         if label not in found:
             found.append(label)
     return found
+
+
+def free_item_cap(html: str) -> int | None:
+    """How many items the free edition allows, when the app states a number."""
+    _full, basic, limits = _limit_branches(html)
+    for key in ("maxItems", "max"):
+        if key not in basic:
+            continue
+        value = _limit_value(basic[key], limits)
+        if isinstance(value, int) and value > 0:
+            return value
+    return None
+
+
+_CAP_PHRASE = re.compile(
+    r"\b(?:unlimited|no limit|without (?:a )?limit|as many)\b", re.I)
+
+
+def paid_differences(html: str, differences=None) -> list[str]:
+    """The paid edition's pitch, including the cap the money lifts.
+
+    Batch file renamer's catalogue entry listed two things for $3 - export and
+    themes - and never mentioned that the free edition stops at three files.
+    The one thing the money actually changes was the only thing the shop did
+    not say. The model writes the list, so the code cannot assume it is
+    complete; it can only make sure the cap is in there.
+    """
+    out = [str(d).strip() for d in (differences or []) if str(d).strip()]
+    cap = free_item_cap(html)
+    if cap and not any(_CAP_PHRASE.search(d) for d in out):
+        out.insert(0, f"Unlimited items (the free edition stops at {cap})")
+    return out[:8]
 
 
 def publish(concept, app_dir, installer, tier="full", brand="", differences=None,
@@ -1581,6 +1632,17 @@ def publish(concept, app_dir, installer, tier="full", brand="", differences=None
     base = strip_tier_suffix_slug(concept.get("base_slug") or concept["slug"])
     if not base:
         base = concept["slug"]
+    if tier == "full":
+        # The list comes from the model and can leave out the main reason to
+        # pay: Batch file renamer's said export and themes, never that the
+        # free edition stops at three files. The app file itself knows the
+        # cap, so the catalogue is checked against it rather than trusted.
+        try:
+            html = (Path(app_dir) / "app" / "index.html").read_text(
+                encoding="utf-8", errors="replace")
+        except OSError:
+            html = ""
+        differences = paid_differences(html, differences)
     entry = {
         "slug": concept["slug"],
         "base_slug": base,

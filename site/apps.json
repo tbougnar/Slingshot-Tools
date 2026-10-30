@@ -5,7 +5,7 @@
     "title": "Batch file renamer",
     "tier": "full",
     "tag": "file",
-    "blurb": "Everything the free edition does, and export and import your data, every theme.",
+    "blurb": "Everything the free edition does, without its three-item limit, plus export and import your data and every theme.",
     "tags": [
       "file",
       "batch",
@@ -16,6 +16,7 @@
     "price": 3.0,
     "free": false,
     "differences": [
+      "Unlimited items (the free edition stops at 3)",
       "Export and import your data",
       "Every theme"
     ],
@@ -193,7 +194,7 @@
     "title": "Markdown editor",
     "tier": "full",
     "tag": "markdown",
-    "blurb": "Everything the free edition does, and export and import your data, every theme.",
+    "blurb": "Everything the free edition does, without its three-item limit, plus export and import your data and every theme.",
     "tags": [
       "markdown",
       "editor"
@@ -203,6 +204,7 @@
     "price": 3.0,
     "free": false,
     "differences": [
+      "Unlimited items (the free edition stops at 3)",
       "Export and import your data",
       "Every theme"
     ],
