@@ -37,27 +37,87 @@ PROBE = r"""
   const origErr = console.error;
   console.error = function (...a) { out.errors.push('console: ' + a.join(' ')); origErr.apply(console, a); };
 
+  // A sample value must satisfy the field's own type. Filling a required
+  // type=date with "sample" leaves it invalid, the browser refuses the submit
+  // before the handler runs, and the Save button is reported dead. That is how
+  // a working invoice generator failed every repair round.
+  const fillValue = (el) => {
+    const t = (el.type || 'text').toLowerCase();
+    if (t === 'date') return '2026-01-15';
+    if (t === 'time') return '09:30';
+    if (t === 'datetime-local') return '2026-01-15T09:30';
+    if (t === 'month') return '2026-01';
+    if (t === 'week') return '2026-W03';
+    if (t === 'email') return 'sample@example.com';
+    if (t === 'url') return 'https://example.com';
+    if (t === 'tel') return '5550100';
+    if (t === 'number' || t === 'range') return '1';
+    if (t === 'color') return '#336699';
+    if (t === 'password') return 'sample-pass';
+    // A textarea whose placeholder is JSON is asking for JSON.
+    const ph = (el.placeholder || '').trim();
+    if (ph.startsWith('[') || ph.startsWith('{')) {
+      try { JSON.parse(ph); return ph; } catch (e) {}
+    }
+    return 'sample';
+  };
+
+  // Elements the page hides at load and reveals on a click (an upgrade note, a
+  // toast, an inline panel) are hidden again before the next click. Two gated
+  // buttons that reveal the same notice: the first changes the page, the
+  // second finds it already visible, changes nothing, and is reported dead.
+  // Putting the page back is the only way to judge each control on its own.
+  const hiddenAtStart = [];
+  const shown = (el) => !!(el.offsetParent !== null || el.getClientRects().length);
+  for (const el of [...document.querySelectorAll('body *')].slice(0, 800)) {
+    if (shown(el)) continue;
+    hiddenAtStart.push({el, style: el.getAttribute('style'),
+                        cls: el.getAttribute('class'),
+                        hidden: el.hasAttribute('hidden')});
+  }
+  const undoReveals = () => {
+    for (const r of hiddenAtStart) {
+      if (!shown(r.el)) continue;
+      if (r.style === null) r.el.removeAttribute('style');
+      else r.el.setAttribute('style', r.style);
+      if (r.cls === null) r.el.removeAttribute('class');
+      else r.el.setAttribute('class', r.cls);
+      if (r.hidden) r.el.setAttribute('hidden', '');
+      else r.el.removeAttribute('hidden');
+    }
+  };
+
   const sel = 'button, a[href], input[type=button], input[type=submit], [role=button], select, [onclick]';
   const nodes = [...document.querySelectorAll(sel)].filter(n => n.offsetParent !== null || n.tagName === 'SELECT');
   for (const n of nodes.slice(0, 120)) {
     const label = (n.tagName + ':' + (n.innerText || n.value || n.getAttribute('aria-label') || n.id || '')).slice(0, 60).trim();
     const text = (n.innerText || n.value || n.getAttribute('aria-label') || '').trim();
     if (/^(delete|remove|reset|clear|empty|wipe)\b/i.test(text)) { out.skipped.push(label); continue; }
+    undoReveals();
     // A submit button on a form with a required field is refused by the browser
     // before the handler ever runs, so the app looks broken when it is not.
     // Fill anything empty first, which is what a person would do.
     if (n.tagName === 'BUTTON' && n.type === 'submit' || n.tagName === 'INPUT' && n.type === 'submit') {
       const form = n.closest('form');
+      let unusable = false;
       for (const f of form ? [form] : []) {
         for (const el of f.querySelectorAll('input,textarea')) {
           if (!el.value) {
             try {
-              el.value = el.type === 'number' ? '1' : 'sample';
+              el.value = fillValue(el);
               el.dispatchEvent(new Event('input', {bubbles: true}));
               el.dispatchEvent(new Event('change', {bubbles: true}));
             } catch (e) {}
           }
         }
+        // Still invalid after a fair fill (an unusual validator, a cross-field
+        // rule) means this control cannot be exercised, which is not evidence
+        // that it is broken.
+        if (typeof f.checkValidity === 'function' && !f.checkValidity()) unusable = true;
+      }
+      if (unusable) {
+        out.skipped.push(label + ' (form still invalid after filling)');
+        continue;
       }
     }
     // A control that only opens a file picker cannot be exercised without a
@@ -69,7 +129,11 @@ PROBE = r"""
     const storeBefore = JSON.stringify(localStorage) + '|' + JSON.stringify(sessionStorage);
     const valsBefore = [...document.querySelectorAll('input,textarea')].map(i=>i.value).join(',');
     const hasHandler = !!(n.onclick || n.getAttribute('onclick')) ||
-      !!n.closest('form') || n.tagName === 'SELECT' || n.tagName === 'A';
+      !!n.closest('form') || n.tagName === 'SELECT' || n.tagName === 'A' ||
+      // a listener attached with addEventListener leaves no inline attribute;
+      // an id the script mentions is the next best evidence one exists, and it
+      // keeps the message honest about what was actually found
+      !!(n.id && (src.includes("'" + n.id + "'") || src.includes('"' + n.id + '"')));
     let dialog = false;
     const origAlert = window.alert; window.alert = () => { dialog = true; };
     try { n.click(); } catch (e) { out.errors.push(label + ' -> ' + e.message); }

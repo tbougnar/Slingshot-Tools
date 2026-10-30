@@ -2575,6 +2575,66 @@ FOUND = [
      "the rejected folder was removed from site/, and the live URL was "
      "rechecked after the Pages redeploy",
      ""),
+
+    ("the scanner filled date fields with text, so a working Save looked dead",
+     "HIGH", "qa", ["app_scanner.py", "scanner_selftest.py"],
+     "VERIFIED_FIXED",
+     "The Friday run's Invoice generator was refused over a Save Invoice "
+     "button that works. The scanner fills every empty field before clicking "
+     "a submit button - which is what a person would do - but it filled all "
+     "of them with the string 'sample'. A required type=date set to 'sample' "
+     "is not a valid date, so the browser refused the submit before the app's "
+     "handler ran, nothing changed on the page, and the control was reported "
+     "dead. The same applied to email, url, tel, number, time and month "
+     "inputs. Four repair rounds could not fix a defect that was in the "
+     "scanner, and the app was discarded.",
+     "running app_scanner.scan() locally on the committed candidate "
+     "(1699fe6) reproduced both deaths; clicking Save by hand with a real "
+     "date selected rendered a row into the invoice list, while the "
+     "scanner's fill left document.querySelector('form').checkValidity() "
+     "false",
+     "scan any generated app with a required date field and a working submit "
+     "handler",
+     "PROBE.fillValue() now picks a value that satisfies the field's type: a "
+     "real date for date inputs, an address for email, a URL for url, a "
+     "number for number, and the placeholder itself when it is valid JSON "
+     "(an items textarea asks for JSON in its placeholder). If the form is "
+     "still invalid after that fair fill, the control is reported as skipped "
+     "rather than dead: a control that cannot be exercised is not evidence "
+     "of a bug.",
+     "scanner_selftest.py scans a form with required date and email fields "
+     "whose submit handler renders a row - it must not be dead and the app "
+     "must pass verdict() - and a form with the same date field whose submit "
+     "handler really does nothing, which must still be reported dead.",
+     "the invoice-maker candidate now scans with no dead controls, and the "
+     "four controls that were dead before the fix stay dead in the suite",
+     ""),
+
+    ("the second of two buttons revealing the same notice was reported dead",
+     "HIGH", "qa", ["app_scanner.py", "scanner_selftest.py"],
+     "VERIFIED_FIXED",
+     "In the free edition Export My Data and Import My Data both reveal one "
+     "upgrade note. The scanner judged a click by whether the DOM changed, "
+     "and clicked Export first: the note appeared. Clicking Import then set "
+     "display:block on a note that was already visible, which is not a "
+     "mutation, so Import was reported dead. A pair of gated buttons sharing "
+     "one upsell is ordinary free-edition design, and the scanner made it "
+     "unshippable: every repair round was asked to fix a button that already "
+     "worked.",
+     "the instrumented probe showed Export with mutated=1, note none->block, "
+     "and Import with mutated=0, note block->block, on the same page with no "
+     "JavaScript error",
+     "scan a free edition with two paid-feature buttons that reveal one "
+     "notice",
+     "PROBE records every element hidden at page load and, before each click, "
+     "puts back the style, class and hidden attribute of any that a previous "
+     "click revealed (undoReveals). Each control is then judged against the "
+     "page as it was, not against a page a previous control already changed.",
+     "scanner_selftest.py scans a page whose Export and Import buttons both "
+     "reveal the same hidden note and asserts neither appears in dead.",
+     "the invoice-maker candidate now scans clean while a genuinely dead "
+     "control in the same suite is still caught",
+     ""),
 ]
 
 
