@@ -657,7 +657,39 @@ Return JSON only, exactly this shape:
 The html value must be a single JSON string with all quotes escaped. No commentary."""
 
 
-def build_html_raw(concept, lessons, attempt=1):
+def builder_prompt(concept, lessons, attempt=1, feedback=""):
+    """The instruction for one generation attempt.
+
+    ``feedback`` is what the staging gate said about the previous attempt.
+    Retrying with the same words and no mention of the rejection is how a run
+    spends five attempts making the same mistake: the model wrote an app that
+    unlocked itself from the address bar three times in a row, and an app with
+    no TIER constant once. The gate's own words are the most useful
+    instruction there is, so they are passed back verbatim.
+    """
+    user = (
+        "Build this app.\n\n"
+        + APP_SPEC
+        + f"\n\nTHE APP: {json.dumps(concept, indent=2)}\n"
+        + "\n\nPATTERNS YOU MUST FOLLOW:\n" + patterns()
+        + f"\n\nKNOWN BUGS TO AVOID:\n{lessons or '(none yet)'}"
+    )
+    if attempt > 1:
+        user += ("\n\nKeep it COMPACT and make sure it is complete: short CSS, "
+                 "no comments, and it must end with </html>.")
+    if feedback:
+        user += (
+            "\n\nYOUR PREVIOUS REPLY WAS REJECTED BEFORE ANYONE COULD SEE IT."
+            "\nIt was rejected because: " + feedback.strip()
+            + "\nFix exactly that. Return the whole file again, complete, "
+              "with the problem gone. Do not explain what you changed."
+        )
+    user += ("\n\nReply with the HTML file only, starting with <!DOCTYPE html> "
+             "and ending with </html>.")
+    return user
+
+
+def build_html_raw(concept, lessons, attempt=1, feedback=""):
     """Ask for the file itself, not JSON containing a file.
 
     Wrapping a 30 KB document in JSON is what kept failing: the reply arrives
@@ -669,18 +701,7 @@ def build_html_raw(concept, lessons, attempt=1):
         "HTML and nothing else. No commentary before it, no explanation after "
         "it, no markdown fences."
     )
-    user = (
-        "Build this app.\n\n"
-        + APP_SPEC
-        + f"\n\nTHE APP: {json.dumps(concept, indent=2)}\n"
-        + "\n\nPATTERNS YOU MUST FOLLOW:\n" + patterns()
-        + f"\n\nKNOWN BUGS TO AVOID:\n{lessons or '(none yet)'}"
-        + "\n\nReply with the HTML file only, starting with <!DOCTYPE html> "
-          "and ending with </html>."
-    )
-    if attempt > 1:
-        user += ("\n\nKeep it COMPACT and make sure it is complete: short CSS, "
-                 "no comments, and it must end with </html>.")
+    user = builder_prompt(concept, lessons, attempt=attempt, feedback=feedback)
     last = ""
     # The free allowance is per minute and it does refill, so waiting is the
     # difference between a failed run and a slow one. The local meter is empty

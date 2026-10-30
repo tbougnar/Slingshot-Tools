@@ -2673,6 +2673,39 @@ FOUND = [
      "the leftover folder was removed from main and the suite went from 36 "
      "editions with one broken back to 35 clean",
      ""),
+
+    ("every rejected attempt was retried with the same words",
+     "MEDIUM", "release", ["make_app.py", "stage_app.py", "selftest.py"],
+     "VERIFIED_FIXED",
+     "The Friday run made five attempts and failed five times, and each "
+     "attempt was asked for the app with an identical prompt. Three attempts "
+     "produced an app that unlocks its paid edition from ?paid in the address "
+     "bar, one had no TIER constant, and one produced no HTML at all. The "
+     "staging gate named the exact defect in its log every time, and "
+     "stage_app dropped that text and asked again as if nothing had happened. "
+     "A run with five attempts was therefore one attempt with five "
+     "temperatures: the model had no way to know what had been wrong.",
+     "the generate log shows 'attempt 1 rejected: [the edition is read from "
+     "the address bar]', then attempt 3 and attempt 4 rejected with the same "
+     "wording, and attempt 2 rejected by the tier gate for having no TIER "
+     "constant",
+     "dispatch the Friday generator and read the attempt lines in "
+     "data/generate-log.txt",
+     "make_app.builder_prompt() builds the instruction and takes a feedback "
+     "argument, which build_html_raw() passes through. stage_app records what "
+     "the last attempt was rejected for - the staging gate's issues, the size "
+     "guard's verdict, the missing paid features, or the tier gate's message "
+     "- and the next attempt is told 'YOUR PREVIOUS REPLY WAS REJECTED... fix "
+     "exactly that'. For a missing paid edition the feedback names the TIER "
+     "constant and LIMITS table the gate is looking for.",
+     "selftest.py checks that a first attempt claims no rejection, that a "
+     "complaint reaches the next prompt verbatim, that the corrected prompt "
+     "still asks for the whole file, and that stage_app actually passes the "
+     "feedback through.",
+     "the prompt construction is covered; whether the free models can produce "
+     "a compliant app is a separate question answered by the next run",
+     "the free models may still fail, in which case the run is honest about "
+     "producing nothing rather than publishing a broken app"),
 ]
 
 

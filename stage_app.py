@@ -129,13 +129,15 @@ def main() -> int:
 
     html = ""
     issues = []
+    feedback = ""
     for attempt in range(1, ATTEMPTS + 1):
         # Ask for the file itself. The JSON path asks a model to wrap a large
         # document in an object, and that parse is the single thing every run
         # has been dying on, even though a working raw path already existed.
         try:
             html, mode, _ = make_app.build_html_raw(concept, lessons,
-                                                    attempt=attempt)
+                                                    attempt=attempt,
+                                                    feedback=feedback)
         except RuntimeError as e:
             # build_html_raw retries internally and then raises. Nothing
             # caught it here, so the rejection block below never ran: no
@@ -177,12 +179,14 @@ def main() -> int:
             auditlog.retried("generate", job=concept["slug"],
                              reason=f"attempt {attempt} failed the staging gate",
                              evidence={"issues": issues, "bytes": len(html)})
+            feedback = "; ".join(issues)
             continue
         ok, why = sizeguard.verdict(len(html))
         if not ok:
             make_app.log(f"attempt {attempt} {why}")
             auditlog.retried("generate", job=concept["slug"], reason=why,
                              evidence={"bytes": len(html)})
+            feedback = why
             continue
         if why:
             make_app.log(f"attempt {attempt} warning: {why}")
@@ -197,6 +201,12 @@ def main() -> int:
                              reason=f"attempt {attempt} has no paid features "
                                     f"to sell",
                              evidence={"bytes": len(html)})
+            feedback = (
+                "the app has no LIMITS table that is different between the "
+                "free and paid editions, so there is nothing to sell. Add "
+                "const TIER = 'basic' near the top and a LIMITS object chosen "
+                "from it, where the basic edition has real limits (a maximum "
+                "number of items and no export) and the full edition does not.")
             continue
         free_blurb = (f"{brand} as a free offline tool: one job done "
                       f"properly, no account, and your data stays on your "
@@ -231,6 +241,7 @@ def main() -> int:
             # failed, and site/ is published. Nothing links to an uncatalogued
             # folder, but it still answers.
             make_app.discard_unpublished(concept["slug"])
+            feedback = str(e)[:200]
             continue
 
         # Now the installer, in the same job.

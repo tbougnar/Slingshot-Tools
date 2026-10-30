@@ -56,6 +56,35 @@ def t_stage_uses_raw():
     return "wired to the raw builder"
 
 
+def t_rejection_is_fed_back():
+    """A rejected attempt must be corrected, not repeated.
+
+    The Friday run wrote an app that unlocked itself from the address bar
+    three times in a row and an app with no TIER constant once, because every
+    attempt was asked with the same words. The gate's own complaint is the
+    most specific instruction available, so it has to reach the next prompt.
+    """
+    import make_app
+
+    concept = {"slug": "x", "title": "X", "blurb": "b", "tag": "t",
+               "tags": ["t"]}
+    plain = make_app.builder_prompt(concept, "", attempt=2)
+    if "REJECTED" in plain:
+        raise AssertionError("a first attempt must not claim a rejection")
+    complaint = ("the edition is read from the address bar, so ?paid "
+                 "unlocks the paid product for free")
+    told = make_app.builder_prompt(concept, "", attempt=3, feedback=complaint)
+    if complaint not in told:
+        raise AssertionError("the rejection never reached the next prompt")
+    if "</html>" not in told:
+        raise AssertionError("the corrected prompt no longer asks for the "
+                             "whole file")
+    stage = (R / "stage_app.py").read_text(encoding="utf-8")
+    if "feedback=feedback" not in stage:
+        raise AssertionError("stage_app builds prompts without the feedback")
+    return "the gate's complaint is passed back to the model"
+
+
 def t_picker_local():
     import make_app
     c = make_app.pick_concept("")
@@ -182,6 +211,7 @@ for nm, fn in [
     ("html salvage", t_salvage),
     ("raw builder present", t_raw_builder_exists),
     ("stage wired to raw", t_stage_uses_raw),
+    ("rejection fed back", t_rejection_is_fed_back),
     ("local concept pick", t_picker_local),
     ("element inventory", t_inventory),
     ("css guard", t_css_guard),
