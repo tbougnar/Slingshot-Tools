@@ -803,6 +803,41 @@ check("and publishing is gated on it", "price_is_asked(url, price)" in
       (ROOT / "itch_publish.py").read_text(encoding="utf-8"),
       "the price check is not called, so a free download would still be sold")
 
+# ------------------------------------------------- the console must not decide
+# butler writes UTF-8 progress lines. On the Windows runner the console is
+# cp1252, so printing one raised UnicodeEncodeError after the push had already
+# succeeded: the release died with no record of the upload that had in fact
+# happened.
+print("\nA LOG LINE CANNOT ABORT A SALE\n")
+import io
+
+
+class _Cp1252Out(io.TextIOWrapper):
+    """stdout as the Windows runner has it."""
+
+    def __init__(self):
+        super().__init__(io.BytesIO(), encoding="cp1252", newline="")
+
+
+_real_out = sys.stdout
+try:
+    sys.stdout = _Cp1252Out()
+    try:
+        ip.log("pushed 13.1 MB \u2192 done \u2026 \u00e9")
+        ok = True
+        why = ""
+    except Exception as e:  # noqa: BLE001
+        ok = False
+        why = f"{type(e).__name__}: {e}"
+finally:
+    sys.stdout = _real_out
+check("a non-cp1252 log line does not raise", ok, why)
+
+_src = (ROOT / "itch_publish.py").read_text(encoding="utf-8")
+check("butler's own output goes through the safe printer",
+      'print(f"  {line.strip()}")' not in _src,
+      "the raw print is back, and it killed a real upload")
+
 print()
 print("FAILURES:", fails if fails else "none")
 sys.exit(1 if fails else 0)

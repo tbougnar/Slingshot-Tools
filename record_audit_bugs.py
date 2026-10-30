@@ -2706,6 +2706,36 @@ FOUND = [
      "a compliant app is a separate question answered by the next run",
      "the free models may still fail, in which case the run is honest about "
      "producing nothing rather than publishing a broken app"),
+
+    ("a log line crashed the itch upload after it had succeeded",
+     "HIGH", "release", ["itch_publish.py", "itchpublish_selftest.py"],
+     "VERIFIED_FIXED",
+     "The first successful end-to-end release uploaded Invoice "
+     "generator-Setup.exe to itch.io and then died with UnicodeEncodeError - "
+     "'charmap' codec can't encode characters - while printing butler's own "
+     "output. butler writes UTF-8 progress bytes, the Windows runner's console "
+     "is cp1252, and print() raised on a character it could not represent. "
+     "The upload had already happened, but the process aborted before "
+     "recording it or checking the price, so the release was reported as a "
+     "failed publish and the paid card stayed hidden for a product that was in "
+     "fact uploaded. A log line decided whether money could change hands.",
+     "gh run view 41084347472 --log-failed showed '[itch] 3. uploading Invoice "
+     "generator-Setup.exe (13.1 MB)' followed by UnicodeEncodeError in "
+     "upload() at the print; the store page then listed Invoice "
+     "generator-Setup.exe Version 1",
+     "publish a paid build from the Windows installer job with a console code "
+     "page that cannot represent butler's output",
+     "itch_publish._say() prints and, on UnicodeEncodeError, re-encodes the "
+     "line with errors='replace' so it always gets out. log() and butler's "
+     "output both go through it, so no console code page can kill a run that "
+     "has already pushed a build.",
+     "itchpublish_selftest replaces sys.stdout with a cp1252 stream and "
+     "asserts that logging a line containing an arrow, an ellipsis and an "
+     "accented character does not raise, and that butler's output no longer "
+     "uses the raw print.",
+     "the upload was confirmed present on the live store page after the crash, "
+     "which is what made the reporting bug visible",
+     ""),
 ]
 
 

@@ -76,8 +76,24 @@ def channel_for(slug: str) -> str:
 OK_URL = "https://"
 
 
+def _say(text: str) -> None:
+    """Print a line without letting the console's code page abort the run.
+
+    butler writes UTF-8 progress lines. On a Windows runner the console is
+    cp1252, so print() raised UnicodeEncodeError inside upload() - after the
+    push had already happened - and the release died with no record of the
+    sale. A log line must never be able to decide whether something was
+    published.
+    """
+    try:
+        print(text, flush=True)
+    except UnicodeEncodeError:
+        enc = sys.stdout.encoding or "utf-8"
+        print(text.encode(enc, "replace").decode(enc, "replace"), flush=True)
+
+
 def log(msg: str) -> None:
-    print(f"[itch] {msg}", flush=True)
+    _say(f"[itch] {msg}")
 
 
 # ------------------------------------------------------------------ the API
@@ -739,7 +755,7 @@ def upload(installer: Path, slug: str, version: str,
         "utf-8", "replace").strip()
     for line in out.splitlines()[-12:]:
         if line.strip():
-            print(f"  {line.strip()}")
+            _say(f"  {line.strip()}")
     if r.returncode != 0:
         if "403" in out or "own the target" in out:
             log("butler was refused: the project does not exist yet")

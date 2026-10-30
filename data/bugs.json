@@ -2412,5 +2412,24 @@
   "verification": "the prompt construction is covered; whether the free models can produce a compliant app is a separate question answered by the next run",
   "uncertainty": "the free models may still fail, in which case the run is honest about producing nothing rather than publishing a broken app",
   "opened": "2026-10-30T15:32:01+00:00"
+ },
+ {
+  "id": "BUG-130",
+  "symptom": "a log line crashed the itch upload after it had succeeded",
+  "severity": "HIGH",
+  "component": "release",
+  "files": [
+   "itch_publish.py",
+   "itchpublish_selftest.py"
+  ],
+  "status": "VERIFIED_FIXED",
+  "root_cause": "The first successful end-to-end release uploaded Invoice generator-Setup.exe to itch.io and then died with UnicodeEncodeError - 'charmap' codec can't encode characters - while printing butler's own output. butler writes UTF-8 progress bytes, the Windows runner's console is cp1252, and print() raised on a character it could not represent. The upload had already happened, but the process aborted before recording it or checking the price, so the release was reported as a failed publish and the paid card stayed hidden for a product that was in fact uploaded. A log line decided whether money could change hands.",
+  "evidence": "gh run view 41084347472 --log-failed showed '[itch] 3. uploading Invoice generator-Setup.exe (13.1 MB)' followed by UnicodeEncodeError in upload() at the print; the store page then listed Invoice generator-Setup.exe Version 1",
+  "repro": "publish a paid build from the Windows installer job with a console code page that cannot represent butler's output",
+  "fix": "itch_publish._say() prints and, on UnicodeEncodeError, re-encodes the line with errors='replace' so it always gets out. log() and butler's output both go through it, so no console code page can kill a run that has already pushed a build.",
+  "regression_test": "itchpublish_selftest replaces sys.stdout with a cp1252 stream and asserts that logging a line containing an arrow, an ellipsis and an accented character does not raise, and that butler's output no longer uses the raw print.",
+  "verification": "the upload was confirmed present on the live store page after the crash, which is what made the reporting bug visible",
+  "uncertainty": "",
+  "opened": "2026-10-30T15:57:59+00:00"
  }
 ]
