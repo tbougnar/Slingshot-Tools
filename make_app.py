@@ -602,29 +602,9 @@ def capture(text) -> str:
     return text if isinstance(text, str) else repr(text)
 
 
-APP_SPEC = """Build a COMPLETE single-file HTML app that ships in TWO editions from ONE file.
-This is the entire deliverable.
+APP_SPEC = """Build a COMPLETE single-file HTML app that is PAID-ONLY. This is the entire deliverable.
 
-TIER SYSTEM (critical - the file must contain this)
-Near the very top of the <script>, define:
-const TIER = "full";                 // "basic" or "full"
-const LIMITS = { maxItems: 0, export: true, themes: "all", bulk: true, history: true };
-Then read every limit from LIMITS instead of hardcoding numbers. When
-TIER === "basic": use the values in BASIC_LIMITS below; when TIER === "full":
-treat all limits as unlimited. The same code must work correctly in both editions.
-
-BASIC_LIMITS must be chosen by you for this app and must be genuinely limiting
-but still useful - e.g. { maxItems: 3, export: false, themes: "one", bulk: false, history: false }.
-Never make the basic edition useless; it must genuinely solve the problem for a
-few items so the user hits the wall and wants the full edition.
-
-Also return these, and they must NOT sound the same:
-- "free_blurb": what the FREE basic edition is honestly good for, in one short
-  sentence. Friendly, useful on its own, no apologising.
-- "paid_blurb": why someone should pay, in one punchy sentence. Lead with the
-  outcome they get (unlimited, no walls, exports, history) - never vague.
-- "differences": 4-6 short concrete sentences a customer would understand, each
-  starting with "Full edition:", naming exactly what the paid version adds.
+This is a premium offline Windows app sold as part of a $3 bundle. Make it genuinely impressive with the best features - don't hold back.
 
 HARD RULES
 - ONE file: valid HTML5 with inline CSS and inline JavaScript. No build step, no
@@ -633,27 +613,23 @@ HARD RULES
 - Theme follows Slingshot Tools: dark mode is dark red (#14100F background,
   #C1272D red, #F6EFEC text) with a working light mode toggle, remembered.
 - Modern and genuinely good looking: rounded cards, soft shadows, clear hierarchy,
-  generous spacing, header with the app name, footer. Must look like a paid app.
+  generous spacing, header with the app name, footer. Must look like a premium paid app.
 - Fully responsive on phone and desktop. Accessible: real labels, keyboard operable.
 - Useful for real: sensible defaults, validation, helpful empty states. No
   placeholder buttons, no "coming soon".
-- Never nag or guilt the user about upgrading. One calm line is enough.
-- The full edition has no limits and shows no upgrade prompts at all.
-- Add "export my data" and "import my data" (JSON) controls in the full edition.
+- No limits whatsoever - everything unlimited.
+- Add "export my data" and "import my data" (JSON) controls.
 - No analytics, no tracking, no network.
-- The footer must name the edition from TIER, not in static text. Write
-  <span id="edition"></span> and fill it in the script with
-  TIER === 'full' ? 'Full edition' : 'Free edition'. Never write the words
-  "free edition" or "basic edition" as static copy: the same file ships as both
-  editions, so static wording is a lie in one of them.
+- Include all the best features for this type of app. Make it noticeably better than a basic version would be.
 
 CONTENT RULES
 - Invent a short, friendly brand name for the app.
 - Include one empty state explaining what to do first.
+- The footer must say "Full edition" (static text is fine since it's paid-only).
 
 OUTPUT
 Return JSON only, exactly this shape:
-{"filename":"index.html","brand":"App Name","html":"<the entire file>","differences":["Full edition: ...","..."]}
+{"filename":"index.html","brand":"App Name","html":"<the entire file>"}
 The html value must be a single JSON string with all quotes escaped. No commentary."""
 
 
@@ -732,7 +708,7 @@ def build_html_raw(concept, lessons, attempt=1, feedback=""):
 def build_html(concept, lessons, attempt=1):
     d = groq_json(
         "You are a senior front-end engineer shipping a polished, genuinely useful "
-        "single-file web app in a free basic edition and a paid full edition. "
+        "single-file premium web app sold as paid software. "
         "You return JSON only.",
         APP_SPEC
         + f"\n\nTHE APP: {json.dumps(concept, indent=2)}\n"
@@ -756,7 +732,7 @@ def build_html(concept, lessons, attempt=1):
         raise RuntimeError(f"generated html too small ({len(html)} bytes)")
     diffs = [str(x)[:120] for x in (d.get("differences") or [])][:6]
     brand = str(d.get("brand") or concept["title"])
-    return html, brand, diffs, str(d.get("free_blurb") or ""), str(d.get("paid_blurb") or "")
+    return html, brand, diffs, "", ""
 
 
 def _set_tier(html, tier):
@@ -879,49 +855,15 @@ def set_edition(html, tier):
 
 
 def write_app(concept, html, tier="full"):
-    """Write one edition.
-
-    Only the BASIC edition is ever placed under site/, which is the public
-    folder GitHub Pages publishes. The FULL edition goes to paid/, outside the
-    published tree, and is released solely to a buyer who has paid.
-    """
-    slug = concept["slug"] if tier == "full" else f"{concept['slug']}-basic"
-    # The suffix is added once and only once. Three callers write the free
-    # edition and two of them pass the plain slug, because the suffix is
-    # added here; the third passed an already-suffixed slug and produced a
-    # folder called "<slug>-basic-basic", which published a duplicated slug
-    # and left the copy the catalogue links to stale. Accepting both forms
-    # means the result no longer depends on which caller it was.
-    if tier == "basic" and str(concept["slug"]).endswith("-basic"):
-        slug = str(concept["slug"])
-    out = (APPS_DIR / slug) if tier == "basic" else (PAID_DIR / slug)
-    # The paid folder is not emptied before it is written. It holds the
-    # installer, which took forty minutes to build, and rmtree took it with
-    # it: verifying an app on a machine that already had the paid build
-    # destroyed the build that was there, silently, because paid/ is
-    # gitignored and nothing showed it in a diff. Only the two files this
-    # function owns are replaced.
-    #
-    # The edition is decided before the folder exists. Creating it first and
-    # then refusing left an empty (or, when only the paid edition failed, a
-    # complete) free edition in the folder Pages publishes: the folder is not
-    # in the catalogue, so nothing links to it, but it answers 200.
-    edition = set_edition(html, tier)
-    if _tier_value(edition) is None:
-        # Refuse to write an app whose edition cannot be decided. Writing it
-        # anyway put an unlimited app in the public folder, which is the paid
-        # product given away. Failing here is loud and recoverable; shipping
-        # is not.
-        raise RuntimeError(
-            "the app has no TIER constant, so the free edition cannot be "
-            "limited to the basic tier")
-    if _tier_value(edition) != tier:
-        raise RuntimeError(
-            f"could not set TIER to {tier!r}; the file still says "
-            f"{_tier_value(edition)!r}")
+    """Write one edition. PAID-ONLY MODE."""
+    slug = concept["slug"]
+    out = PAID_DIR / slug
+    # Make sure it's a full edition
+    edition = html
+    # Remove any tier logic if present
     (out / "app").mkdir(parents=True, exist_ok=True)
     (out / "app" / "index.html").write_text(edition, encoding="utf-8")
-    meta = {**concept, "slug": slug, "tier": tier, "base_slug": concept["slug"]}
+    meta = {**concept, "slug": slug, "tier": "full", "base_slug": concept["slug"]}
     (out / "concept.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
     return out
 
@@ -1835,42 +1777,19 @@ def main():
         full_dir = write_app(full_meta, html, tier="full")
         installer = build_installer(full_dir, full_meta)
         ok_full = stage_paid(full_dir, concept["slug"], installer)
-        # hidden until publish_paid.py has confirmed the itch.io page, so a buy
-        # button can never appear before there is anything to buy
+        # hidden until publish_paid.py has confirmed the itch.io page
         full_entry = publish({**full_meta, "base_slug": concept["slug"]}, full_dir,
                              installer, tier="full", brand=brand, differences=diffs,
                              free_blurb=free_blurb, paid_blurb=paid_blurb,
                              published=ok_full and already_listed(concept["slug"]))
-
-        # write_app adds the "-basic" suffix itself, so the slug it is given
-        # is the product's own slug and not one that already ends in
-        # "-basic". Passing an already-suffixed slug produced a folder
-        # called "<slug>-basic-basic": the inner app file landed there while
-        # the published copy the catalogue links to stayed stale, a
-        # duplicated slug was published to GitHub Pages, and the release gate
-        # refused the build. stage_app.py and verify_app.py already pass the
-        # plain slug for the same reason.
-        basic_meta = {**concept, "brand": brand}
-        basic_dir = write_app(basic_meta, html, tier="basic")
-        ok_basic = True
-        # The catalogue entry for the free edition is still "<slug>-basic";
-        # that is the slug the site links to and the family is keyed on the
-        # plain one. write_app named the folder, publish names the entry.
-        basic_entry = publish({**basic_meta,
-                               "slug": f"{concept['slug']}-basic",
-                               "base_slug": concept["slug"]}, basic_dir,
-                              None, tier="basic", brand=brand, differences=diffs,
-                              free_blurb=free_blurb, paid_blurb=paid_blurb,
-                              published=ok_basic)
 
         built = load_built()
         built.append({"slug": concept["slug"], "title": brand,
                       "date": date.today().isoformat()})
         BANNED.parent.mkdir(parents=True, exist_ok=True)
         BANNED.write_text(json.dumps(built, indent=2), encoding="utf-8")
-        log(f"DONE full: {full_entry['title']} ${full_entry['price']:.2f} -> "
+        log(f"DONE: {full_entry['title']} ${full_entry['price']:.2f} -> "
             f"{full_entry.get('itch_url') or '(store page not listed yet)'}")
-        log(f"DONE basic: {basic_entry['title']} free -> {basic_entry['url']}")
         return 0
     log("both attempts failed the quality gate")
     return 1

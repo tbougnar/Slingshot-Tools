@@ -1,10 +1,9 @@
-name: Slingshot — Monday, open the weekly ballot
+name: Slingshot — Sunday, open the weekly ballot
 
 on:
   schedule:
-    # Monday 09:00 UTC. GitHub cron is UTC and can be late by a few minutes
-    # when the platform is busy, so nothing here depends on the exact minute.
-    - cron: "0 9 * * 1"
+    # Sunday 09:00 UTC
+    - cron: "0 9 * * 0"
   workflow_dispatch:
 
 permissions:
