@@ -154,7 +154,7 @@ def groq(system, user, max_tokens=4000, temperature=0.8, tries=3):
     if CHAT_MODEL and CHAT_MODEL in order:
         order = [CHAT_MODEL] + [m for m in order if m != CHAT_MODEL]
     last = ""
-    goals_prefix = "GOALS: Be popular while making the most money as possible. Prioritize tools people search for and share. Balance virality with revenue optimization. "
+    goals_prefix = "GOALS: Be popular while making the most money as possible. Target: by Jan 2027 aim for 25k-60k monthly visitors, 1%-1.5% conversion to bundle sales ($625-$2250/month take home). Prioritize tools people actively search for and share. Focus on SEO-friendly utility tools that solve real problems. Balance virality with revenue optimization. "
     system = goals_prefix + system
     for model in order:
         try:
@@ -711,7 +711,7 @@ def build_html(concept, lessons, attempt=1):
     d = groq_json(
         "You are a senior front-end engineer shipping a polished, genuinely useful "
         "single-file premium web app sold as paid software. "
-        "GOALS: Be popular while making the most money as possible. Build tools people actually search for, want to share, and gladly pay for. "
+        "GOALS: Be popular while making the most money as possible. Target Jan 2027: 25k-60k visitors, 1%-1.5% conversion ($625-$2250/month). Build SEO-friendly tools people search for, want to share, and gladly pay for. "
         "You return JSON only.",
         APP_SPEC
         + f"\n\nTHE APP: {json.dumps(concept, indent=2)}\n"
