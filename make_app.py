@@ -78,10 +78,10 @@ SITE_BASE = SITE_URL.rstrip("/")
 # itch.io is the store. A product is only shown for sale once its itch_url is
 # in the catalog, which only a person sets, so there is no payment code here.
 LICENSE_SECRET = (os.environ.get("LICENSE_SECRET") or "").strip()
-PRICE_FLOOR = float((os.environ.get("PRICE_FLOOR") or "").strip() or 1.00)
-PRICE_START = float((os.environ.get("PRICE_START") or "").strip() or 3.00)
-# Hard bounds the AI may never leave: $1.00 to $10.00.
-PRICE_CEILING = float((os.environ.get("PRICE_CEILING") or "").strip() or 10.00)
+PRICE_FLOOR = float((os.environ.get("PRICE_FLOOR") or "").strip() or 2.99)
+PRICE_START = float((os.environ.get("PRICE_START") or "").strip() or 3.49)
+# Hard bounds the AI may never leave: $2.99 to $4.99.
+PRICE_CEILING = float((os.environ.get("PRICE_CEILING") or "").strip() or 4.99)
 
 CATEGORIES = [
     ("password-manager", "offline password manager with vault encryption and a generator"),
@@ -154,6 +154,8 @@ def groq(system, user, max_tokens=4000, temperature=0.8, tries=3):
     if CHAT_MODEL and CHAT_MODEL in order:
         order = [CHAT_MODEL] + [m for m in order if m != CHAT_MODEL]
     last = ""
+    goals_prefix = "GOALS: Be popular while making the most money as possible. Prioritize tools people search for and share. Balance virality with revenue optimization. "
+    system = goals_prefix + system
     for model in order:
         try:
             out = providers.chat(model, system, user, temperature,
@@ -709,6 +711,7 @@ def build_html(concept, lessons, attempt=1):
     d = groq_json(
         "You are a senior front-end engineer shipping a polished, genuinely useful "
         "single-file premium web app sold as paid software. "
+        "GOALS: Be popular while making the most money as possible. Build tools people actually search for, want to share, and gladly pay for. "
         "You return JSON only.",
         APP_SPEC
         + f"\n\nTHE APP: {json.dumps(concept, indent=2)}\n"
