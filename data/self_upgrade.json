@@ -53,6 +53,12 @@
       "at": 1793363987,
       "outcome": "no-change",
       "detail": "the model proposed nothing"
+    },
+    {
+      "fingerprint": "import json\nimport os\nimport sys\nimport time\nfrom pathlib import Path\nfrom typing import Any, Dict, Optional\n\nSTATE_FILE = Path(\"data/token_usage.json\")\nSTATE_FILE.parent.mkdir(parents=True, exist_ok=True)\n\nWINDOW_SECONDS = 24 * 60 * 60  # 24-hour rolling window\n\n\ndef _now() -> int:\n    return int(time.time())\n\n\ndef _atomic_write(path: Path, data: Dict[str, Any]) -> None:\n    \"\"\"Write JSON atomica",
+      "at": 1793448099,
+      "outcome": "rejected",
+      "detail": "selftest.py exited 1\n  PASS  css guard                    patches in, restyling out\n  PASS  size guard                   rejects oversize, accepts small\n  PASS  exposure check               paid work cannot sit in the published folder\n  FAIL  token meter                  AttributeError: module 'tokenmeter' has no attribute 'STATE'\n  PASS  fixbook                      142 lessons recorded\n  PASS  w"
     }
   ]
 }
