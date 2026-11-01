@@ -1,9 +1,9 @@
-name: Slingshot — Tuesday, review and improve
+name: Slingshot — Wednesday, review and improve
 
 on:
   schedule:
-    # Tuesday 09:00 UTC
-    - cron: "0 9 * * 2"
+    # Wednesday 09:00 UTC
+    - cron: "0 9 * * 3"
   workflow_dispatch:
 
 permissions:
