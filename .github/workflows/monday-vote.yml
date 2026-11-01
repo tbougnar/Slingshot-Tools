@@ -44,7 +44,6 @@ jobs:
       - name: No channel is left empty
         continue-on-error: true
         run: |
-          python discord_intro.py
           python discord_intro.py --check
 
       - name: Record the ballot
