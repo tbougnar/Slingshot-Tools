@@ -113,6 +113,8 @@
         <span>Slingshot <b>Tools</b></span>
       </a>
       <div class="spacer"></div>
+      <a class="btn" href="#votes">Votes</a>
+      <a class="btn" href="#events">Events</a>
       <a class="btn" href="#apps">Browse for apps</a>
       <button class="btn" id="themeBtn" aria-label="Toggle light and dark mode">Light mode</button>
     </div>
@@ -128,6 +130,24 @@
       <p class="sub">Small, fast, free tools that solve real annoyances. One focused app at a time — a password manager, a unit converter, and a habit tracker. Simple, focused tools that just work.</p>
       <div class="cta">
         <a class="btn" href="#apps">Browse for apps</a>
+      </div>
+    </section>
+    <section class="votes" id="votes">
+      <div class="votes-header">
+        <h2>Votes</h2>
+        <p>Vote for what gets built next. Results sync with Discord.</p>
+      </div>
+      <div id="votesContent" class="votes-content">
+        <div class="empty">Loading votes...</div>
+      </div>
+    </section>
+    <section class="events" id="events">
+      <div class="events-header">
+        <h2>Events</h2>
+        <p>Upcoming events and updates.</p>
+      </div>
+      <div id="eventsContent" class="events-content">
+        <div class="empty">No events scheduled.</div>
       </div>
     </section>
     <section class="grid" id="apps"></section>
@@ -247,6 +267,36 @@ const soon=document.getElementById('dlgSoon'); if(soon)soon.style.display=(item.
       else if(!e.shiftKey&&document.activeElement===last){e.preventDefault(); first.focus();}
     });
     fetch("apps.json",{cache:"no-store"}).then(r=>r.json()).then(d=>{APPS=Array.isArray(d)?d:(d.apps||[]); render();}).catch(()=>{appsEl.innerHTML='<div class="empty"><strong>Slingshot Tools</strong><br>The catalog loads on first build.</div>';});
+
+    // Votes and Events
+    (function(){
+      const votesEl = document.getElementById('votesContent');
+      const eventsEl = document.getElementById('eventsContent');
+      fetch("votes.json",{cache:"no-store"}).then(r=>r.ok?r.json():null).then(data=>{
+        if(!data||!votesEl) return;
+        const poll = data.poll;
+        if(!poll || !poll.options || !poll.options.length){
+          votesEl.innerHTML='<div class="empty">No active vote.</div>';
+          return;
+        }
+        const total = poll.options.reduce((s,o)=>s + (o.votes||0), 0);
+        votesEl.innerHTML = '<div class="votes-question">'+esc(poll.question)+'</div><div class="votes-list">'+
+          poll.options.map((o,i)=>{
+            const pct = total > 0 ? Math.round((o.votes||0)/total*100) : 0;
+            return '<div class="vote-item"><div class="vote-row"><span class="vote-label">'+esc(o.label)+'</span><span class="vote-pct">'+pct+'%</span></div><div class="vote-bar"><div class="vote-fill" style="width:'+pct+'%"></div></div><div class="vote-count">'+(o.votes||0)+' vote(s)</div></div>';
+          }).join('')+
+          '</div><div class="votes-total">'+total+' total vote(s) · Vote in Discord #polls</div>';
+      }).catch(()=>{if(votesEl) votesEl.innerHTML='<div class="empty">No active vote.</div>';});
+
+      fetch("events.json",{cache:"no-store"}).then(r=>r.ok?r.json():null).then(data=>{
+        if(!eventsEl) return;
+        if(!data || !data.events || !data.events.length){
+          eventsEl.innerHTML='<div class="empty">No events scheduled.</div>';
+          return;
+        }
+        eventsEl.innerHTML = data.events.map(ev=>'<div class="event-item"><div class="event-title">'+esc(ev.title||'')+'</div><div class="event-desc">'+esc(ev.description||'')+'</div>'+(ev.date?'<div class="event-date">'+esc(ev.date)+'</div>':'')+'</div>').join('');
+      }).catch(()=>{if(eventsEl) eventsEl.innerHTML='<div class="empty">No events scheduled.</div>';});
+    })();
 
     // Release countdown. Reads update.json, which update_state.py writes.
     // Anything unexpected in that file leaves the banner hidden, because a
