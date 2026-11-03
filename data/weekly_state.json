@@ -3,12 +3,13 @@
     "a11y",
     "theme",
     "empty",
-    "export"
+    "export",
+    "a11y"
   ],
   "last": {
-    "lane": "export",
-    "area": "data",
-    "what": "Make export and import survive a very large vault",
-    "version": "1.0.2"
+    "lane": "a11y",
+    "area": "accessibility",
+    "what": "Tighten focus rings and label coverage across generated apps",
+    "version": "2.0.1"
   }
 }
