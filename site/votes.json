@@ -1,0 +1,13 @@
+{
+  "poll": {
+    "id": "2026-11-01-5",
+    "question": "What should Slingshot Tools build next week?",
+    "options": [
+      {"label": "password manager", "votes": 0},
+      {"label": "dev converter", "votes": 0},
+      {"label": "file renamer", "votes": 0},
+      {"label": "bookmark organizer", "votes": 0},
+      {"label": "color picker", "votes": 0}
+    ]
+  }
+}

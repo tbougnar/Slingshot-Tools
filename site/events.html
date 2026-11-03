@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Events — Slingshot Tools</title>
+  <link rel="icon" href="favicon.png">
+  <style>
+    :root{--bg:#0b0b0d;--card:#151517;--ink:#f5f5f7;--sub:#b9b9c3;--line:#2a2a31;--red-ink:#ff6b6b;}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:radial-gradient(1200px 800px at 20% -10%,#1a1a20,transparent),var(--bg);color:var(--ink)}
+    .wrap{max-width:1100px;margin:0 auto;padding:0 20px}
+    header{position:sticky;top:0;background:linear-gradient(180deg,rgba(11,11,13,.9),rgba(11,11,13,.7));backdrop-filter:blur(12px);border-bottom:1px solid var(--line);z-index:10}
+    .bar{display:flex;align-items:center;gap:16px;height:64px}
+    .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink);font-weight:800}
+    .brand img{width:28px;height:28px;border-radius:8px}
+    .spacer{flex:1}
+    .btn{border:1px solid var(--line);color:var(--ink);text-decoration:none;padding:8px 12px;border-radius:10px;font-weight:600}
+    main{padding:40px 0}
+    h1{font-size:32px;margin:0 0 10px}
+    p.sub{color:var(--sub);margin:0 0 30px}
+    .events{display:grid;gap:16px}
+    .event{border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.02),transparent);border-radius:14px;padding:18px}
+    .event h2{margin:0 0 6px;font-size:20px}
+    .event .meta{color:var(--sub);font-size:14px;margin-bottom:10px}
+    .empty{border:1px dashed var(--line);border-radius:14px;padding:24px;text-align:center;color:var(--sub)}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap bar">
+      <a class="brand" href="./"><img src="logo.png" alt="Slingshot Tools"><span>Slingshot <b>Tools</b></span></a>
+      <div class="spacer"></div>
+      <a class="btn" href="index.html#votes">Votes</a>
+      <a class="btn" href="events.html">Events</a>
+      <a class="btn" href="index.html#apps">Browse for apps</a>
+    </div>
+  </header>
+  <main class="wrap">
+    <h1>Events</h1>
+    <p class="sub">Updates, releases, and community events.</p>
+    <div id="events" class="events"></div>
+  </main>
+  <script>
+    fetch('events.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
+      const el=document.getElementById('events');
+      if(!d||!d.events||!d.events.length){el.innerHTML='<div class="empty">No events scheduled.</div>';return;}
+      el.innerHTML=d.events.map(ev=>'<article class="event"><h2>'+escapeHtml(ev.title||'')+'</h2>'+(ev.date?'<div class="meta">'+escapeHtml(ev.date)+'</div>':'')+'<div>'+escapeHtml(ev.description||'')+'</div></article>').join('');
+    }).catch(()=>{document.getElementById('events').innerHTML='<div class="empty">No events scheduled.</div>';});
+    function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));}
+  </script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "events": [
+    {
+      "title": "Weekly Vote",
+      "date": "Sunday",
+      "description": "Vote for the next tool to build on Discord #polls."
+    },
+    {
+      "title": "Review & Learn",
+      "date": "Tuesday",
+      "description": "AI reviews community feedback and improves the roadmap."
+    },
+    {
+      "title": "Build & Publish",
+      "date": "Friday",
+      "description": "New paid bundle update goes live on itch.io."
+    }
+  ]
+}
