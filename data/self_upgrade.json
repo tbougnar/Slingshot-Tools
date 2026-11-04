@@ -71,6 +71,12 @@
       "at": 1793724728,
       "outcome": "no-change",
       "detail": "the model proposed nothing"
+    },
+    {
+      "fingerprint": "import json\nimport os\nimport sys\nimport tempfile\nfrom pathlib import Path\nfrom typing import Any, Dict, Optional\n\nSTATE_PATH = Path(\"data/token_usage.json\")\nSTATE_PATH.parent.mkdir(parents=True, exist_ok=True)\n\n\ndef _atomic_write(path: Path, data: Dict[str, Any]) -> bool:\n    \"\"\"Write JSON atomically via a temp file in the same directory.\n    Returns True on success, False on failure (logs to stde",
+      "at": 1793801551,
+      "outcome": "rejected",
+      "detail": "selftest.py exited 1\n  PASS  css guard                    patches in, restyling out\n  PASS  size guard                   rejects oversize, accepts small\n  PASS  exposure check               paid work cannot sit in the published folder\n  FAIL  token meter                  AttributeError: module 'tokenmeter' has no attribute 'STATE'\n  PASS  fixbook                      143 lessons recorded\n  PASS  w"
     }
   ]
 }
