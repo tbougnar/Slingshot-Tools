@@ -1139,6 +1139,14 @@ the change that fixed it. Check here before proposing anything.
 - **Check for recurrence:** recurs every Wednesday; one entry per week is expected
 - **Status:** PROVEN
 
+## B143 - weekly review 2026-W45: 0 order(s), $0.00, 0 star(s), 0 vote(s) on the open ballot
+
+- **Cause:** No ballot is open, so nobody is choosing next week's tool.
+- **Fix:** read data/weekly_reviews.json before the next build; it carries this week's numbers and what to change
+- **Files:** data/weekly_reviews.json, weekly_review.py
+- **Check for recurrence:** recurs every Wednesday; one entry per week is expected
+- **Status:** UNTESTED
+
 ## How to use this
 
 1. If the symptom matches an entry, use that fix. Do not invent a new one.
