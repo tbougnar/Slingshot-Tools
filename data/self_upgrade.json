@@ -89,6 +89,12 @@
       "at": 1793973883,
       "outcome": "rejected",
       "detail": "selftest.py exited 1\n  PASS  css guard                    patches in, restyling out\n  PASS  size guard                   rejects oversize, accepts small\n  PASS  exposure check               paid work cannot sit in the published folder\n  FAIL  token meter                  AttributeError: module 'tokenmeter' has no attribute 'STATE'\n  PASS  fixbook                      143 lessons recorded\n  PASS  w"
+    },
+    {
+      "fingerprint": "no-plan",
+      "at": 1794055759,
+      "outcome": "no-change",
+      "detail": "the model proposed nothing"
     }
   ]
 }
