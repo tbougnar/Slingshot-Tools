@@ -4,12 +4,13 @@
     "theme",
     "empty",
     "export",
-    "a11y"
+    "a11y",
+    "theme"
   ],
   "last": {
-    "lane": "a11y",
-    "area": "accessibility",
-    "what": "Tighten focus rings and label coverage across generated apps",
-    "version": "2.0.1"
+    "lane": "theme",
+    "area": "interface",
+    "what": "Check light mode against dark mode in both themes",
+    "version": "2.0.2"
   }
 }
