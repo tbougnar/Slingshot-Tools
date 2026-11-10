@@ -101,6 +101,12 @@
       "at": 1794239402,
       "outcome": "rejected",
       "detail": "selftest.py exited 1\n  PASS  css guard                    patches in, restyling out\n  PASS  size guard                   rejects oversize, accepts small\n  PASS  exposure check               paid work cannot sit in the published folder\n  FAIL  token meter                  AttributeError: module 'tokenmeter' has no attribute 'STATE'\n  PASS  fixbook                      143 lessons recorded\n  PASS  w"
+    },
+    {
+      "fingerprint": "#!/usr/bin/env python3\n\"\"\"Build the weekly tool.\"\"\"\n\nimport json\nimport sys\nfrom pathlib import Path\n\ndef main():\n    # Read weekly reviews to decide what to build\n    reviews_path = Path(\"data/weekly_reviews.json\")\n    if not reviews_path.exists():\n        print(\"ERROR: data/weekly_reviews.json not found. Cannot determine what to build.\", file=sys.stderr)\n        sys.exit(1)\n    \n    try:\n       ",
+      "at": 1794321677,
+      "outcome": "rejected",
+      "detail": "selftest.py exited 1\n  PASS  css guard                    patches in, restyling out\n  PASS  size guard                   rejects oversize, accepts small\n  PASS  exposure check               paid work cannot sit in the published folder\n  PASS  token meter                  tracks and reports usage\n  PASS  fixbook                      143 lessons recorded\n  PASS  workflows parse              all 11 w"
     }
   ]
 }
