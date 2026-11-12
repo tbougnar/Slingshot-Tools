@@ -2,12 +2,6 @@
   "tried": [
     {
       "fingerprint": "no-plan",
-      "at": 1792606714,
-      "outcome": "no-change",
-      "detail": "the model proposed nothing"
-    },
-    {
-      "fingerprint": "no-plan",
       "at": 1792676224,
       "outcome": "no-change",
       "detail": "the model proposed nothing"
@@ -119,6 +113,12 @@
       "at": 1794405405,
       "outcome": "no-change",
       "detail": "the model proposed nothing"
+    },
+    {
+      "fingerprint": "import json\nimport os\nimport sys\nimport time\nfrom pathlib import Path\n\nTOKEN_FILE = Path(\"data/token_usage.json\")\nTOKEN_FILE.parent.mkdir(parents=True, exist_ok=True)\n\nWINDOW_SECONDS = 24 * 60 * 60\nDAILY_LIMIT = 200_000\n\n\ndef _now() -> int:\n    return int(time.time())\n\n\ndef _window_start() -> int:\n    return _now() - WINDOW_SECONDS\n\n\ndef load() -> dict:\n    \"\"\"Load token usage. On any read/parse e",
+      "at": 1794495440,
+      "outcome": "rejected",
+      "detail": "selftest.py exited 1\n  PASS  css guard                    patches in, restyling out\n  PASS  size guard                   rejects oversize, accepts small\n  PASS  exposure check               paid work cannot sit in the published folder\n  FAIL  token meter                  AttributeError: module 'tokenmeter' has no attribute 'STATE'\n  PASS  fixbook                      144 lessons recorded\n  PASS  w"
     }
   ]
 }
