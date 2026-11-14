@@ -2,12 +2,6 @@
   "tried": [
     {
       "fingerprint": "no-plan",
-      "at": 1792681992,
-      "outcome": "no-change",
-      "detail": "the model proposed nothing"
-    },
-    {
-      "fingerprint": "no-plan",
       "at": 1793018315,
       "outcome": "no-change",
       "detail": "the model proposed nothing"
@@ -119,6 +113,12 @@
       "at": 1794580003,
       "outcome": "no-change",
       "detail": "the model proposed nothing"
+    },
+    {
+      "fingerprint": "#!/usr/bin/env python3\n\"\"\"Build the weekly app, informed by the weekly review data.\"\"\"\nimport json\nimport os\nimport sys\nimport subprocess\n\nDATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')\nREVIEW_FILE = os.path.join(DATA_DIR, 'weekly_reviews.json')\n\ndef load_weekly_review():\n    \"\"\"Read this week's review numbers and change instructions.\"\"\"\n    if not os.path.exists(REVIE",
+      "at": 1794662407,
+      "outcome": "rejected",
+      "detail": "selftest.py exited 1\n  PASS  css guard                    patches in, restyling out\n  PASS  size guard                   rejects oversize, accepts small\n  PASS  exposure check               paid work cannot sit in the published folder\n  PASS  token meter                  tracks and reports usage\n  PASS  fixbook                      144 lessons recorded\n  PASS  workflows parse              all 11 w"
     }
   ]
 }
