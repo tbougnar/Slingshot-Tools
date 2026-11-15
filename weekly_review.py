@@ -19,6 +19,8 @@ from __future__ import annotations
 
 import json
 import os
+import urllib.request
+import urllib.parse
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -169,37 +171,95 @@ def facts() -> dict:
     }
 
 
-def groq(system: str, user: str, max_tokens: int = 900) -> str:
+def web_search(query: str) -> str:
+    """Search the web for solutions to problems. Returns relevant results."""
+    try:
+        # Use DuckDuckGo HTML search as a fallback that doesn't require API keys
+        url = "https://html.duckduckgo.com/html/?" + urllib.parse.urlencode({"q": query})
+        req = urllib.request.Request(url, headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        })
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            html = resp.read().decode('utf-8', errors='ignore')
+        # Extract snippets (basic)
+        results = []
+        # Look for result snippets
+        import re
+        snippets = re.findall(r'class="result__snippet"[^>]*>(.*?)</a>', html, re.DOTALL)
+        for s in snippets[:5]:
+            s = re.sub(r'<[^>]+>', '', s)
+            s = s.strip()
+            if s and len(s) > 20:
+                results.append(s)
+        return "\n\n".join(results) if results else ""
+    except Exception as e:
+        log(f"web search failed: {str(e)[:80]}")
+        return ""
+
+
+def research_problem(problem: str) -> str:
+    """Research a problem using web search to learn solutions."""
+    try:
+        queries = [
+            f"how to solve {problem} indie game tools software",
+            f"marketing strategies {problem} small tools product",
+            f"community growth {problem} discord votes engagement"
+        ]
+        all_results = []
+        for q in queries[:2]:  # Limit to avoid too many requests
+            res = web_search(q)
+            if res:
+                all_results.append(res)
+        return "\n\n---\n\n".join(all_results) if all_results else ""
+    except Exception:
+        return ""
+
+
+def groq(system: str, user: str, max_tokens: int = 1200) -> str:
     """The review text from the live backend, or "" when it cannot answer."""
     try:
         import providers
         if not providers.configured():
             return ""
         return (providers.chat(providers.best_model("chat"), system, user,
-                               0.35, max_tokens, role="debug") or "").strip()
+                               0.35, max_tokens, role="chat") or "").strip()
     except Exception as e:  # noqa: BLE001
         log(f"the model was unavailable ({str(e)[:120]})")
         return ""
 
 
 REVIEW_SYSTEM = (
-    "You are the weekly reviewer for a small tool company that ships one new "
+    "You are the weekly reviewer and self-improving AI for a small tool company that ships one new "
     "desktop tool every week. You write for the person who reads this before "
     "the next build.\n"
+    "Your goal is to LEARN and ADAPT. Use web research to find concrete solutions to problems. "
     "Be specific and honest. If a number is zero, say it is zero and do not "
     "dress it up. Never invent a fact that is not in the data you are given. "
     "Do not be encouraging for its own sake.\n"
+    "When you see problems (zero votes, zero revenue, no engagement, bugs), research proven strategies "
+    "and give actionable steps the system can take automatically next week.\n"
     "Answer with markdown only: a '## What happened' section, a '## What to "
-    "change' section with at most five concrete changes, and a '## Risk' "
-    "section naming the biggest thing that could go wrong. Under 300 words."
+    "change' section with at most five concrete changes (each should be implementable), and a '## Risk' "
+    "section naming the biggest thing that could go wrong. Under 400 words."
 )
 
 
 def review(f: dict) -> str:
     """The review, from the model when available, else from the facts."""
-    body = groq(REVIEW_SYSTEM,
-                "Here is this week's data as JSON:\n\n"
-                + json.dumps(f, indent=2, ensure_ascii=False))
+    # Research solutions for problems
+    research = ""
+    if f.get("ballot_votes", 0) == 0 or f.get("revenue", {}).get("orders", 0) == 0:
+        log("researching solutions for zero activity...")
+        research = research_problem("zero user engagement indie software tools discord voting")
+    if f.get("known_problems", 0) > 50:
+        log("researching solutions for backlog management...")
+        research += "\n\n" + research_problem("backlog triage prioritization small team")
+    
+    user_msg = "Here is this week's data as JSON:\n\n" + json.dumps(f, indent=2, ensure_ascii=False)
+    if research:
+        user_msg += "\n\n## Web Research (for learning):\n\n" + research
+    
+    body = groq(REVIEW_SYSTEM, user_msg)
     if body:
         return body
 
