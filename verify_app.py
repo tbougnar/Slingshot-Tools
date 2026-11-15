@@ -128,11 +128,12 @@ def main() -> int:
     html = candidate.read_text(encoding="utf-8", errors="replace")
     concept = {"slug": stage["slug"], "brand": stage["brand"],
                "title": stage["title"], "tag": stage["tag"],
-               "blurb": stage.get("blurb") or stage.get("free_blurb") or ""}
+               "blurb": stage.get("paid_blurb") or stage.get("blurb") or ""}
 
+    # PAID-ONLY: one edition. write_app keeps it under paid/<slug>/, which is
+    # never published to site/; the installer job packages it and itch.io
+    # delivers it after payment.
     full_dir = make_app.write_app({**concept}, html, tier="full")
-    # write_app adds the "-basic" suffix itself; passing it here doubles it
-    basic_dir = make_app.write_app({**concept}, html, tier="basic")
 
     price = make_app.PRICE_START
     import pricing
@@ -151,27 +152,15 @@ def main() -> int:
         print(f"[verify] pricing unavailable ({str(e)[:60]}), using {price}")
     price = max(make_app.PRICE_FLOOR, min(make_app.PRICE_CEILING, price))
 
-    # A Windows .exe cannot be built on the Linux runner, so this job only
-    # publishes the free edition. The paid tier is listed but stays hidden
-    # unless it was already proven on sale: itch.io hosts the paid file and
-    # only a person can upload it, so publish_paid.py is what makes it
-    # visible, and never before the build and the price are verified.
-    # write_app named the public folder "<slug>-basic"; the catalog entry must
-    # carry the same name so the two match on disk and in URLs
-    make_app.publish({**concept, "slug": basic_dir.name}, basic_dir, None,
-                     tier="basic",
-                     brand=stage["brand"], differences=stage["differences"],
-                     free_blurb=stage["free_blurb"], paid_blurb=stage["paid_blurb"],
-                     published=True, price_override=0.0)
-
-    # A re-verified candidate must not hide a product that is already on sale.
-    # publish() replaces the entry with the same slug, so passing False blindly
-    # removed the buy button from a live product until publish_paid.py ran
-    # again - and that run now correctly refuses while the price is unverified.
+    # PAID-ONLY: a single catalog entry. Nothing is copied into site/, because
+    # the app itself is the paid product; the card links to itch.io and only
+    # publish_paid.py flips it live once the build and price are verified.
     was_live = make_app.already_listed(stage["slug"])
     make_app.publish({**concept, "slug": stage["slug"]}, full_dir, None, tier="full",
-                     brand=stage["brand"], differences=stage["differences"],
-                     free_blurb=stage["free_blurb"], paid_blurb=stage["paid_blurb"],
+                     brand=stage["brand"],
+                     differences=stage.get("differences") or [],
+                     free_blurb=stage.get("free_blurb", ""),
+                     paid_blurb=stage.get("paid_blurb", ""),
                      published=was_live, price_override=price)
 
     # write_app already put the full tier under paid/, so just record it
@@ -179,8 +168,8 @@ def main() -> int:
     (make_app.DATA / "published.json").write_text(_json.dumps(
         {"slug": stage["slug"], "title": stage["title"], "price": price}, indent=1),
         encoding="utf-8")
-    print(f"[verify] published the free edition of {stage['title']}; "
-          f"paid tier at ${price:.2f} waits for the Windows installer")
+    print(f"[verify] published {stage['title']} at ${price:.2f}; "
+          f"the Windows installer is built next")
     try:
         import mark_verified
         mark_verified.main()

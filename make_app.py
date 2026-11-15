@@ -903,13 +903,11 @@ def html_looks_fine(html):
                      "default only, which is acceptable")
     if "localStorage" not in html and "indexedDB" not in html:
         problems.append("missing localStorage (the app would not save anything)")
-    # Without this constant the builder cannot produce a limited free edition:
-    # the paid file and the free file would be the same product. Checked here
-    # so the app is retried instead of being written and then failing later.
-    if _tier_value(html) is None:
-        problems.append(
-            "no TIER constant, so the free edition cannot be limited to the "
-            "basic tier and the paid product would be given away")
+    # PAID-ONLY: there is no free edition any more, so the app no longer has
+    # to declare a TIER constant. Requiring one here rejected every app the
+    # paid-only builder produced (it is told "no limits whatsoever" and writes
+    # no tier table), which is why two Fridays in a row shipped nothing.
+    #
     # The edition must be decided in the file, not by the address bar. Every
     # generated app used to read it from the query string, because the pattern
     # library taught it that, and the twenty-five free editions that shipped

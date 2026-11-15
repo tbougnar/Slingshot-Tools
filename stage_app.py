@@ -190,29 +190,16 @@ def main() -> int:
             continue
         if why:
             make_app.log(f"attempt {attempt} warning: {why}")
-        # The shop asks for money, so the product has to say what the money
-        # buys. An empty list means the paid edition is the free one, which
-        # used to be published with a generic description on both cards.
+        # PAID-ONLY: there is no free edition to be limited, so there is no
+        # limit table to compare and nothing to "add" to unlock. Requiring a
+        # paid-features diff here rejected every app the paid-only builder
+        # produced, which is why two Fridays in a row shipped nothing.
         diffs = make_app.paid_features(html)
-        if not diffs:
-            make_app.log(f"attempt {attempt} rejected: the paid edition adds "
-                         f"nothing the free edition does not have")
-            auditlog.retried("generate", job=concept["slug"],
-                             reason=f"attempt {attempt} has no paid features "
-                                    f"to sell",
-                             evidence={"bytes": len(html)})
-            feedback = (
-                "the app has no LIMITS table that is different between the "
-                "free and paid editions, so there is nothing to sell. Add "
-                "const TIER = 'basic' near the top and a LIMITS object chosen "
-                "from it, where the basic edition has real limits (a maximum "
-                "number of items and no export) and the full edition does not.")
-            continue
-        free_blurb = (f"{brand} as a free offline tool: one job done "
-                      f"properly, no account, and your data stays on your "
-                      f"device.")
-        paid_blurb = (f"Everything the free edition does, and "
-                      f"{', '.join(diffs).lower()}.")
+        brand_blurb = (f"{brand} is a premium offline Windows tool. Buy once "
+                       f"and keep it: no account, no subscription, and your "
+                       f"data never leaves your device.")
+        free_blurb = ""
+        paid_blurb = brand_blurb
         make_app.log(f"attempt {attempt} ok ({len(html)} bytes, brand={brand!r})")
         auditlog.succeeded("generate", job=concept["slug"],
                            reason="the app passed the staging gate and the "
@@ -221,26 +208,17 @@ def main() -> int:
                            evidence={"attempt": attempt, "bytes": len(html),
                                      "concept": concept["slug"]})
 
-        # write_app appends "-basic" itself for the basic tier, so passing an
-        # already-suffixed slug produced "password-manager-basic-basic"
+        # One edition. write_app writes it to paid/<slug>/ and never into
+        # site/, because the app is what the customer pays for.
         try:
-            basic_dir = make_app.write_app({**concept, "brand": brand},
-                                           html, tier="basic")
-            full_dir = make_app.write_app({**concept, "brand": brand}, html,
-                                          tier="full")
+            full_dir = make_app.write_app({**concept, "brand": brand},
+                                          html, tier="full")
         except RuntimeError as e:
-            # The tier gate refuses to write an app whose free edition would
-            # be the full product. Try another sample rather than publishing
-            # an unlocked build.
-            make_app.log(f"attempt {attempt} rejected by the tier gate: "
+            make_app.log(f"attempt {attempt} rejected while writing the app: "
                          f"{str(e)[:120]}")
             auditlog.retried("generate", job=concept["slug"],
-                             reason=f"attempt {attempt} failed the tier gate",
+                             reason=f"attempt {attempt} could not be written",
                              evidence={"error": str(e)[:200]})
-            # The free edition may already have been written when the paid one
-            # failed, and site/ is published. Nothing links to an uncatalogued
-            # folder, but it still answers.
-            make_app.discard_unpublished(concept["slug"])
             feedback = str(e)[:200]
             continue
 
@@ -276,7 +254,10 @@ def main() -> int:
                          "have nothing to sell until this is fixed")
 
         # The verifier needs the candidate on disk plus enough context to judge
-        # it. Nothing goes near site/, which is the published folder.
+        # it. In paid-only mode the candidate IS the paid build, so it lives in
+        # paid/ and is handed to the verifier as an artifact rather than
+        # committed: the repository is public and must never carry the app a
+        # customer is paying for.
         stage = {
             "slug": concept["slug"],
             "brand": brand,
@@ -285,7 +266,7 @@ def main() -> int:
             "differences": diffs,
             "free_blurb": free_blurb,
             "paid_blurb": paid_blurb,
-            "candidate": (basic_dir / "app" / "index.html")
+            "candidate": (full_dir / "app" / "index.html")
                            .relative_to(make_app.ROOT).as_posix(),
             "paid_dir": _rel(full_dir),
         }
