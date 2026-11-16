@@ -2,12 +2,6 @@
   "tried": [
     {
       "fingerprint": "no-plan",
-      "at": 1793018315,
-      "outcome": "no-change",
-      "detail": "the model proposed nothing"
-    },
-    {
-      "fingerprint": "no-plan",
       "at": 1793102099,
       "outcome": "no-change",
       "detail": "the model proposed nothing"
@@ -119,6 +113,12 @@
       "at": 1794662407,
       "outcome": "rejected",
       "detail": "selftest.py exited 1\n  PASS  css guard                    patches in, restyling out\n  PASS  size guard                   rejects oversize, accepts small\n  PASS  exposure check               paid work cannot sit in the published folder\n  PASS  token meter                  tracks and reports usage\n  PASS  fixbook                      144 lessons recorded\n  PASS  workflows parse              all 11 w"
+    },
+    {
+      "fingerprint": "no-plan",
+      "at": 1794842721,
+      "outcome": "no-change",
+      "detail": "the model proposed nothing"
     }
   ]
 }
