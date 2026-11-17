@@ -2,12 +2,6 @@
   "tried": [
     {
       "fingerprint": "no-plan",
-      "at": 1793102099,
-      "outcome": "no-change",
-      "detail": "the model proposed nothing"
-    },
-    {
-      "fingerprint": "no-plan",
       "at": 1793190673,
       "outcome": "no-change",
       "detail": "the model proposed nothing"
@@ -117,6 +111,12 @@
     {
       "fingerprint": "no-plan",
       "at": 1794842721,
+      "outcome": "no-change",
+      "detail": "the model proposed nothing"
+    },
+    {
+      "fingerprint": "no-plan",
+      "at": 1794930406,
       "outcome": "no-change",
       "detail": "the model proposed nothing"
     }
