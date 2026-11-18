@@ -6,7 +6,6 @@ without any server and without exposing anything on GitHub Pages.
 from __future__ import annotations
 
 import json
-import html
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -20,7 +19,7 @@ def load(path: Path, default):
         return default
 
 
-def main() -> int:
+def dashboard_data() -> dict:
     earn = load(ROOT / "data/earnings.json", {})
     prices = load(ROOT / "data/prices.json", {})
     reputation = load(ROOT / "data/reputation.json", {})
@@ -34,7 +33,7 @@ def main() -> int:
     latest_week = sorted(wrev.keys())[-1] if wrev else None
     latest_review = wrev.get(latest_week) if latest_week else None
     latest_fix = fixbook[-1] if fixbook else None
-    dash = {
+    return {
         "generated": datetime.now(timezone.utc).isoformat(),
         "revenue": earn,
         "prices": prices,
@@ -50,9 +49,9 @@ def main() -> int:
         "known_problems_count": len(fixbook),
         "recent_fixbook": fixbook[-10:] if fixbook else [],
     }
-    data_json = json.dumps(dash, ensure_ascii=False)
 
-    template = """<!doctype html>
+
+TEMPLATE = r"""<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -86,9 +85,9 @@ def main() -> int:
         <h1>Slingshot Private Dashboard</h1>
         <p class="sub" id="updated"></p>
       </div>
-      <div class="muted">Local only — not published</div>
+      <div class="muted">Localhost only</div>
     </div>
-    <div class="note">This file is generated locally by <code>python make_dashboard.py</code>. Keep it private (gitignored). Do not upload to GitHub Pages.</div>
+    <div class="note">Private dashboard. Served locally for this PC only. Not published.</div>
 
     <div class="grid" id="stats"></div>
     <div class="grid">
@@ -152,9 +151,16 @@ render();
 </body>
 </html>"""
 
-    out = template.replace("__DASHBOARD_DATA__", data_json)
-    (ROOT / "dashboard.html").write_text(out, encoding="utf-8")
-    print(f"wrote {ROOT / 'dashboard.html'}")
+
+def build_dashboard_html() -> str:
+    data_json = json.dumps(dashboard_data(), ensure_ascii=False)
+    return TEMPLATE.replace("__DASHBOARD_DATA__", data_json)
+
+
+def main() -> int:
+    out = ROOT / "dashboard.html"
+    out.write_text(build_dashboard_html(), encoding="utf-8")
+    print(f"wrote {out}")
     return 0
 
 
