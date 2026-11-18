@@ -145,3 +145,7 @@ data/trailer_script.json
 # Pages deploy, never committed: a committed copy goes stale and leaves a
 # banner announcing a release that already shipped.
 site/update.json
+
+# Private local dashboard (never publish)
+/dashboard.html
+/site/dashboard-data.json
