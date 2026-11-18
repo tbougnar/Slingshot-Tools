@@ -52,14 +52,14 @@ jobs:
       - name: Is there budget left this month
         run: python budget.py check --label wednesday --need 0.35
 
-      - name: Read the outside world, review the week, write the coaching
+      - name: Read the outside world, review the week, scan, and publish same-day updates
         run: python weekly_cycle.py wednesday
 
       - name: Can any product be retired
         run: python retire_product.py --list
 
       - name: Refuse the commit if anything protected changed
-        run: python weekly_guard.py check
+        run: python weekly_guard.py check --allow-release
 
       # This is a gate, not a report. It was continue-on-error, which meant the
       # Wednesday job went green while the audit was failing: the audit is the

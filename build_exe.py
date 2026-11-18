@@ -98,6 +98,21 @@ def build_app(app_dir: Path, title: str) -> Path | None:
 
     (app_dir / "app").mkdir(parents=True, exist_ok=True)
     write_meta(app_dir, title)
+
+    # Ensure in-app update UI is present and updater runtime is bundled.
+    try:
+        import app_update as au
+        au.inject(app_dir / "app" / "index.html")
+    except Exception as e:  # noqa: BLE001
+        print(f"[pyi] update banner inject skipped: {e}", flush=True)
+    for mod in ("app_update.py", "update_state.py"):
+        src = ROOT / mod
+        if src.exists():
+            try:
+                shutil.copy2(src, app_dir / mod)
+            except Exception as e:  # noqa: BLE001
+                print(f"[pyi] could not stage {mod}: {e}", flush=True)
+
     ico = app_dir / "app" / "icon.ico"
     if not ico.exists():
         ico = make_ico(ICON_PNG, ico) if ICON_PNG.exists() else None
@@ -107,6 +122,7 @@ def build_app(app_dir: Path, title: str) -> Path | None:
     for d in (out, work):
         shutil.rmtree(d, ignore_errors=True)
 
+    sep = __import__("os").pathsep
     cmd = [
         sys.executable, "-m", "PyInstaller",
         "--noconfirm", "--clean", "--onedir", "--windowed",
@@ -114,7 +130,7 @@ def build_app(app_dir: Path, title: str) -> Path | None:
         "--distpath", str(out),
         "--workpath", str(work),
         "--specpath", str(work),
-        "--add-data", f"{app_dir / 'app'}{__import__('os').pathsep}app",
+        "--add-data", f"{app_dir / 'app'}{sep}app",
         "--hidden-import", "webview.platforms.edgechromium",
         "--hidden-import", "webview.platforms.winforms",
         "--exclude-module", "webview.platforms.gtk",
@@ -125,6 +141,10 @@ def build_app(app_dir: Path, title: str) -> Path | None:
         "--exclude-module", "PyQt5",
         "--exclude-module", "PySide6",
     ]
+    for mod in ("app_update.py", "update_state.py"):
+        p = app_dir / mod
+        if p.exists():
+            cmd += ["--add-data", f"{p}{sep}."]
     if ico:
         cmd += ["--icon", str(ico)]
     cmd.append(str(LAUNCHER))

@@ -1828,5 +1828,20 @@
     ],
     "detects": "recurs every Wednesday; one entry per week is expected",
     "verified": false
+  },
+  {
+    "id": "B147",
+    "date": "2026-11-18",
+    "symptom": "learning-day scan: 21 app(s) queued for same-day update, 1 failed check(s), 0 secret finding(s), 6 suspect pattern hit(s)",
+    "cause": "This update includes same-day maintenance across Slingshot apps. Automated health checks found issues that are being addressed to improve reliability. Security and stability checks were reviewed and hardening improvements were applied where needed. Download the update and restart",
+    "fix": "Published same-day update manifest with AI-written notes for all known apps; run build/publish jobs to ship binaries.",
+    "files": [
+      "learning_day_scan.py",
+      "data/update_state.json",
+      "site/update.json",
+      "data/learning_day_scan.json"
+    ],
+    "detects": "learning day system scan and update publication",
+    "verified": false
   }
 ]

@@ -113,6 +113,10 @@ def _empty() -> dict:
         "next_major_notes": [],
         "discord_event_id": None,
         "last_trailer": None,
+        "last_update_title": None,
+        "last_update_description": "",
+        "last_update_notes": [],
+        "last_update_at": None,
         "apps": {},
     }
 
@@ -130,12 +134,9 @@ def load() -> dict:
     if isinstance(d, dict):
         base.update(d)
     # a state file written before a key existed must not make the rest fail.
-    # apps is a dict of slug -> version and next_major_notes is a list, and
-    # they were both treated as lists here. Every load() therefore replaced the
-    # per-app version map with [], so app_version() answered with the
-    # company-wide version for every app, and set_app_version() raised
-    # TypeError: list indices must be integers.
-    for key, want in (("apps", dict), ("next_major_notes", list)):
+    # apps is a dict of slug -> version/metadata and next_major_notes is a list.
+    for key, want in (("apps", dict), ("next_major_notes", list),
+                      ("last_update_notes", list)):
         if not isinstance(base.get(key), want):
             base[key] = want()
     return base
@@ -162,14 +163,60 @@ def save(state: dict) -> bool:
     return True
 
 
+def app_entry(state: dict, slug: str) -> dict:
+    """Per-app update metadata, normalized to a dict."""
+    got = (state.get("apps") or {}).get(str(slug))
+    if isinstance(got, dict):
+        out = dict(got)
+    elif got:
+        out = {"version": str(got)}
+    else:
+        out = {}
+    if not out.get("version"):
+        out["version"] = str(state.get("version") or "1.0.0")
+    out["version"] = format_version(parse(out["version"]))
+    return out
+
+
 def app_version(state: dict, slug: str) -> str:
     """One app's version, falling back to the company-wide version."""
-    got = (state.get("apps") or {}).get(str(slug))
-    return str(got or state.get("version") or "1.0.0")
+    return app_entry(state, slug)["version"]
 
 
 def set_app_version(state: dict, slug: str, version: str) -> None:
-    state.setdefault("apps", {})[str(slug)] = format_version(parse(version))
+    apps = state.setdefault("apps", {})
+    cur = apps.get(str(slug))
+    if isinstance(cur, dict):
+        cur["version"] = format_version(parse(version))
+        apps[str(slug)] = cur
+    else:
+        apps[str(slug)] = format_version(parse(version))
+
+
+def set_app_update(state: dict, slug: str, *, version: str | None = None,
+                   title: str | None = None, description: str | None = None,
+                   notes: list | None = None, download_url: str | None = None,
+                   restart_required: bool = True) -> dict:
+    """Record a same-day update for one app."""
+    apps = state.setdefault("apps", {})
+    cur = apps.get(str(slug))
+    entry = dict(cur) if isinstance(cur, dict) else ({"version": str(cur)} if cur else {})
+    if version is not None:
+        entry["version"] = format_version(parse(version))
+    elif not entry.get("version"):
+        entry["version"] = str(state.get("version") or "1.0.0")
+    if title is not None:
+        entry["title"] = str(title)
+    if description is not None:
+        entry["description"] = str(description)
+    if notes is not None:
+        entry["notes"] = [str(n) for n in notes if str(n).strip()][:12]
+    if download_url is not None:
+        entry["download_url"] = str(download_url)
+    entry["restart_required"] = bool(restart_required)
+    entry["released"] = date.today().isoformat()
+    apps[str(slug)] = entry
+    return entry
 
 
 def next_major_date(state: dict) -> date | None:
@@ -216,6 +263,22 @@ def phase(state: dict, when: date | None = None) -> str:
     return "idle"
 
 
+def _public_app_entry(value) -> dict:
+    if isinstance(value, dict):
+        ver = format_version(parse(value.get("version") or "1.0.0"))
+        out = {"version": ver}
+        for key in ("title", "description", "download_url", "released"):
+            if value.get(key):
+                out[key] = str(value[key])
+        notes = value.get("notes")
+        if isinstance(notes, list):
+            out["notes"] = [str(n) for n in notes if str(n).strip()][:12]
+        if value.get("restart_required") is not None:
+            out["restart_required"] = bool(value.get("restart_required"))
+        return out
+    return {"version": format_version(parse(value or "1.0.0"))}
+
+
 def publish_public(state: dict) -> bool:
     """Write the small file the website and the apps read.
 
@@ -229,6 +292,11 @@ def publish_public(state: dict) -> bool:
     ph = phase(state)
     left = days_until(state)
     when = next_major_date(state)
+    raw_apps = state.get("apps") or {}
+    apps_out = {}
+    if isinstance(raw_apps, dict):
+        for k, v in raw_apps.items():
+            apps_out[str(k)] = _public_app_entry(v)
     out = {
         "version": state.get("version") or "1.0.0",
         "updated": state.get("updated"),
@@ -243,17 +311,19 @@ def publish_public(state: dict) -> bool:
         "next_major_notes": [] if ph == "idle" else
         list(state.get("next_major_notes") or [])[:6],
         "trailer": state.get("last_trailer"),
-        # The version of each product, so an app can be told about its own
-        # update rather than the company's. The map was kept in the state
-        # file and never published, so a product could not learn its own
-        # latest version even in principle.
-        "apps": {str(k): format_version(parse(v))
-                 for k, v in (state.get("apps") or {}).items()
-                 if isinstance(state.get("apps"), dict)},
+        # Per-app update metadata for installed apps. Backward compatible:
+        # each entry always includes a version string.
+        "apps": apps_out,
+        "latest_update": {
+            "title": state.get("last_update_title"),
+            "description": state.get("last_update_description") or "",
+            "notes": list(state.get("last_update_notes") or [])[:12],
+            "released": state.get("last_update_at") or state.get("updated"),
+        },
     }
     try:
         PUBLIC.parent.mkdir(parents=True, exist_ok=True)
-        PUBLIC.write_text(json.dumps(out, indent=2), encoding="utf-8")
+        PUBLIC.write_text(json.dumps(out, indent=2) + "\n", encoding="utf-8")
     except OSError as e:
         log(f"could not write {PUBLIC.name}: {e}")
         log("the countdown the homepage reads was NOT refreshed")

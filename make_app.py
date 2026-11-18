@@ -1124,6 +1124,8 @@ Section "Install" SecMain
   File "launcher.py"
   File "app\app.json"
   File "Start App.cmd"
+  File "app_update.py"
+  File "update_state.py"
 
   WriteRegStr HKCU "Software\Slingshot Tools\__SLUG__" "InstallDir" "$INSTDIR"
 
@@ -1150,6 +1152,8 @@ Section "Uninstall"
   Delete "$INSTDIR\Start App.cmd"
   Delete "$INSTDIR\launcher.py"
   Delete "$INSTDIR\app\app.json"
+  Delete "$INSTDIR\app_update.py"
+  Delete "$INSTDIR\update_state.py"
   RMDir "$INSTDIR"
   Delete "$DESKTOP\__APPNAME__.lnk"
   DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\__SLUG__"
@@ -1240,6 +1244,18 @@ def build_installer(app_dir: Path, concept):
     icon_png = ROOT / "site" / "icon-512.png"
     if icon_png.exists():
         shutil.copy2(icon_png, app_dir / "app" / "icon.png")
+    # In-app updater: inject red update UI and ship runtime modules.
+    try:
+        import app_update as au
+        au.inject(app_dir / "app" / "index.html")
+    except Exception as e:  # noqa: BLE001
+        log(f"update banner inject skipped: {e}")
+    for mod in ("app_update.py", "update_state.py"):
+        src = ROOT / mod
+        if src.exists():
+            shutil.copy2(src, app_dir / mod)
+        else:
+            (app_dir / mod).write_text("", encoding="utf-8")
 
     if shutil.which("makensis") is None:
         log("makensis not installed - shipping portable folder only")

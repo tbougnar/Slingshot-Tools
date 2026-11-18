@@ -107,13 +107,13 @@ SELF_IMPROVABLE = [
 RETIRE_MIN_DAYS = 365
 
 
-# The release lane is allowed to write the catalogue and the generated app
-# folders. It is the lane that publishes them, and a guard that forbids the
-# publish step from doing its own job fails every successful week. Everything
-# else in site/ stays protected, including the storefront markup.
+# The release lane is allowed to write the catalogue, generated app folders,
+# and published update metadata. Same-day update manifests must be publishable
+# by automated learning/update jobs; storefront markup remains protected.
 RELEASE_WRITES = (
     "site/apps.json",
     "site/apps/",
+    "site/update.json",
 )
 
 

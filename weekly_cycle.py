@@ -78,7 +78,7 @@ def close_ballot() -> int:
 
 
 def wednesday() -> int:
-    """Read the outside world, then write the review."""
+    """Read the outside world, review, scan/fix, and publish same-day updates."""
     with budget.Timer("wednesday-review"):
         # reputation first: it is what the review reasons about
         run(["reputation.py"], "wednesday/reputation")
@@ -89,17 +89,20 @@ def wednesday() -> int:
         # and every source in it already degrades to "unavailable".
         run(["signals.py"], "wednesday/signals", soft=True)
         rc = run(["weekly_review.py"], "wednesday/review")
+        # learning day: scan whole system for bugs/fixes/security issues and
+        # publish same-day update metadata for all known Slingshot apps.
+        run(["learning_day_scan.py"], "wednesday/scan-and-publish", soft=True)
         # the goal is decided from the signals, after they are collected and
         # before the review reads them, so the review reasons about the right
         # phase rather than assuming one
         run(["goals.py"], "wednesday/goal", soft=True)
 
-        # the review must not have touched anything it may not touch
+        # the review/scan must not have touched anything it may not touch,
+        # except allowed release/update metadata.
         print(f"\n{'=' * 62}\n[cycle] wednesday/guard\n{'=' * 62}",
               flush=True)
-        if guard.guard():
-            print("[cycle] refusing to continue: the review changed a "
-                  "protected file")
+        if guard.guard(allow=guard.RELEASE_WRITES):
+            print("[cycle] refusing to continue: protected files were changed")
             return 1
         return rc
 
