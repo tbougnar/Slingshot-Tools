@@ -1,0 +1,547 @@
+{
+  "generated": "2026-11-18T14:17:00.311736Z",
+  "revenue": {
+    "date": "2026-10-30",
+    "revenue": 0.0,
+    "net_profit": 0.0,
+    "break_even": 0.35,
+    "products": [
+      {
+        "slug": "a",
+        "title": "A",
+        "tier": "full",
+        "sales": 0,
+        "views": 0,
+        "price": 5.0,
+        "revenue": 0.0,
+        "net": 0.0,
+        "per_sale": 4.1
+      },
+      {
+        "slug": "b",
+        "title": "B",
+        "tier": "full",
+        "sales": 0,
+        "views": 0,
+        "price": 10.0,
+        "revenue": 0.0,
+        "net": 0.0,
+        "per_sale": 8.5
+      },
+      {
+        "slug": "a-basic",
+        "title": "A (Basic)",
+        "tier": "basic",
+        "sales": 0,
+        "views": 0,
+        "price": 0.0,
+        "revenue": 0.0,
+        "net": 0.0,
+        "per_sale": 0.0
+      },
+      {
+        "slug": "b-basic",
+        "title": "B (Basic)",
+        "tier": "basic",
+        "sales": 0,
+        "views": 0,
+        "price": 0.0,
+        "revenue": 0.0,
+        "net": 0.0,
+        "per_sale": 0.0
+      }
+    ],
+    "directives": [
+      "2 paid product(s) have zero sales: a, b. Either cut the price to the break-even floor ($0.35), change the pitch, or stop building in that niche and build what sells.",
+      "Nothing has netted positive yet. Do not build more apps: fix price and the itch.io page for what exists first."
+    ]
+  },
+  "prices": {
+    "expense-splitter-basic": {
+      "price": 0.0,
+      "tier": "basic",
+      "sales": 0,
+      "views": 0,
+      "itch_url": "https://slingshot-tools.itch.io/"
+    },
+    "expense-splitter": {
+      "price": 3.0,
+      "tier": "full",
+      "sales": 0,
+      "views": 0,
+      "itch_url": "https://slingshot-tools.itch.io/"
+    },
+    "recipe-scaler-basic": {
+      "price": 0.0,
+      "tier": "basic",
+      "sales": 0,
+      "views": 0,
+      "itch_url": "https://slingshot-tools.itch.io/"
+    },
+    "recipe-scaler": {
+      "price": 3.0,
+      "tier": "full",
+      "sales": 0,
+      "views": 0,
+      "itch_url": "https://slingshot-tools.itch.io/"
+    },
+    "invoice-maker-basic": {
+      "price": 0.0,
+      "tier": "basic",
+      "sales": 0,
+      "views": 0,
+      "itch_url": "https://slingshot-tools.itch.io/invoice-maker-basic"
+    },
+    "invoice-maker": {
+      "price": 3.0,
+      "tier": "full",
+      "sales": 0,
+      "views": 0,
+      "itch_url": "https://slingshot-tools.itch.io/invoice-maker"
+    },
+    "unit-price-compare-basic": {
+      "price": 0.0,
+      "tier": "basic",
+      "sales": 0,
+      "views": 0,
+      "itch_url": "https://slingshot-tools.itch.io/unit-price-compare-basic"
+    },
+    "unit-price-compare": {
+      "price": 3.0,
+      "tier": "full",
+      "sales": 0,
+      "views": 0,
+      "itch_url": "https://slingshot-tools.itch.io/unit-price-compare"
+    },
+    "gst-calculator-basic": {
+      "price": 0.0,
+      "tier": "basic",
+      "sales": 0,
+      "views": 0,
+      "itch_url": "https://slingshot-tools.itch.io/gst-calculator-basic"
+    },
+    "gst-calculator": {
+      "price": 3.0,
+      "tier": "full",
+      "sales": 0,
+      "views": 0,
+      "itch_url": "https://slingshot-tools.itch.io/gst-calculator"
+    },
+    "compound-interest-basic": {
+      "price": 0.0,
+      "tier": "basic",
+      "sales": 0,
+      "views": 0,
+      "itch_url": "https://slingshot-tools.itch.io/compound-interest-basic"
+    },
+    "compound-interest": {
+      "price": 3.0,
+      "tier": "full",
+      "sales": 0,
+      "views": 0,
+      "itch_url": "https://slingshot-tools.itch.io/compound-interest"
+    },
+    "grade-calculator-basic": {
+      "price": 0.0,
+      "tier": "basic",
+      "sales": 0,
+      "views": 0,
+      "itch_url": "https://slingshot-tools.itch.io/grade-calculator-basic"
+    },
+    "grade-calculator": {
+      "price": 3.0,
+      "tier": "full",
+      "sales": 0,
+      "views": 0,
+      "itch_url": "https://slingshot-tools.itch.io/grade-calculator"
+    },
+    "flashcard-maker-basic": {
+      "price": 0.0,
+      "tier": "basic",
+      "sales": 0,
+      "views": 0,
+      "itch_url": "https://slingshot-tools.itch.io/flashcard-maker-basic"
+    },
+    "flashcard-maker": {
+      "price": 3.0,
+      "tier": "full",
+      "sales": 0,
+      "views": 0,
+      "itch_url": "https://slingshot-tools.itch.io/flashcard-maker"
+    },
+    "habit-tracker-basic": {
+      "price": 0.0,
+      "tier": "basic",
+      "sales": 0,
+      "views": 0,
+      "itch_url": "https://slingshot-tools.itch.io/habit-tracker-basic"
+    },
+    "habit-tracker": {
+      "price": 3.0,
+      "tier": "full",
+      "sales": 0,
+      "views": 0,
+      "itch_url": "https://slingshot-tools.itch.io/habit-tracker"
+    },
+    "file-renamer-basic": {
+      "price": 0.0,
+      "tier": "basic",
+      "sales": 0,
+      "views": 0,
+      "itch_url": "https://slingshot-tools.itch.io/file-renamer-basic"
+    },
+    "file-renamer": {
+      "price": 3.0,
+      "tier": "full",
+      "sales": 0,
+      "views": 0,
+      "itch_url": "https://slingshot-tools.itch.io/file-renamer"
+    },
+    "password-manager": {
+      "price": 3.0,
+      "tier": "full",
+      "sales": 0,
+      "views": 0,
+      "itch_url": "https://slingshot-tools.itch.io/"
+    },
+    "password-manager-basic": {
+      "price": 0.0,
+      "tier": "basic",
+      "sales": 0,
+      "views": 0,
+      "itch_url": "https://slingshot-tools.itch.io/"
+    }
+  },
+  "reputation": {
+    "at": 1792623313,
+    "site": "https://tbougnar.github.io/Slingshot-Tools",
+    "repo": "tbougnar/Slingshot-Tools",
+    "github": {
+      "available": false
+    },
+    "itch": {
+      "available": false,
+      "reason": "no ITCH_API_KEY"
+    },
+    "catalog": {
+      "available": true,
+      "entries": 68,
+      "live": 36,
+      "paid": 2,
+      "lowest_price": 3.0,
+      "highest_price": 3.0,
+      "catalog_mtime": 1792617761
+    },
+    "earnings": {
+      "available": true,
+      "orders": 0,
+      "total": 0.0,
+      "currency": "USD"
+    }
+  },
+  "goals": {
+    "phase": "reach",
+    "since": null,
+    "promoted_by": null,
+    "notes": []
+  },
+  "products": [],
+  "votes": {
+    "poll": {
+      "id": "2026-11-01-5",
+      "question": "What should Slingshot Tools build next week?",
+      "options": [
+        {
+          "label": "password manager",
+          "votes": 0
+        },
+        {
+          "label": "dev converter",
+          "votes": 0
+        },
+        {
+          "label": "file renamer",
+          "votes": 0
+        },
+        {
+          "label": "bookmark organizer",
+          "votes": 0
+        },
+        {
+          "label": "color picker",
+          "votes": 0
+        }
+      ]
+    }
+  },
+  "events": {
+    "events": [
+      {
+        "title": "Weekly Vote",
+        "date": "Sunday",
+        "description": "Vote for the next tool to build on Discord #polls."
+      },
+      {
+        "title": "Review & Learn",
+        "date": "Tuesday",
+        "description": "AI reviews community feedback and improves the roadmap."
+      },
+      {
+        "title": "Build & Publish",
+        "date": "Friday",
+        "description": "New paid bundle update goes live on itch.io."
+      }
+    ]
+  },
+  "weekly_state": {
+    "done": [
+      "a11y",
+      "theme",
+      "empty",
+      "export",
+      "a11y",
+      "theme",
+      "empty"
+    ],
+    "last": {
+      "lane": "empty",
+      "area": "onboarding",
+      "what": "Make empty states say what to do first, not just that it is empty",
+      "version": "2.0.3"
+    }
+  },
+  "latest_week": "2026-W47",
+  "latest_review": {
+    "week": "2026-W47",
+    "ballot_open": true,
+    "ballot_question": "What should Slingshot Tools build next week?",
+    "ballot_votes": 0,
+    "recent_winners": [
+      {
+        "question": "Test vote",
+        "winner": null,
+        "slug": null,
+        "votes": [
+          {
+            "label": "a",
+            "votes": 0
+          },
+          {
+            "label": "b",
+            "votes": 0
+          }
+        ]
+      },
+      {
+        "question": "What should Slingshot Tools build next week?",
+        "winner": null,
+        "slug": null,
+        "votes": [
+          {
+            "label": "bookmark organizer",
+            "votes": 0
+          },
+          {
+            "label": "color picker",
+            "votes": 0
+          },
+          {
+            "label": "dev converter",
+            "votes": 0
+          },
+          {
+            "label": "file renamer",
+            "votes": 0
+          },
+          {
+            "label": "password manager",
+            "votes": 0
+          }
+        ]
+      },
+      {
+        "question": "What should Slingshot Tools build next week?",
+        "winner": null,
+        "slug": null,
+        "votes": [
+          {
+            "label": "bookmark organizer",
+            "votes": 0
+          },
+          {
+            "label": "color picker",
+            "votes": 0
+          },
+          {
+            "label": "dev converter",
+            "votes": 0
+          },
+          {
+            "label": "file renamer",
+            "votes": 0
+          },
+          {
+            "label": "password manager",
+            "votes": 0
+          }
+        ]
+      }
+    ],
+    "stars": null,
+    "forks": null,
+    "watchers": null,
+    "repo_days": null,
+    "revenue": {
+      "orders": 0,
+      "total": 0.0,
+      "available": true
+    },
+    "products": [],
+    "known_problems": 145,
+    "text": "## What happened\n- A ballot is open: \"What should Slingshot Tools build next week?\" with 0 vote(s) so far.\n- Last ballot: a tie (no slug).\n- 0 product(s) on sale.\n- Revenue recorded: $0.00 from 0 order(s).\n\n## What to change\n- No sales at all. Check that the checkout works end to end before changing anything else.\n- Nobody voted. The ballot may be posted where members cannot see it.\n- Compare the winner of the last ballot against what was actually built.\n\n## Risk\n- The model that writes this review was unavailable, so this one is generated from the raw numbers only."
+  },
+  "latest_fixbook_entry": {
+    "id": "B146",
+    "date": "2026-11-18",
+    "symptom": "weekly review 2026-W47: 0 order(s), $0.00, None star(s), 0 vote(s) on the open ballot",
+    "cause": "A ballot is open: \"What should Slingshot Tools build next week?\" with 0 vote(s) so far.",
+    "fix": "read data/weekly_reviews.json before the next build; it carries this week's numbers and what to change",
+    "files": [
+      "data/weekly_reviews.json",
+      "weekly_review.py"
+    ],
+    "detects": "recurs every Wednesday; one entry per week is expected",
+    "verified": false
+  },
+  "known_problems_count": 146,
+  "recent_fixbook": [
+    {
+      "id": "B137",
+      "date": "2026-10-13",
+      "symptom": "a release could die on a PermissionError traceback and still have printed that it saved",
+      "cause": "save() logged the success line before writing, and neither it nor publish_public() caught the write error, so an unattended job exited on a traceback and main() returned 0 either way",
+      "fix": "both report whether they wrote, neither claims a save it cannot prove, and main() exits non-zero when either write failed",
+      "files": [
+        "update_state.py"
+      ],
+      "detects": "audit_selftest.py makes the state file read-only and checks there is no traceback, a non-zero exit, and no claim of a save",
+      "verified": true
+    },
+    {
+      "id": "B138",
+      "date": "2026-10-13",
+      "symptom": "every runner started its token allowance from the last runner's usage",
+      "cause": "the Friday job's blanket git add committed data/token_usage.json. It is live rate-limit state for whichever machine is running, so each later run on another runner read a total it had not earned",
+      "fix": "the file is ignored along with the temporary files the atomic writes leave behind, so a blanket add cannot sweep up live state again",
+      "files": [
+        ".gitignore"
+      ],
+      "detects": "checked by hand: a blanket git add -A in a copy of the tree leaves no token_usage.json staged, verified by cleanroom_selftest.py",
+      "verified": true
+    },
+    {
+      "id": "B139",
+      "date": "2026-10-21",
+      "symptom": "weekly review 2026-W43: 0 order(s), $0.00, 0 star(s), 0 vote(s) on the open ballot",
+      "cause": "## What happened",
+      "fix": "read data/weekly_reviews.json before the next build; it carries this week's numbers and what to change",
+      "files": [
+        "data/weekly_reviews.json",
+        "weekly_review.py"
+      ],
+      "detects": "recurs every Wednesday; one entry per week is expected",
+      "verified": true
+    },
+    {
+      "id": "B140",
+      "date": "2026-10-22",
+      "symptom": "weekly review 2026-W43: 0 order(s), $0.00, 0 star(s), 0 vote(s) on the open ballot",
+      "cause": "## What happened",
+      "fix": "read data/weekly_reviews.json before the next build; it carries this week's numbers and what to change",
+      "files": [
+        "data/weekly_reviews.json",
+        "weekly_review.py"
+      ],
+      "detects": "recurs every Wednesday; one entry per week is expected",
+      "verified": true
+    },
+    {
+      "id": "B141",
+      "date": "2026-10-22",
+      "symptom": "weekly review 2026-W43: 0 order(s), $0.00, 0 star(s), 0 vote(s) on the open ballot",
+      "cause": "## What happened",
+      "fix": "read data/weekly_reviews.json before the next build; it carries this week's numbers and what to change",
+      "files": [
+        "data/weekly_reviews.json",
+        "weekly_review.py"
+      ],
+      "detects": "recurs every Wednesday; one entry per week is expected",
+      "verified": true
+    },
+    {
+      "id": "B142",
+      "date": "2026-10-28",
+      "symptom": "weekly review 2026-W44: 0 order(s), $0.00, 0 star(s), 0 vote(s) on the open ballot",
+      "cause": "## What happened",
+      "fix": "read data/weekly_reviews.json before the next build; it carries this week's numbers and what to change",
+      "files": [
+        "data/weekly_reviews.json",
+        "weekly_review.py"
+      ],
+      "detects": "recurs every Wednesday; one entry per week is expected",
+      "verified": true
+    },
+    {
+      "id": "B143",
+      "date": "2026-11-03",
+      "symptom": "weekly review 2026-W45: 0 order(s), $0.00, 0 star(s), 0 vote(s) on the open ballot",
+      "cause": "No ballot is open, so nobody is choosing next week's tool.",
+      "fix": "read data/weekly_reviews.json before the next build; it carries this week's numbers and what to change",
+      "files": [
+        "data/weekly_reviews.json",
+        "weekly_review.py"
+      ],
+      "detects": "recurs every Wednesday; one entry per week is expected",
+      "verified": false
+    },
+    {
+      "id": "B144",
+      "date": "2026-11-10",
+      "symptom": "weekly review 2026-W46: 0 order(s), $0.00, 0 star(s), 0 vote(s) on the open ballot",
+      "cause": "This week (2026-W46) saw no ballot activity: the ballot is closed, with no question and zero votes. There were no recent winners. Community engagement metrics are all zero: 0 stars, 0 forks, and 0 watchers, despite the repository being 39 days old. Revenue is nonexistent, with 0 ",
+      "fix": "read data/weekly_reviews.json before the next build; it carries this week's numbers and what to change",
+      "files": [
+        "data/weekly_reviews.json",
+        "weekly_review.py"
+      ],
+      "detects": "recurs every Wednesday; one entry per week is expected",
+      "verified": false
+    },
+    {
+      "id": "B145",
+      "date": "2026-11-17",
+      "symptom": "weekly review 2026-W47: 0 order(s), $0.00, 0 star(s), 0 vote(s) on the open ballot",
+      "cause": "Week 2026-W47 closed with no ballot (`ballot_open: false`, empty question, 0 votes), no recent winners, no products listed, and no revenue (`orders: 0`, `total: 0.0`, `available: false`). GitHub signals are all zero: 0 stars, 0 forks, 0 watchers after 46 repo days. `known_problem",
+      "fix": "read data/weekly_reviews.json before the next build; it carries this week's numbers and what to change",
+      "files": [
+        "data/weekly_reviews.json",
+        "weekly_review.py"
+      ],
+      "detects": "recurs every Wednesday; one entry per week is expected",
+      "verified": false
+    },
+    {
+      "id": "B146",
+      "date": "2026-11-18",
+      "symptom": "weekly review 2026-W47: 0 order(s), $0.00, None star(s), 0 vote(s) on the open ballot",
+      "cause": "A ballot is open: \"What should Slingshot Tools build next week?\" with 0 vote(s) so far.",
+      "fix": "read data/weekly_reviews.json before the next build; it carries this week's numbers and what to change",
+      "files": [
+        "data/weekly_reviews.json",
+        "weekly_review.py"
+      ],
+      "detects": "recurs every Wednesday; one entry per week is expected",
+      "verified": false
+    }
+  ]
+}
