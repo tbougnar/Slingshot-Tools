@@ -42,7 +42,17 @@
     <div id="events" class="events"></div>
   </main>
   <script>
-    fetch('events.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
+    function fetchJson(url, ms){
+      try{
+        var ctrl = (typeof AbortController!=="undefined") ? new AbortController() : null;
+        var t = ctrl ? setTimeout(function(){ctrl.abort();}, ms||3500) : null;
+        return fetch(url,{cache:'no-store', signal: ctrl?ctrl.signal:undefined}).then(function(r){
+          if(t) clearTimeout(t);
+          return r.ok ? r.json() : null;
+        }).catch(function(){ if(t) clearTimeout(t); return null; });
+      }catch(e){ return Promise.resolve(null); }
+    }
+    (fetchJson('http://46.247.108.19:20738/events.json', 3000).then(function(d){ return d || fetchJson('events.json', 5000); })).then(function(d){
       const el=document.getElementById('events');
       if(!d||!d.events||!d.events.length){el.innerHTML='<div class="empty">No events scheduled.</div>';return;}
       el.innerHTML=d.events.map(ev=>'<article class="event"><h2>'+escapeHtml(ev.title||'')+'</h2>'+(ev.date?'<div class="meta">'+escapeHtml(ev.date)+'</div>':'')+'<div>'+escapeHtml(ev.description||'')+'</div></article>').join('');

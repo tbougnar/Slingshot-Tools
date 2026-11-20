@@ -272,7 +272,18 @@ const soon=document.getElementById('dlgSoon'); if(soon)soon.style.display=(item.
     (function(){
       const votesEl = document.getElementById('votesContent');
       const eventsEl = document.getElementById('eventsContent');
-      fetch("votes.json",{cache:"no-store"}).then(r=>r.ok?r.json():null).then(data=>{
+      const KERIT_VOTES_URL = "http://46.247.108.19:20738/votes.json";
+      function fetchJson(url, ms){
+        try{
+          const ctrl = (typeof AbortController!=="undefined") ? new AbortController() : null;
+          const t = ctrl ? setTimeout(()=>ctrl.abort(), ms||3500) : null;
+          return fetch(url,{cache:"no-store", signal: ctrl?ctrl.signal:undefined}).then(r=>{
+            if(t) clearTimeout(t);
+            return r.ok ? r.json() : null;
+          }).catch(()=>{ if(t) clearTimeout(t); return null; });
+        }catch(e){ return Promise.resolve(null); }
+      }
+      (fetchJson(KERIT_VOTES_URL, 3000).then(d=>d||fetchJson("votes.json", 5000))).then(data=>{
         if(!data||!votesEl) return;
         const poll = data.poll;
         if(!poll || !poll.options || !poll.options.length){

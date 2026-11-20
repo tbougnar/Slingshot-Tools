@@ -237,14 +237,14 @@ class Handler(BaseHTTPRequestHandler):
                 "service": "slingshot-kerit",
                 "time": datetime.now(timezone.utc).isoformat(),
                 "repo": str(REPO),
+                "votes_source": "kerit",
             })
             return
         if p == "/update.json":
             self._send_file_json(REPO / "site" / "update.json")
             return
         if p == "/votes.json":
-            # serve freshest available view
-            sync_votes()
+            # Serve cached votes immediately; scheduler keeps them fresh in background.
             self._send_file_json(REPO / "site" / "votes.json")
             return
         if p == "/events.json":
