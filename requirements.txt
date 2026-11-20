@@ -1,0 +1,4 @@
+# Kerit/Pterodactyl service dependencies.
+# The always-on service (kerit_service.py) uses the Python standard library only.
+# This file exists so panel install steps like `pip install -r requirements.txt` do not fail.
+# Add packages here only if you enable features that require them.

@@ -4,20 +4,20 @@ Provides what GitHub Actions cannot do well as a persistent service:
 - 24/7 HTTP endpoint serving update/votes/events manifests instantly
 - background scheduler for vote sync, learning-day scan/publish, and git pull
 
-Run on Kerit:
+Run (Pterodactyl/Kerit or locally):
     python kerit_service.py
 
-Environment variables:
-    PORT=8080                         bind port (Kerit/platform may set PORT)
-    HOST=0.0.0.0                      bind host
-    SLINGSHOT_REPO_DIR=.              repo directory (default: this file's dir)
-    SLINGSHOT_GIT_PULL=1              periodically git pull (default: 1)
-    SLINGSHOT_PULL_INTERVAL=300       seconds between git pulls
-    SLINGSHOT_SYNC_INTERVAL=60        seconds between votes/site sync
-    SLINGSHOT_LEARNING_DAY=0          run learning-day scan on schedule in-service (default: 0)
-    SLINGSHOT_LEARNING_CRON_DAY=2     weekday for learning-day scan (Mon=0 .. Sun=6, default Tue=2)
-    SLINGSHOT_LEARNING_CRON_HOUR=9    UTC hour for learning-day scan
-    SLINGSHOT_LEARNING_CRON_MIN=0     UTC minute for learning-day scan
+Environment variables (or .env in repo root / SLINGSHOT_REPO_DIR):
+    PORT / SERVER_PORT               bind port (default: 8080). Pterodactyl sets SERVER_PORT.
+    HOST=0.0.0.0                     bind host
+    SLINGSHOT_REPO_DIR=.             repo directory (default: this file's directory)
+    SLINGSHOT_GIT_PULL=1             periodically git pull (default: 1)
+    SLINGSHOT_PULL_INTERVAL=300      seconds between git pulls
+    SLINGSHOT_SYNC_INTERVAL=60       seconds between votes/site sync
+    SLINGSHOT_LEARNING_DAY=0         run learning-day scan on schedule in-service (default: 0)
+    SLINGSHOT_LEARNING_CRON_DAY=2    weekday for learning-day scan (Mon=0 .. Sun=6, default Tue=2)
+    SLINGSHOT_LEARNING_CRON_HOUR=9   UTC hour for learning-day scan
+    SLINGSHOT_LEARNING_CRON_MIN=0    UTC minute for learning-day scan
 """
 from __future__ import annotations
 
@@ -27,13 +27,63 @@ import subprocess
 import sys
 import threading
 import time
+import traceback
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
+# Resolve paths relative to this file so launch works from any working directory
+# (e.g. /home/container, repo root, or a subdirectory).
 ROOT = Path(__file__).resolve().parent
-REPO = Path(os.environ.get("SLINGSHOT_REPO_DIR") or ROOT).resolve()
+
+
+def load_dotenv(paths) -> list[str]:
+    """Load KEY=VALUE pairs from .env-like files (stdlib only, no overrides)."""
+    loaded = []
+    for path in paths:
+        try:
+            p = Path(path)
+            if not p.is_file():
+                continue
+            for raw in p.read_text(encoding="utf-8", errors="replace").splitlines():
+                line = raw.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                if line.startswith("export "):
+                    line = line[7:].lstrip()
+                key, value = line.split("=", 1)
+                key = key.strip()
+                if not key or any(ch.isspace() for ch in key):
+                    continue
+                value = value.strip()
+                if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
+                    value = value[1:-1]
+                # Do not override real environment variables (panel/runtime wins).
+                if key not in os.environ:
+                    os.environ[key] = value
+            loaded.append(str(p))
+        except Exception:
+            # Never fail startup because of a malformed/unreadable .env file.
+            pass
+    return loaded
+
+
+# Load .env early so SLINGSHOT_REPO_DIR/PORT/HOST can be provided via file manager.
+_DOTENV_PATHS = [ROOT / ".env", Path.cwd() / ".env"]
+_repo_hint = (os.environ.get("SLINGSHOT_REPO_DIR") or "").strip()
+if _repo_hint:
+    _hint = Path(_repo_hint)
+    if not _hint.is_absolute():
+        _hint = (ROOT / _hint).resolve()
+    _DOTENV_PATHS.append(_hint / ".env")
+LOADED_DOTENV = load_dotenv(_DOTENV_PATHS)
+
+REPO = Path(os.environ.get("SLINGSHOT_REPO_DIR") or ROOT)
+if not REPO.is_absolute():
+    REPO = (ROOT / REPO).resolve()
+else:
+    REPO = REPO.resolve()
 sys.path.insert(0, str(REPO))
 
 
@@ -47,6 +97,24 @@ def env_bool(name: str, default: bool = False) -> bool:
 def log(msg: str) -> None:
     ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     print(f"[kerit {ts}] {msg}", flush=True)
+
+
+def get_bind_host_port() -> tuple[str, int, str]:
+    host = (os.environ.get("HOST") or "0.0.0.0").strip() or "0.0.0.0"
+    port_raw = os.environ.get("PORT")
+    source = "PORT"
+    if port_raw is None or str(port_raw).strip() == "":
+        port_raw = os.environ.get("SERVER_PORT")
+        source = "SERVER_PORT" if port_raw not in (None, "") else "default"
+    if port_raw is None or str(port_raw).strip() == "":
+        port_raw = "8080"
+    try:
+        port = int(str(port_raw).strip())
+    except Exception:
+        log(f"invalid port value {port_raw!r} from {source}, falling back to 8080")
+        port = 8080
+        source = "fallback:8080"
+    return host, port, source
 
 
 def read_json(path: Path, default):
@@ -157,7 +225,7 @@ class Handler(BaseHTTPRequestHandler):
     def _send_file_json(self, path: Path):
         data = read_json(path, None)
         if data is None:
-            self._send_json({"error": "not found"}, status=404)
+            self._send_json({"error": "not found", "path": str(path)}, status=404)
             return
         self._send_json(data)
 
@@ -189,20 +257,54 @@ class Handler(BaseHTTPRequestHandler):
         return
 
 
+def startup_diagnostics(host: str, port: int, port_source: str) -> None:
+    log("startup diagnostics")
+    log(f"python: {sys.version.split()[0]} ({sys.executable})")
+    log(f"cwd: {Path.cwd()}")
+    log(f"script root (__file__ dir): {ROOT}")
+    log(f"resolved repo dir: {REPO}")
+    log(f"bind target: {host}:{port} (port source: {port_source})")
+    if LOADED_DOTENV:
+        log(f"loaded .env: {', '.join(LOADED_DOTENV)}")
+    else:
+        log("loaded .env: none (checked script dir, cwd, and SLINGSHOT_REPO_DIR)")
+    checks = [
+        ("kerit_service.py", ROOT / "kerit_service.py"),
+        ("site/update.json", REPO / "site" / "update.json"),
+        ("site/votes.json", REPO / "site" / "votes.json"),
+        ("site/events.json", REPO / "site" / "events.json"),
+        ("sync_votes_site.py", REPO / "sync_votes_site.py"),
+        ("learning_day_scan.py", REPO / "learning_day_scan.py"),
+        (".git directory", REPO / ".git"),
+    ]
+    for label, path in checks:
+        state = "OK" if path.exists() else "MISSING"
+        log(f"check [{state}] {label}: {path}")
+    if not (REPO / "site" / "update.json").exists():
+        log("warning: site/update.json missing in repo dir; /update.json will 404 until generated or tracked")
+
+
 def main() -> int:
-    host = os.environ.get("HOST", "0.0.0.0")
-    port = int(os.environ.get("PORT", "8080"))
-    threading.Thread(target=scheduler_loop, daemon=True).start()
-    httpd = ThreadingHTTPServer((host, port), Handler)
-    log(f"serving on http://{host}:{port} (repo={REPO})")
-    log("endpoints: /health, /update.json, /votes.json, /events.json")
     try:
-        httpd.serve_forever()
-    except KeyboardInterrupt:
-        log("stopping")
-    finally:
-        httpd.server_close()
-    return 0
+        host, port, port_source = get_bind_host_port()
+        startup_diagnostics(host, port, port_source)
+        threading.Thread(target=scheduler_loop, daemon=True).start()
+        httpd = ThreadingHTTPServer((host, port), Handler)
+        log(f"serving on http://{host}:{port} (repo={REPO})")
+        log("endpoints: /, /health, /healthz, /update.json, /votes.json, /events.json")
+        try:
+            httpd.serve_forever()
+        except KeyboardInterrupt:
+            log("stopping (KeyboardInterrupt)")
+        finally:
+            httpd.server_close()
+        return 0
+    except Exception:
+        log("fatal startup error:")
+        traceback.print_exc()
+        sys.stdout.flush()
+        sys.stderr.flush()
+        return 1
 
 
 if __name__ == "__main__":
