@@ -1,0 +1,327 @@
+{
+  "version": "2.0.4",
+  "updated": "2026-11-18",
+  "phase": "countdown",
+  "next_major": "2026-11-26",
+  "days_left": 8,
+  "next_major_title": "Pages load in half the time",
+  "next_major_notes": [
+    "Cold starts drop from 2.1s to 0.9s on typical devices",
+    "Background sync pauses when battery dips below 20%",
+    "Bundle size shrinks 38% by dropping legacy polyfills"
+  ],
+  "trailer": {
+    "file": "dist/trailer/release-trailer.mp4",
+    "version": "2.0.0",
+    "slug": "release",
+    "seconds": 16.4,
+    "title": "Pages load in half the time"
+  },
+  "apps": {
+    "compound-interest": {
+      "version": "2.0.5",
+      "title": "System maintenance, bug fixes, and security update",
+      "description": "This update includes same-day maintenance across Slingshot apps. Automated health checks found issues that are being addressed to improve reliability. Security and stability checks were reviewed and hardening improvements were applied where needed. Download the update and restart the app to apply the latest fixes.",
+      "download_url": "https://tbougnar.github.io/Slingshot-Tools/",
+      "released": "2026-11-18",
+      "notes": [
+        "Reliability fixes from automated health checks",
+        "Code safety and stability hardening",
+        "General bug fixes and performance improvements",
+        "Update delivery improvements for faster installs"
+      ],
+      "restart_required": true
+    },
+    "compound-interest-basic-basic": {
+      "version": "2.0.5",
+      "title": "System maintenance, bug fixes, and security update",
+      "description": "This update includes same-day maintenance across Slingshot apps. Automated health checks found issues that are being addressed to improve reliability. Security and stability checks were reviewed and hardening improvements were applied where needed. Download the update and restart the app to apply the latest fixes.",
+      "download_url": "https://tbougnar.github.io/Slingshot-Tools/",
+      "released": "2026-11-18",
+      "notes": [
+        "Reliability fixes from automated health checks",
+        "Code safety and stability hardening",
+        "General bug fixes and performance improvements",
+        "Update delivery improvements for faster installs"
+      ],
+      "restart_required": true
+    },
+    "expense-splitter": {
+      "version": "2.0.5",
+      "title": "System maintenance, bug fixes, and security update",
+      "description": "This update includes same-day maintenance across Slingshot apps. Automated health checks found issues that are being addressed to improve reliability. Security and stability checks were reviewed and hardening improvements were applied where needed. Download the update and restart the app to apply the latest fixes.",
+      "download_url": "https://tbougnar.github.io/Slingshot-Tools/",
+      "released": "2026-11-18",
+      "notes": [
+        "Reliability fixes from automated health checks",
+        "Code safety and stability hardening",
+        "General bug fixes and performance improvements",
+        "Update delivery improvements for faster installs"
+      ],
+      "restart_required": true
+    },
+    "expense-splitter-basic-basic": {
+      "version": "2.0.5",
+      "title": "System maintenance, bug fixes, and security update",
+      "description": "This update includes same-day maintenance across Slingshot apps. Automated health checks found issues that are being addressed to improve reliability. Security and stability checks were reviewed and hardening improvements were applied where needed. Download the update and restart the app to apply the latest fixes.",
+      "download_url": "https://tbougnar.github.io/Slingshot-Tools/",
+      "released": "2026-11-18",
+      "notes": [
+        "Reliability fixes from automated health checks",
+        "Code safety and stability hardening",
+        "General bug fixes and performance improvements",
+        "Update delivery improvements for faster installs"
+      ],
+      "restart_required": true
+    },
+    "file-renamer": {
+      "version": "2.0.5",
+      "title": "System maintenance, bug fixes, and security update",
+      "description": "This update includes same-day maintenance across Slingshot apps. Automated health checks found issues that are being addressed to improve reliability. Security and stability checks were reviewed and hardening improvements were applied where needed. Download the update and restart the app to apply the latest fixes.",
+      "download_url": "https://tbougnar.github.io/Slingshot-Tools/",
+      "released": "2026-11-18",
+      "notes": [
+        "Reliability fixes from automated health checks",
+        "Code safety and stability hardening",
+        "General bug fixes and performance improvements",
+        "Update delivery improvements for faster installs"
+      ],
+      "restart_required": true
+    },
+    "file-renamer-basic-basic": {
+      "version": "2.0.5",
+      "title": "System maintenance, bug fixes, and security update",
+      "description": "This update includes same-day maintenance across Slingshot apps. Automated health checks found issues that are being addressed to improve reliability. Security and stability checks were reviewed and hardening improvements were applied where needed. Download the update and restart the app to apply the latest fixes.",
+      "download_url": "https://tbougnar.github.io/Slingshot-Tools/",
+      "released": "2026-11-18",
+      "notes": [
+        "Reliability fixes from automated health checks",
+        "Code safety and stability hardening",
+        "General bug fixes and performance improvements",
+        "Update delivery improvements for faster installs"
+      ],
+      "restart_required": true
+    },
+    "flashcard-maker": {
+      "version": "2.0.5",
+      "title": "System maintenance, bug fixes, and security update",
+      "description": "This update includes same-day maintenance across Slingshot apps. Automated health checks found issues that are being addressed to improve reliability. Security and stability checks were reviewed and hardening improvements were applied where needed. Download the update and restart the app to apply the latest fixes.",
+      "download_url": "https://tbougnar.github.io/Slingshot-Tools/",
+      "released": "2026-11-18",
+      "notes": [
+        "Reliability fixes from automated health checks",
+        "Code safety and stability hardening",
+        "General bug fixes and performance improvements",
+        "Update delivery improvements for faster installs"
+      ],
+      "restart_required": true
+    },
+    "flashcard-maker-basic-basic": {
+      "version": "2.0.5",
+      "title": "System maintenance, bug fixes, and security update",
+      "description": "This update includes same-day maintenance across Slingshot apps. Automated health checks found issues that are being addressed to improve reliability. Security and stability checks were reviewed and hardening improvements were applied where needed. Download the update and restart the app to apply the latest fixes.",
+      "download_url": "https://tbougnar.github.io/Slingshot-Tools/",
+      "released": "2026-11-18",
+      "notes": [
+        "Reliability fixes from automated health checks",
+        "Code safety and stability hardening",
+        "General bug fixes and performance improvements",
+        "Update delivery improvements for faster installs"
+      ],
+      "restart_required": true
+    },
+    "grade-calculator": {
+      "version": "2.0.5",
+      "title": "System maintenance, bug fixes, and security update",
+      "description": "This update includes same-day maintenance across Slingshot apps. Automated health checks found issues that are being addressed to improve reliability. Security and stability checks were reviewed and hardening improvements were applied where needed. Download the update and restart the app to apply the latest fixes.",
+      "download_url": "https://tbougnar.github.io/Slingshot-Tools/",
+      "released": "2026-11-18",
+      "notes": [
+        "Reliability fixes from automated health checks",
+        "Code safety and stability hardening",
+        "General bug fixes and performance improvements",
+        "Update delivery improvements for faster installs"
+      ],
+      "restart_required": true
+    },
+    "grade-calculator-basic-basic": {
+      "version": "2.0.5",
+      "title": "System maintenance, bug fixes, and security update",
+      "description": "This update includes same-day maintenance across Slingshot apps. Automated health checks found issues that are being addressed to improve reliability. Security and stability checks were reviewed and hardening improvements were applied where needed. Download the update and restart the app to apply the latest fixes.",
+      "download_url": "https://tbougnar.github.io/Slingshot-Tools/",
+      "released": "2026-11-18",
+      "notes": [
+        "Reliability fixes from automated health checks",
+        "Code safety and stability hardening",
+        "General bug fixes and performance improvements",
+        "Update delivery improvements for faster installs"
+      ],
+      "restart_required": true
+    },
+    "gst-calculator": {
+      "version": "2.0.5",
+      "title": "System maintenance, bug fixes, and security update",
+      "description": "This update includes same-day maintenance across Slingshot apps. Automated health checks found issues that are being addressed to improve reliability. Security and stability checks were reviewed and hardening improvements were applied where needed. Download the update and restart the app to apply the latest fixes.",
+      "download_url": "https://tbougnar.github.io/Slingshot-Tools/",
+      "released": "2026-11-18",
+      "notes": [
+        "Reliability fixes from automated health checks",
+        "Code safety and stability hardening",
+        "General bug fixes and performance improvements",
+        "Update delivery improvements for faster installs"
+      ],
+      "restart_required": true
+    },
+    "gst-calculator-basic-basic": {
+      "version": "2.0.5",
+      "title": "System maintenance, bug fixes, and security update",
+      "description": "This update includes same-day maintenance across Slingshot apps. Automated health checks found issues that are being addressed to improve reliability. Security and stability checks were reviewed and hardening improvements were applied where needed. Download the update and restart the app to apply the latest fixes.",
+      "download_url": "https://tbougnar.github.io/Slingshot-Tools/",
+      "released": "2026-11-18",
+      "notes": [
+        "Reliability fixes from automated health checks",
+        "Code safety and stability hardening",
+        "General bug fixes and performance improvements",
+        "Update delivery improvements for faster installs"
+      ],
+      "restart_required": true
+    },
+    "habit-tracker": {
+      "version": "2.0.5",
+      "title": "System maintenance, bug fixes, and security update",
+      "description": "This update includes same-day maintenance across Slingshot apps. Automated health checks found issues that are being addressed to improve reliability. Security and stability checks were reviewed and hardening improvements were applied where needed. Download the update and restart the app to apply the latest fixes.",
+      "download_url": "https://tbougnar.github.io/Slingshot-Tools/",
+      "released": "2026-11-18",
+      "notes": [
+        "Reliability fixes from automated health checks",
+        "Code safety and stability hardening",
+        "General bug fixes and performance improvements",
+        "Update delivery improvements for faster installs"
+      ],
+      "restart_required": true
+    },
+    "habit-tracker-basic-basic": {
+      "version": "2.0.5",
+      "title": "System maintenance, bug fixes, and security update",
+      "description": "This update includes same-day maintenance across Slingshot apps. Automated health checks found issues that are being addressed to improve reliability. Security and stability checks were reviewed and hardening improvements were applied where needed. Download the update and restart the app to apply the latest fixes.",
+      "download_url": "https://tbougnar.github.io/Slingshot-Tools/",
+      "released": "2026-11-18",
+      "notes": [
+        "Reliability fixes from automated health checks",
+        "Code safety and stability hardening",
+        "General bug fixes and performance improvements",
+        "Update delivery improvements for faster installs"
+      ],
+      "restart_required": true
+    },
+    "invoice-maker": {
+      "version": "2.0.5",
+      "title": "System maintenance, bug fixes, and security update",
+      "description": "This update includes same-day maintenance across Slingshot apps. Automated health checks found issues that are being addressed to improve reliability. Security and stability checks were reviewed and hardening improvements were applied where needed. Download the update and restart the app to apply the latest fixes.",
+      "download_url": "https://tbougnar.github.io/Slingshot-Tools/",
+      "released": "2026-11-18",
+      "notes": [
+        "Reliability fixes from automated health checks",
+        "Code safety and stability hardening",
+        "General bug fixes and performance improvements",
+        "Update delivery improvements for faster installs"
+      ],
+      "restart_required": true
+    },
+    "invoice-maker-basic-basic": {
+      "version": "2.0.5",
+      "title": "System maintenance, bug fixes, and security update",
+      "description": "This update includes same-day maintenance across Slingshot apps. Automated health checks found issues that are being addressed to improve reliability. Security and stability checks were reviewed and hardening improvements were applied where needed. Download the update and restart the app to apply the latest fixes.",
+      "download_url": "https://tbougnar.github.io/Slingshot-Tools/",
+      "released": "2026-11-18",
+      "notes": [
+        "Reliability fixes from automated health checks",
+        "Code safety and stability hardening",
+        "General bug fixes and performance improvements",
+        "Update delivery improvements for faster installs"
+      ],
+      "restart_required": true
+    },
+    "password-manager": {
+      "version": "2.0.5",
+      "title": "System maintenance, bug fixes, and security update",
+      "description": "This update includes same-day maintenance across Slingshot apps. Automated health checks found issues that are being addressed to improve reliability. Security and stability checks were reviewed and hardening improvements were applied where needed. Download the update and restart the app to apply the latest fixes.",
+      "download_url": "https://tbougnar.github.io/Slingshot-Tools/",
+      "released": "2026-11-18",
+      "notes": [
+        "Reliability fixes from automated health checks",
+        "Code safety and stability hardening",
+        "General bug fixes and performance improvements",
+        "Update delivery improvements for faster installs"
+      ],
+      "restart_required": true
+    },
+    "recipe-scaler": {
+      "version": "2.0.5",
+      "title": "System maintenance, bug fixes, and security update",
+      "description": "This update includes same-day maintenance across Slingshot apps. Automated health checks found issues that are being addressed to improve reliability. Security and stability checks were reviewed and hardening improvements were applied where needed. Download the update and restart the app to apply the latest fixes.",
+      "download_url": "https://tbougnar.github.io/Slingshot-Tools/",
+      "released": "2026-11-18",
+      "notes": [
+        "Reliability fixes from automated health checks",
+        "Code safety and stability hardening",
+        "General bug fixes and performance improvements",
+        "Update delivery improvements for faster installs"
+      ],
+      "restart_required": true
+    },
+    "recipe-scaler-basic-basic": {
+      "version": "2.0.5",
+      "title": "System maintenance, bug fixes, and security update",
+      "description": "This update includes same-day maintenance across Slingshot apps. Automated health checks found issues that are being addressed to improve reliability. Security and stability checks were reviewed and hardening improvements were applied where needed. Download the update and restart the app to apply the latest fixes.",
+      "download_url": "https://tbougnar.github.io/Slingshot-Tools/",
+      "released": "2026-11-18",
+      "notes": [
+        "Reliability fixes from automated health checks",
+        "Code safety and stability hardening",
+        "General bug fixes and performance improvements",
+        "Update delivery improvements for faster installs"
+      ],
+      "restart_required": true
+    },
+    "unit-price-compare": {
+      "version": "2.0.5",
+      "title": "System maintenance, bug fixes, and security update",
+      "description": "This update includes same-day maintenance across Slingshot apps. Automated health checks found issues that are being addressed to improve reliability. Security and stability checks were reviewed and hardening improvements were applied where needed. Download the update and restart the app to apply the latest fixes.",
+      "download_url": "https://tbougnar.github.io/Slingshot-Tools/",
+      "released": "2026-11-18",
+      "notes": [
+        "Reliability fixes from automated health checks",
+        "Code safety and stability hardening",
+        "General bug fixes and performance improvements",
+        "Update delivery improvements for faster installs"
+      ],
+      "restart_required": true
+    },
+    "unit-price-compare-basic-basic": {
+      "version": "2.0.5",
+      "title": "System maintenance, bug fixes, and security update",
+      "description": "This update includes same-day maintenance across Slingshot apps. Automated health checks found issues that are being addressed to improve reliability. Security and stability checks were reviewed and hardening improvements were applied where needed. Download the update and restart the app to apply the latest fixes.",
+      "download_url": "https://tbougnar.github.io/Slingshot-Tools/",
+      "released": "2026-11-18",
+      "notes": [
+        "Reliability fixes from automated health checks",
+        "Code safety and stability hardening",
+        "General bug fixes and performance improvements",
+        "Update delivery improvements for faster installs"
+      ],
+      "restart_required": true
+    }
+  },
+  "latest_update": {
+    "title": "System maintenance, bug fixes, and security update",
+    "description": "This update includes same-day maintenance across Slingshot apps. Automated health checks found issues that are being addressed to improve reliability. Security and stability checks were reviewed and hardening improvements were applied where needed. Download the update and restart the app to apply the latest fixes.",
+    "notes": [
+      "Reliability fixes from automated health checks",
+      "Code safety and stability hardening",
+      "General bug fixes and performance improvements",
+      "Update delivery improvements for faster installs"
+    ],
+    "released": "2026-11-18"
+  }
+}
