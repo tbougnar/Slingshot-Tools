@@ -1155,6 +1155,30 @@ the change that fixed it. Check here before proposing anything.
 - **Check for recurrence:** recurs every Wednesday; one entry per week is expected
 - **Status:** UNTESTED
 
+## B145 - weekly review 2026-W47: 0 order(s), $0.00, 0 star(s), 0 vote(s) on the open ballot
+
+- **Cause:** Week 2026-W47 closed with no ballot (`ballot_open: false`, empty question, 0 votes), no recent winners, no products listed, and no revenue (`orders: 0`, `total: 0.0`, `available: false`). GitHub signals are all zero: 0 stars, 0 forks, 0 watchers after 46 repo days. `known_problem
+- **Fix:** read data/weekly_reviews.json before the next build; it carries this week's numbers and what to change
+- **Files:** data/weekly_reviews.json, weekly_review.py
+- **Check for recurrence:** recurs every Wednesday; one entry per week is expected
+- **Status:** UNTESTED
+
+## B146 - weekly review 2026-W47: 0 order(s), $0.00, None star(s), 0 vote(s) on the open ballot
+
+- **Cause:** A ballot is open: "What should Slingshot Tools build next week?" with 0 vote(s) so far.
+- **Fix:** read data/weekly_reviews.json before the next build; it carries this week's numbers and what to change
+- **Files:** data/weekly_reviews.json, weekly_review.py
+- **Check for recurrence:** recurs every Wednesday; one entry per week is expected
+- **Status:** UNTESTED
+
+## B147 - learning-day scan: 21 app(s) queued for same-day update, 1 failed check(s), 0 secret finding(s), 6 suspect pattern hit(s)
+
+- **Cause:** This update includes same-day maintenance across Slingshot apps. Automated health checks found issues that are being addressed to improve reliability. Security and stability checks were reviewed and hardening improvements were applied where needed. Download the update and restart
+- **Fix:** Published same-day update manifest with AI-written notes for all known apps; run build/publish jobs to ship binaries.
+- **Files:** learning_day_scan.py, data/update_state.json, site/update.json, data/learning_day_scan.json
+- **Check for recurrence:** learning day system scan and update publication
+- **Status:** UNTESTED
+
 ## How to use this
 
 1. If the symptom matches an entry, use that fix. Do not invent a new one.
