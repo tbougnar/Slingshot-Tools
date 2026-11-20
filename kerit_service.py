@@ -162,6 +162,31 @@ def run_learning_day_scan() -> None:
         log(f"learning-day scan error: {str(e)[:160]}")
 
 
+def maybe_start_discord_bot() -> subprocess.Popen | None:
+    """Optionally run the Discord bot 24/7 inside Kerit (as a child process)."""
+    enabled = env_bool("SLINGSHOT_DISCORD_BOT", False) or env_bool("SLINGSHOT_RUN_DISCORD_BOT", False)
+    token = (os.environ.get("DISCORD_BOT_TOKEN") or "").strip()
+    if not enabled:
+        log("discord bot: disabled (set SLINGSHOT_DISCORD_BOT=1 to run 24/7 in Kerit)")
+        return None
+    if not token:
+        log("discord bot: enabled but DISCORD_BOT_TOKEN is missing; not starting")
+        return None
+    try:
+        proc = subprocess.Popen(
+            [sys.executable, "discord_bot.py"],
+            cwd=REPO,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.STDOUT,
+            env=os.environ.copy(),
+        )
+        log(f"discord bot: started (pid={proc.pid})")
+        return proc
+    except Exception as e:  # noqa: BLE001
+        log(f"discord bot: failed to start ({str(e)[:160]})")
+        return None
+
+
 class ServiceState:
     def __init__(self):
         self.last_learning_stamp = ""
@@ -289,6 +314,7 @@ def main() -> int:
         host, port, port_source = get_bind_host_port()
         startup_diagnostics(host, port, port_source)
         threading.Thread(target=scheduler_loop, daemon=True).start()
+        bot_proc = maybe_start_discord_bot()
         httpd = ThreadingHTTPServer((host, port), Handler)
         log(f"serving on http://{host}:{port} (repo={REPO})")
         log("endpoints: /, /health, /healthz, /update.json, /votes.json, /events.json")
@@ -297,6 +323,11 @@ def main() -> int:
         except KeyboardInterrupt:
             log("stopping (KeyboardInterrupt)")
         finally:
+            if bot_proc and bot_proc.poll() is None:
+                try:
+                    bot_proc.terminate()
+                except Exception:
+                    pass
             httpd.server_close()
         return 0
     except Exception:
