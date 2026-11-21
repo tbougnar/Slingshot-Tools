@@ -162,6 +162,49 @@ def run_learning_day_scan() -> None:
         log(f"learning-day scan error: {str(e)[:160]}")
 
 
+_WEEKLY_CYCLE_LAST: dict[str, str] = {}
+
+
+def run_weekly_cycle_stage(stage: str) -> None:
+    """Run a weekly_cycle.py stage (monday/wednesday/friday/close-ballot)."""
+    stage = (stage or "").strip().lower()
+    if stage not in {"monday", "wednesday", "friday", "close-ballot"}:
+        log(f"weekly cycle: unknown stage {stage!r}")
+        return
+    log(f"running weekly cycle stage: {stage}")
+    try:
+        r = subprocess.run([sys.executable, "weekly_cycle.py", stage], cwd=REPO,
+                           capture_output=True, text=True, timeout=3600)
+        out = ((r.stdout or "") + ("\n" + r.stderr if r.stderr else "")).strip()
+        tail = out.splitlines()[-1] if out else f"rc={r.returncode}"
+        log(f"weekly cycle {stage} finished (rc={r.returncode}): {tail[:220]}")
+    except Exception as e:  # noqa: BLE001
+        log(f"weekly cycle {stage} error: {str(e)[:160]}")
+
+
+def maybe_run_weekly_cycle(now: datetime) -> None:
+    """Optional Kerit fallback/scheduler for weekly cycle when GHA is unavailable."""
+    if not env_bool("SLINGSHOT_KERIT_WEEKLY_CYCLE", False):
+        return
+    # Defaults: Mon 09:00, Wed 09:00, Fri 07:00 UTC (close-ballot before build)
+    schedule = [
+        ("monday", 0, env_int("SLINGSHOT_KERIT_MONDAY_HOUR", 9)),
+        ("wednesday", 2, env_int("SLINGSHOT_KERIT_WEDNESDAY_HOUR", 9)),
+        ("close-ballot", 4, env_int("SLINGSHOT_KERIT_CLOSE_BALLOT_HOUR", 6)),
+        ("friday", 4, env_int("SLINGSHOT_KERIT_FRIDAY_HOUR", 7)),
+    ]
+    day_key = now.strftime("%Y-%m-%d")
+    for stage, weekday, hour in schedule:
+        if hour < 0:
+            continue
+        if now.weekday() == weekday and now.hour == hour:
+            marker = f"{day_key}:{stage}:{hour}"
+            if _WEEKLY_CYCLE_LAST.get(stage) == marker:
+                continue
+            _WEEKLY_CYCLE_LAST[stage] = marker
+            threading.Thread(target=run_weekly_cycle_stage, args=(stage,), daemon=True).start()
+
+
 def maybe_start_discord_bot() -> subprocess.Popen | None:
     """Optionally run the Discord bot 24/7 inside Kerit (as a child process)."""
     enabled = env_bool("SLINGSHOT_DISCORD_BOT", False) or env_bool("SLINGSHOT_RUN_DISCORD_BOT", False)
@@ -218,7 +261,8 @@ def scheduler_loop():
     next_pull = 0.0
     next_sync = 0.0
     log(f"scheduler started (pull={do_pull}/{pull_interval}s, sync={sync_interval}s, "
-        f"learning_day={env_bool('SLINGSHOT_LEARNING_DAY', False)})")
+        f"learning_day={env_bool('SLINGSHOT_LEARNING_DAY', False)}, "
+        f"weekly_cycle={env_bool('SLINGSHOT_KERIT_WEEKLY_CYCLE', False)})")
     while True:
         now = time.time()
         try:
@@ -229,6 +273,7 @@ def scheduler_loop():
                 git_pull()
                 next_pull = now + pull_interval
             STATE.maybe_run_learning_day()
+            maybe_run_weekly_cycle(datetime.now(timezone.utc))
         except Exception as e:  # noqa: BLE001
             log(f"scheduler error: {str(e)[:160]}")
         time.sleep(15)

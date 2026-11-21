@@ -30,14 +30,18 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 STATE = ROOT / "data" / "budget.json"
 
-MONTHLY_HOURS = float(os.environ.get("SLINGSHOT_MONTHLY_HOURS") or 30.0)
-EMERGENCY_HOURS = float(os.environ.get("SLINGSHOT_EMERGENCY_HOURS") or 3.0)
+# Budget is tracked for visibility, but no longer hard-blocks runs by default.
+# GitHub Actions has minute limits; when exhausted, Kerit/always-on runners
+# should handle overflow. Set SLINGSHOT_BUDGET_ENFORCE=1 to restore hard gates.
+MONTHLY_HOURS = float(os.environ.get("SLINGSHOT_MONTHLY_HOURS") or 9999.0)
+EMERGENCY_HOURS = float(os.environ.get("SLINGSHOT_EMERGENCY_HOURS") or 9999.0)
 
 # A single job may not burn more than this, whatever the monthly total says.
-JOB_CAP_HOURS = float(os.environ.get("SLINGSHOT_JOB_CAP_HOURS") or 1.5)
+JOB_CAP_HOURS = float(os.environ.get("SLINGSHOT_JOB_CAP_HOURS") or 9999.0)
 
 # Emergency budget is only for a run that is repairing something already broken.
 EMERGENCY = os.environ.get("SLINGSHOT_EMERGENCY", "").strip() in ("1", "true", "yes")
+BUDGET_ENFORCE = os.environ.get("SLINGSHOT_BUDGET_ENFORCE", "").strip() in ("1", "true", "yes")
 
 # Set when the recorded hours cannot be read. The module docstring promises the
 # hours "cannot quietly reset"; they did, because a parse error was swallowed
@@ -228,12 +232,18 @@ def check(label: str = "", planned_hours: float = 0.0) -> int:
             log(f"emergency repair jobs may still use "
                 f"{max(0.0, EMERGENCY_HOURS - s['emergency']):.2f}h "
                 f"with SLINGSHOT_EMERGENCY=1")
-        return 1
+        if BUDGET_ENFORCE:
+            return 1
+        log(f"budget enforcement disabled; continuing{tag} (use Kerit/always-on for overflow)")
+        return 0
 
     if need > left:
         log(f"REFUSING{tag}: this job needs about {need:.2f}h but only "
             f"{left:.2f}h is left this month")
-        return 1
+        if BUDGET_ENFORCE:
+            return 1
+        log(f"budget enforcement disabled; continuing{tag} (use Kerit/always-on for overflow)")
+        return 0
 
     log(f"approved{tag}: about {need:.2f}h against {left:.2f}h remaining")
     return 0

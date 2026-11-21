@@ -31,7 +31,7 @@ jobs:
       GROQ_CHAT_MODEL: ${{ secrets.GROQ_CHAT_MODEL }}
       DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
       DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
-      SLINGSHOT_MONTHLY_HOURS: "30"
+      SLINGSHOT_MONTHLY_HOURS: "9999"
     steps:
       - uses: actions/checkout@v4
 

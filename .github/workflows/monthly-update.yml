@@ -48,7 +48,7 @@ jobs:
       DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
       ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
       ELEVENLABS_VOICE_ID: ${{ vars.ELEVENLABS_VOICE_ID }}
-      SLINGSHOT_MONTHLY_HOURS: "30"
+      SLINGSHOT_MONTHLY_HOURS: "9999"
       STAGE: ${{ inputs.stage || 'all' }}
     steps:
       - uses: actions/checkout@v4

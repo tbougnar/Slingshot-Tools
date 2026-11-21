@@ -29,8 +29,8 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
       DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
-      SLINGSHOT_MONTHLY_HOURS: "30"
-      SLINGSHOT_EMERGENCY_HOURS: "3"
+      SLINGSHOT_MONTHLY_HOURS: "9999"
+      SLINGSHOT_EMERGENCY_HOURS: "9999"
       SLINGSHOT_RETIRE_MIN_DAYS: "365"
     steps:
       - uses: actions/checkout@v4
@@ -100,7 +100,7 @@ jobs:
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
       OPENROUTER_CHAT_MODEL: ${{ vars.OPENROUTER_CHAT_MODEL }}
       GROQ_CHAT_MODEL: ${{ secrets.GROQ_CHAT_MODEL }}
-      SLINGSHOT_MONTHLY_HOURS: "30"
+      SLINGSHOT_MONTHLY_HOURS: "9999"
     steps:
       - uses: actions/checkout@v4
         with:

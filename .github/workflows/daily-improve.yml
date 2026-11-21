@@ -43,7 +43,7 @@ jobs:
       OPENROUTER_CHAT_MODEL: ${{ vars.OPENROUTER_CHAT_MODEL }}
       GROQ_CHAT_MODEL: ${{ secrets.GROQ_CHAT_MODEL }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      SLINGSHOT_MONTHLY_HOURS: "30"
+      SLINGSHOT_MONTHLY_HOURS: "9999"
       # the editable set. Kept identical to the one the Wednesday job uses, so
       # the two lanes cannot drift into different permissions.
       SLINGSHOT_ALLOWED: "make_app.py,qa_loop.py,app_scanner.py,patcher.py,selfheal.py,sizeguard.py,tokenmeter.py,providers.py"

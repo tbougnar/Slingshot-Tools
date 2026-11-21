@@ -109,13 +109,13 @@ GROQ_BASE = "https://api.groq.com/openai/v1"
 # a run, so every job has a chain and the caller walks it.
 OPENROUTER_CHAINS = {
     "builder": ("deepseek/deepseek-chat-v3-0324:free",
-                "google/gemma-3-27b-it:free",
+                "google/gemma-3-12b-it:free",
                 "meta-llama/llama-3.3-70b-instruct:free"),
     "debug": ("deepseek/deepseek-chat-v3-0324:free",
-              "google/gemma-3-27b-it:free",
+              "google/gemma-3-12b-it:free",
               "meta-llama/llama-3.3-70b-instruct:free"),
     "chat": ("deepseek/deepseek-chat-v3-0324:free",
-             "google/gemma-3-27b-it:free",
+             "google/gemma-3-12b-it:free",
              "meta-llama/llama-3.3-70b-instruct:free"),
 }
 GROQ_CHAINS = {

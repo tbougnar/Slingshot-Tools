@@ -35,8 +35,8 @@ jobs:
       PRICE_FLOOR: '1.00'
       PRICE_CEILING: '10.00'
       PRICE_START: "3.00"
-      SLINGSHOT_MONTHLY_HOURS: "30"
-      SLINGSHOT_EMERGENCY_HOURS: "3"
+      SLINGSHOT_MONTHLY_HOURS: "9999"
+      SLINGSHOT_EMERGENCY_HOURS: "9999"
     steps:
       - uses: actions/checkout@v4
         with:
