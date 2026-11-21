@@ -230,6 +230,22 @@ def maybe_start_discord_bot() -> subprocess.Popen | None:
         return None
 
 
+def maybe_start_ai_monitor():
+    """Start 24/7 AI monitor in-process (scans errors/glitches/vulns; auto-fixes or hands off to AI dev team)."""
+    enabled = env_bool("SLINGSHOT_KERIT_AI_MONITOR", True)
+    if not enabled:
+        log("ai monitor: disabled (SLINGSHOT_KERIT_AI_MONITOR=0)")
+        return None
+    try:
+        import kerit_ai_monitor
+        t = kerit_ai_monitor.start_background()
+        log("ai monitor: started (24/7)")
+        return t
+    except Exception as e:  # noqa: BLE001
+        log(f"ai monitor: failed to start ({str(e)[:160]})")
+        return None
+
+
 class ServiceState:
     def __init__(self):
         self.last_learning_stamp = ""
@@ -345,6 +361,8 @@ def startup_diagnostics(host: str, port: int, port_source: str) -> None:
         ("site/events.json", REPO / "site" / "events.json"),
         ("sync_votes_site.py", REPO / "sync_votes_site.py"),
         ("learning_day_scan.py", REPO / "learning_day_scan.py"),
+        ("kerit_ai_monitor.py", REPO / "kerit_ai_monitor.py"),
+        ("weekly_cycle.py", REPO / "weekly_cycle.py"),
         (".git directory", REPO / ".git"),
     ]
     for label, path in checks:
@@ -360,6 +378,7 @@ def main() -> int:
         startup_diagnostics(host, port, port_source)
         threading.Thread(target=scheduler_loop, daemon=True).start()
         bot_proc = maybe_start_discord_bot()
+        ai_monitor = maybe_start_ai_monitor()
         httpd = ThreadingHTTPServer((host, port), Handler)
         log(f"serving on http://{host}:{port} (repo={REPO})")
         log("endpoints: /, /health, /healthz, /update.json, /votes.json, /events.json")
