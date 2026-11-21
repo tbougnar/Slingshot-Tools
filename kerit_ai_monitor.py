@@ -26,6 +26,14 @@ REPORT = DATA / "kerit_ai_monitor.json"
 TASKS = DATA / "ai_dev_team_tasks.json"
 FIXLOG = DATA / "kerit_ai_monitor_fixes.json"
 
+# Two-folder AI queue:
+# 1) system_auto_fix: system/app-creation errors and glitches auto-fixed on the spot
+# 2) app_update_queue: app glitches/vulnerabilities queued for AI dev team future updates + announcement
+QUEUE_ROOT = DATA / "ai_queue"
+SYSTEM_QUEUE = QUEUE_ROOT / "system_auto_fix"
+APP_QUEUE = QUEUE_ROOT / "app_update_queue"
+APP_QUEUE_ANNOUNCED = DATA / "ai_queue_announced.json"
+
 SKIP_DIRS = {".git", "node_modules", "__pycache__", ".venv", "venv", "_audit_tmp"}
 TEXT_EXTS = {".py", ".js", ".ts", ".html", ".css", ".json", ".yml", ".yaml", ".md", ".ps1", ".cmd", ".txt"}
 APP_EXTS = {".py", ".js", ".ts", ".html", ".css", ".json"}
@@ -52,6 +60,85 @@ def write_json(path: Path, data) -> None:
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def ensure_queue_dirs() -> None:
+    for p in (SYSTEM_QUEUE, APP_QUEUE):
+        p.mkdir(parents=True, exist_ok=True)
+
+
+def _fingerprint(obj) -> str:
+    raw = json.dumps(obj, sort_keys=True, ensure_ascii=False, default=str)
+    return hashlib.sha1(raw.encode("utf-8", "replace")).hexdigest()[:16]
+
+
+def queue_system_fix(item: dict) -> Path:
+    ensure_queue_dirs()
+    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    fp = _fingerprint({"file": item.get("file"), "type": item.get("type"), "action": item.get("action")})
+    p = SYSTEM_QUEUE / f"{ts}_{fp}.json"
+    rec = {"ts": now_iso(), "status": "applied" if item.get("ok") else "failed", **item}
+    write_json(p, rec)
+    return p
+
+
+def queue_app_issue(item: dict) -> tuple[Path, bool]:
+    ensure_queue_dirs()
+    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    fp = _fingerprint({"app": item.get("app"), "file": item.get("file"), "issue": item.get("issue"), "type": item.get("type")})
+    p = APP_QUEUE / f"{ts}_{fp}.json"
+    rec = {"ts": now_iso(), "status": "queued_for_ai_dev_team", **item}
+    write_json(p, rec)
+
+    announced = load_json(APP_QUEUE_ANNOUNCED, [])
+    if not isinstance(announced, list):
+        announced = []
+    seen = set(str(x) for x in announced)
+    is_new = fp not in seen
+    if is_new:
+        announced = (announced + [fp])[-500:]
+        write_json(APP_QUEUE_ANNOUNCED, announced)
+    return p, is_new
+
+
+def announce_app_issues(items: list[dict]) -> bool:
+    if not items:
+        return False
+    try:
+        import discord_post as dp
+    except Exception as e:
+        log(f"announcement unavailable: {str(e)[:120]}")
+        return False
+    # Compact announcement; avoid spam/noise
+    lines = []
+    for it in items[:8]:
+        app = it.get("app") or "unknown-app"
+        issue = it.get("issue") or it.get("type") or "issue"
+        sev = it.get("severity") or "medium"
+        lines.append(f"- **{app}**: {issue} ({sev})")
+    more = len(items) - min(len(items), 8)
+    if more > 0:
+        lines.append(f"- ...and {more} more")
+    desc = "App glitches/vulnerabilities were detected and queued for the AI dev team to fix in a future update.\n\n" + "\n".join(lines)
+    payload = {
+        "embeds": [{
+            "title": "App Update Queue: Vulnerabilities/Glitches Detected",
+            "description": desc[:3900],
+            "color": 0xE74C3C,
+            "footer": {"text": "Slingshot Kerit AI Monitor"},
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }]
+    }
+    try:
+        ok = bool(dp.post("announcements", payload))
+        if ok:
+            log(f"announced {len(items)} app issue(s) to announcements")
+        else:
+            log("announcement post failed")
+        return ok
+    except Exception as e:
+        log(f"announcement error: {str(e)[:140]}")
+        return False
 
 
 def iter_files(roots=None, exts=None):
@@ -105,6 +192,7 @@ def scan_system() -> dict:
         "glitches": [],
         "vulnerabilities": [],
         "app_vulnerabilities": [],
+        "app_glitches": [],
         "stats": {"files_scanned": 0, "apps_scanned": 0},
     }
 
@@ -170,6 +258,17 @@ def scan_system() -> dict:
                 txt = read_text(p)
                 if txt is None:
                     continue
+                # App glitches/errors
+                if p.suffix.lower() == ".json":
+                    try:
+                        json.loads(txt.lstrip("\ufeff"))
+                    except Exception as e:
+                        findings["app_glitches"].append({"type": "app_invalid_json", "app": app_dir.name, "file": rel, "issue": f"Invalid JSON: {str(e)[:120]}", "severity": "high"})
+                elif p.suffix.lower() == ".py":
+                    try:
+                        compile(txt.lstrip("\ufeff"), rel, "exec")
+                    except SyntaxError as e:
+                        findings["app_glitches"].append({"type": "app_syntax_error", "app": app_dir.name, "file": rel, "issue": f"Syntax error: {str(e.msg)[:120]}", "severity": "high"})
                 for rx, label, sev in APP_VULN_PATTERNS:
                     if rx.search(txt):
                         k = (rel, label)
@@ -190,7 +289,7 @@ def scan_system() -> dict:
             findings["glitches"].append({"type": "invalid_json", "file": name, "severity": "high", "detail": str(e)[:160]})
 
     # Deduplicate and cap
-    for k in ("glitches", "vulnerabilities", "app_vulnerabilities"):
+    for k in ("glitches", "vulnerabilities", "app_vulnerabilities", "app_glitches"):
         findings[k] = findings[k][:120]
     return findings
 
@@ -243,6 +342,12 @@ def auto_fix_glitches(findings: dict) -> list[dict]:
                 fixes.append({"file": rel, "action": "handoff_syntax_error", "ok": False})
         except Exception as e:
             fixes.append({"file": rel, "action": f"auto_fix_failed:{ftype}", "ok": False, "error": str(e)[:160]})
+    for f in fixes:
+        if f.get("ok"):
+            try:
+                queue_system_fix(f)
+            except Exception as e:
+                log(f"system queue write failed: {str(e)[:120]}")
     return fixes
 
 # ----------------------------- AI dev team -----------------------------
@@ -261,7 +366,7 @@ def _ai_chat(system: str, user: str) -> str:
 def handoff_to_ai_dev_team(findings: dict, auto_fixes: list[dict]) -> dict:
     """Hand vulnerabilities/app issues to AI dev team; produce updates/tasks."""
     vulns = list(findings.get("vulnerabilities", []))
-    app_vulns = list(findings.get("app_vulnerabilities", []))
+    app_vulns = list(findings.get("app_vulnerabilities", [])) + list(findings.get("app_glitches", []))
     # glitches that couldn't be auto-fixed
     pending_glitches = [g for g in findings.get("glitches", []) if g.get("type") in ("python_syntax_error", "invalid_json")]
     pending_glitches = [g for g in pending_glitches if not any(f.get("file")==g.get("file") and f.get("ok") for f in auto_fixes)]
@@ -409,6 +514,10 @@ def handoff_to_ai_dev_team(findings: dict, auto_fixes: list[dict]) -> dict:
             continue
         if ok:
             result["actions"].append({"file": rel, "action": "ai_fix_on_spot", "ok": True})
+            try:
+                queue_system_fix({"file": rel, "action": "ai_fix_on_spot", "ok": True, "type": g.get("type"), "detail": g.get("detail", "")})
+            except Exception as e:
+                log(f"system queue write failed: {str(e)[:120]}")
 
     # Persist task/report
     tasks = load_json(TASKS, [])
@@ -425,10 +534,28 @@ def handoff_to_ai_dev_team(findings: dict, auto_fixes: list[dict]) -> dict:
 
 def run_monitor_cycle() -> dict:
     started = time.time()
+    ensure_queue_dirs()
     findings = scan_system()
     auto_fixes = auto_fix_glitches(findings)
+
+    # Queue app glitches/vulnerabilities for AI dev team future updates
+    app_issues = list(findings.get("app_vulnerabilities", [])) + list(findings.get("app_glitches", []))
+    queued_app = []
+    new_app = []
+    for it in app_issues:
+        try:
+            p, is_new = queue_app_issue(it)
+            rec = {"queue_file": p.relative_to(ROOT).as_posix(), "new": is_new, **it}
+            queued_app.append(rec)
+            if is_new:
+                new_app.append(it)
+        except Exception as e:
+            log(f"app queue write failed: {str(e)[:120]}")
+    if new_app:
+        announce_app_issues(new_app)
+
     handoff = {"tasks_created": 0, "updates_published": [], "actions": []}
-    needs_handoff = bool(findings.get("vulnerabilities") or findings.get("app_vulnerabilities"))
+    needs_handoff = bool(findings.get("vulnerabilities") or findings.get("app_vulnerabilities") or findings.get("app_glitches"))
     # also handoff glitches that couldn't be fixed on spot
     unfixed = [g for g in findings.get("glitches", []) if not any(f.get("file")==g.get("file") and f.get("ok") for f in auto_fixes)]
     if needs_handoff or unfixed:
@@ -442,15 +569,20 @@ def run_monitor_cycle() -> dict:
             "glitches": len(findings.get("glitches", [])),
             "vulnerabilities": len(findings.get("vulnerabilities", [])),
             "app_vulnerabilities": len(findings.get("app_vulnerabilities", [])),
+            "app_glitches": len(findings.get("app_glitches", [])),
             "auto_fixes": len([f for f in auto_fixes if f.get("ok")]),
             "handoff_tasks": handoff.get("tasks_created", 0),
+            "app_queued": len(queued_app),
+            "app_announced_new": len(new_app),
         },
         "auto_fixes": auto_fixes[:80],
         "handoff": handoff,
+        "app_queue": queued_app[:80],
         "findings": {
             "glitches": findings.get("glitches", [])[:40],
             "vulnerabilities": findings.get("vulnerabilities", [])[:40],
             "app_vulnerabilities": findings.get("app_vulnerabilities", [])[:40],
+            "app_glitches": findings.get("app_glitches", [])[:40],
         },
     }
     write_json(REPORT, report)
@@ -463,7 +595,7 @@ def run_monitor_cycle() -> dict:
         flog = (flog + [{"ts": report["ts"], "auto_fixes": auto_fixes, "handoff": handoff}])[-200:]
         write_json(FIXLOG, flog)
 
-    log(f"cycle done: glitches={report['counts']['glitches']} vulns={report['counts']['vulnerabilities']} app_vulns={report['counts']['app_vulnerabilities']} fixed={report['counts']['auto_fixes']} handoffs={report['counts']['handoff_tasks']}")
+    log(f"cycle done: glitches={report['counts']['glitches']} vulns={report['counts']['vulnerabilities']} app_vulns={report['counts']['app_vulnerabilities']} app_glitches={report['counts']['app_glitches']} fixed={report['counts']['auto_fixes']} handoffs={report['counts']['handoff_tasks']} queued={report['counts']['app_queued']}")
     return report
 
 
