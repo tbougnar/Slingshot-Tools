@@ -1,4 +1,4 @@
-﻿"""24/7 Kerit AI monitor: scans system/apps for errors, glitches, and vulnerabilities.
+"""24/7 Kerit AI monitor: scans system/apps for errors, glitches, and vulnerabilities.
 
 - Runs continuously in Kerit Cloud (started by kerit_service.py).
 - Errors/glitches: fixed on the spot when safe/deterministic.
@@ -125,7 +125,7 @@ def scan_system() -> dict:
         if txt is None:
             continue
         try:
-            compile(txt, p.name, "exec")
+            compile(txt.lstrip("\ufeff"), p.name, "exec")
         except SyntaxError as e:
             findings["glitches"].append({"type": "python_syntax_error", "file": p.relative_to(ROOT).as_posix(), "severity": "high", "detail": f"{e.msg} at line {e.lineno}"})
         except Exception:
