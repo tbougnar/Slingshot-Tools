@@ -108,15 +108,15 @@ GROQ_BASE = "https://api.groq.com/openai/v1"
 # Free OpenRouter models, best first. A daily cap on one model must never kill
 # a run, so every job has a chain and the caller walks it.
 OPENROUTER_CHAINS = {
-    "builder": ("deepseek/deepseek-chat-v3-0324:free",
-                "google/gemma-3-12b-it:free",
-                "meta-llama/llama-3.3-70b-instruct:free"),
-    "debug": ("deepseek/deepseek-chat-v3-0324:free",
-              "google/gemma-3-12b-it:free",
-              "meta-llama/llama-3.3-70b-instruct:free"),
-    "chat": ("deepseek/deepseek-chat-v3-0324:free",
-             "google/gemma-3-12b-it:free",
-             "meta-llama/llama-3.3-70b-instruct:free"),
+    "builder": ("deepseek/deepseek-chat-v3-0324",
+                "google/gemini-2.0-flash-001",
+                "meta-llama/llama-3.3-70b-instruct"),
+    "debug": ("deepseek/deepseek-chat-v3-0324",
+              "google/gemini-2.0-flash-001",
+              "meta-llama/llama-3.3-70b-instruct"),
+    "chat": ("deepseek/deepseek-chat-v3-0324",
+             "google/gemini-2.0-flash-001",
+             "meta-llama/llama-3.3-70b-instruct"),
 }
 GROQ_CHAINS = {
     "builder": ("openai/gpt-oss-120b", "qwen/qwen3.8-27b"),
