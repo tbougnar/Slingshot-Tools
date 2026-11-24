@@ -175,25 +175,17 @@ def main() -> int:
         return 1
 
     log("")
-    log("Now store all three. Each asks you to paste, then press Enter:")
+    log("Now put the token in GitHub. The gh CLI is not installed here, so")
+    log("use the website (and do not paste the token into a chat or a file):")
     log("")
-    log("  gh secret set YOUTUBE_CLIENT_ID --repo tbougnar/Slingshot-Tools")
-    log("  gh secret set YOUTUBE_CLIENT_SECRET --repo tbougnar/Slingshot-Tools")
-    log("  gh secret set YOUTUBE_REFRESH_TOKEN --repo tbougnar/Slingshot-Tools")
+    log("  1. github.com/tbougnar/Slingshot-Tools/settings/secrets/actions")
+    log("  2. Repository secrets -> New repository secret")
+    log("  3. Name: YOUTUBE_REFRESH_TOKEN")
+    log(f"  4. Value: {refresh}")
     log("")
-    log("When it prompts, paste this for the last one:")
-    log("")
-    log(f"  {refresh}")
-    log("")
-    log("Paste it after the prompt appears, not on the command line.")
-    log("A value typed onto the command itself stays in your history.")
-    log("")
-    log("Then the privacy level, which is a variable, not a secret:")
-    log("  gh variable set YOUTUBE_PRIVACY --body unlisted "
-        "--repo tbougnar/Slingshot-Tools")
-    log("")
-    log("valid: private, unlisted, public")
-    log("start with unlisted until you have watched a full video")
+    log("If the client id or secret changed, update those two secrets on the")
+    log("same page. YOUTUBE_PRIVACY is a Variable, not a secret; keep it")
+    log("unlisted until you have watched a full Short.")
     return 0
 
 
