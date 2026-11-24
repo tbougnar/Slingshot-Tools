@@ -1203,6 +1203,22 @@ the change that fixed it. Check here before proposing anything.
 - **Check for recurrence:** python check_connections.py must report PASS discord channels
 - **Status:** PROVEN
 
+## B151 - Verifier said staged file is gone after a successful Friday build
+
+- **Cause:** The generator writes the paid app to gitignored paid/ and only commits data/candidate.json. The verifier runs as a separate workflow_run on a fresh checkout, so the pointer existed but the app did not.
+- **Fix:** Upload paid/ as candidate-paid-build from the Friday run and download it with actions/download-artifact@v4 using github.event.workflow_run.id before verify_app runs. Also upload the verifier's paid build even when a later step fails.
+- **Files:** .github/workflows/friday-build.yml, .github/workflows/friday-verify.yml, data/fixbook.json, data/fixbook.md, data/lessons.txt
+- **Check for recurrence:** A dispatched Friday build must leave a candidate-paid-build artifact; the following verify run must report a clean app and publish it.
+- **Status:** PROVEN
+
+## B152 - Site deploy dispatch failed silently with no diagnostic
+
+- **Cause:** gh workflow run pages.yml --ref main returned a nonzero status on the hosted runner without printing why, turning an otherwise successful verification into a red release after the catalog was committed.
+- **Fix:** Use the GitHub REST workflow dispatch endpoint with curl, capture the HTTP status and response body, and fail with the actual code when it is not 2xx.
+- **Files:** .github/workflows/friday-verify.yml, data/fixbook.json, data/fixbook.md, data/lessons.txt
+- **Check for recurrence:** The verify job's Publish the site step must print the deploy request and return 204 on a successful dispatch.
+- **Status:** PROVEN
+
 ## How to use this
 
 1. If the symptom matches an entry, use that fix. Do not invent a new one.

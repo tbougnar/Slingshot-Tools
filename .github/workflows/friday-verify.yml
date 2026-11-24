@@ -80,6 +80,20 @@ jobs:
                  "built or published and the previous release stays live"
           fi
 
+      # The generator is a different workflow, on another machine, and paid/
+      # is gitignored so the paid app is never committed. Restore the private
+      # artifact from the run that triggered this one before verify_app looks
+      # for the staged file. Without this, a perfectly good candidate was
+      # deleted as "staged file is gone" and nothing was ever published.
+      - name: Restore the paid build from the Friday run
+        if: steps.fresh.outputs.fresh == 'yes' && github.event_name == 'workflow_run'
+        uses: actions/download-artifact@v4
+        with:
+          name: candidate-paid-build
+          path: paid/
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
       # Only when there is a paid build to hand over. With no candidate the
       # verifier writes nothing to paid/, and "No files were found" failed the
       # job on every week where generation produced nothing. It also used to
@@ -130,17 +144,29 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git fetch origin main --quiet
-          if gh workflow run pages.yml --ref main; then
-            echo "the site deploy has been requested"
-          else
-            echo "::error::could not trigger the site deploy; the new app"
-            echo "::error::is committed but not published"
+          set -euo pipefail
+          response=$(mktemp)
+          # gh workflow run returned no diagnostic at all on the hosted
+          # runner and failed the whole release after the app was already
+          # committed. The REST dispatch is the same request with a visible
+          # status code, so a deploy failure can be diagnosed instead of
+          # silently turning a successful verification into a red run.
+          code=$(curl -sS -o "$response" -w '%{http_code}' \
+            -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/pages.yml/dispatches" \
+            -d '{"ref":"main"}')
+          if [ "$code" -lt 200 ] || [ "$code" -ge 300 ]; then
+            echo "::error::site deploy dispatch returned HTTP $code"
+            cat "$response"
             exit 1
           fi
+          echo "the site deploy has been requested"
 
       - name: Upload the paid build for the Windows installer
-        if: steps.fresh.outputs.fresh == 'yes'
+        if: always() && steps.fresh.outputs.fresh == 'yes'
         uses: actions/upload-artifact@v4
         with:
           name: paid-build

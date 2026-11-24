@@ -135,6 +135,20 @@ jobs:
       - name: Decide the price
         run: python pricing.py
 
+      # paid/ is deliberately gitignored, and the verifier is a separate
+      # workflow_run on a fresh checkout. Committing candidate.json alone was
+      # not enough: the verifier saw the pointer but not the file it pointed
+      # at and discarded the app as "staged file is gone". Hand the private
+      # build over as an artifact from this run instead.
+      - name: Hand the paid build to the verifier
+        if: hashFiles('data/candidate.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: candidate-paid-build
+          path: paid/
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Save the candidate for the verifier
         shell: bash
         run: |
