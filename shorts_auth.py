@@ -1,4 +1,4 @@
-"""Get the YouTube refresh token, then show the three commands to store it.
+"""Get the YouTube refresh token, then show the steps to store it.
 
 The refresh token is the only value in this whole pipeline that cannot be
 generated or derived. Google issues it once, in a browser, after a person
@@ -7,8 +7,12 @@ only manual step is clicking Allow.
 
     python shorts_auth.py
 
-It prints the exact commands to run afterwards. It never stores anything
-itself: the token goes straight to a GitHub secret, not to a file on disk.
+If the browser cannot reach the local helper (Windows firewall, proxy, IPv6,
+redirect-URI mismatch), the script asks you to paste the URL from the address
+bar instead. The one-time code in that URL works just as well.
+
+It never stores anything itself: the token goes straight to a GitHub secret,
+not to a file on disk.
 """
 from __future__ import annotations
 
@@ -16,6 +20,7 @@ import http.server
 import json
 import os
 import secrets
+import socket
 import threading
 import urllib.error
 import urllib.parse
@@ -27,6 +32,7 @@ AUTH = "https://accounts.google.com/o/oauth2/v2/auth"
 TOKEN = "https://oauth2.googleapis.com/token"
 PORT = 8765
 REDIRECT = f"http://localhost:{PORT}"
+TIMEOUT = int(os.environ.get("SHORTS_AUTH_TIMEOUT", "300"))
 
 
 def log(m: str) -> None:
@@ -46,6 +52,16 @@ class Handler(http.server.BaseHTTPRequestHandler):
         Handler.code = (q.get("code") or [None])[0]
         Handler.error = (q.get("error") or [None])[0]
         Handler.detail = (q.get("error_description") or [None])[0]
+
+        # A browser sometimes asks for /favicon.ico first. That is not the
+        # OAuth reply; answering it must not end the wait or we lose the code.
+        if not (Handler.code or Handler.error):
+            self.send_response(404)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+
+        log("the browser reached the local helper")
         reason = {
             "access_denied": "you said no, which is fine",
             "invalid_scope": "the scope was rejected",
@@ -66,16 +82,108 @@ class Handler(http.server.BaseHTTPRequestHandler):
         return
 
 
+class DualStackHTTPServer(http.server.ThreadingHTTPServer):
+    """`localhost` can resolve to ::1 or 127.0.0.1. Listen on both."""
+
+    address_family = socket.AF_INET6
+
+    def server_bind(self) -> None:
+        try:
+            self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+        except OSError:
+            pass
+        super().server_bind()
+
+
+def make_server() -> http.server.ThreadingHTTPServer:
+    try:
+        return DualStackHTTPServer(("::", PORT), Handler)
+    except OSError:
+        return http.server.ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
+
+
+def explain_error(error: str, detail: str) -> None:
+    blob = (detail or "").lower()
+    if "verification" in blob or "developer-approved" in blob \
+            or "testers" in blob:
+        log("")
+        log("This is the consent screen, not a code problem.")
+        log("The app is in Testing mode, so only test users may allow it.")
+        log("Add the account you are signing in with:")
+        log("")
+        log("  1. console.cloud.google.com/apis/credentials")
+        log("  2. Google Auth Platform, then Test users, Add")
+        log("  3. add the Gmail address that owns the YouTube channel")
+        log("  4. wait a minute, then run this again")
+    elif error == "access_denied":
+        log("")
+        log("You pressed Cancel, or the wrong account was signed in.")
+        log("Run it again and choose Allow.")
+    elif "redirect_uri" in blob or "redirect" in blob:
+        log("")
+        log("The redirect URI does not match the Google OAuth client.")
+        log("In console.cloud.google.com/apis/credentials add this exact")
+        log(f"Authorized redirect URI: {REDIRECT}")
+    else:
+        log("")
+        log("Run it again; the consent screen must reach Allow.")
+
+
+def finish_reply() -> str:
+    if Handler.error:
+        log("")
+        log(f"Google said: {Handler.error}")
+        explain_error(Handler.error, Handler.detail or "")
+        raise SystemExit(f"[auth] {Handler.error}")
+    if not Handler.code:
+        log("nothing usable came back within five minutes.")
+        raise SystemExit("[auth] no code received")
+    return Handler.code
+
+
+def manual_code() -> str:
+    """Finish from the browser address bar when loopback cannot be reached."""
+    log("")
+    log(f"{TIMEOUT} seconds passed without the browser reaching this helper.")
+    log("That is usually a firewall/proxy, an IPv6 problem, or a")
+    log("redirect-URI mismatch. We can finish by hand instead.")
+    log("")
+    log("After pressing Allow, the browser address bar should read like:")
+    log(f"  {REDIRECT}/?code=4%2F0...&scope=...")
+    log("Paste that whole URL, or just the code, then press Enter.")
+    try:
+        text = input("[auth] URL or code: ").strip()
+    except EOFError:
+        text = ""
+    if not text:
+        raise SystemExit("[auth] no code received")
+
+    q: dict[str, list[str]] = {}
+    if "://" in text:
+        q = urllib.parse.parse_qs(urllib.parse.urlparse(text).query)
+    elif "code=" in text or "error=" in text:
+        q = urllib.parse.parse_qs(text)
+
+    Handler.code = (q.get("code") or [None])[0]
+    Handler.error = (q.get("error") or [None])[0]
+    Handler.detail = (q.get("error_description") or [None])[0]
+    if not Handler.code and not Handler.error and "=" not in text \
+            and " " not in text:
+        Handler.code = text
+    return finish_reply()
+
+
 def ask_for_code(client_id: str) -> str:
     Handler.code = None
     Handler.error = None
     Handler.detail = None
     Handler.done.clear()
 
-    state = secrets.token_urlsafe(24)
-    srv = http.server.HTTPServer(("localhost", PORT), Handler)
-    threading.Thread(target=srv.handle_request, daemon=True).start()
+    srv = make_server()
+    threading.Thread(target=srv.serve_forever,
+                     kwargs={"poll_interval": 0.2}, daemon=True).start()
 
+    state = secrets.token_urlsafe(24)
     url = (f"{AUTH}?client_id={urllib.parse.quote(client_id)}"
            f"&redirect_uri={urllib.parse.quote(REDIRECT)}"
            f"&response_type=code&scope={urllib.parse.quote(SCOPE)}"
@@ -86,50 +194,19 @@ def ask_for_code(client_id: str) -> str:
     log(url)
     log("")
     log("Sign in as the YouTube channel account, press Allow, then wait.")
+    log("If it times out, paste the address-bar URL when asked.")
     log("")
     try:
         webbrowser.open(url)
     except Exception:  # noqa: BLE001
         pass
 
-    # wait for the redirect before closing, or the callback has nowhere to
-    # land and the run always fails even though consent succeeded
-    got = Handler.done.wait(timeout=300)
+    got = Handler.done.wait(timeout=TIMEOUT)
+    srv.shutdown()
     srv.server_close()
-
-    if Handler.error:
-        log("")
-        log(f"Google said: {Handler.error}")
-        blob = f"{Handler.detail or ''}".lower()
-
-        if "verification" in blob or "developer-approved" in blob \
-                or "testers" in blob:
-            # by far the most common cause, and the message Google sends
-            # does not say what to do about it
-            log("")
-            log("This is the consent screen, not a code problem.")
-            log("The app is in Testing mode, so only test users may allow")
-            log("it. Add the account you are signing in with:")
-            log("")
-            log("  1. console.cloud.google.com/apis/credentials")
-            log("  2. Google Auth Platform, then Test users, Add")
-            log("  3. add the Gmail address that owns the YouTube channel")
-            log("  4. wait a minute, then run this again")
-        elif Handler.error == "access_denied":
-            log("")
-            log("You pressed Cancel, or the wrong account was signed in.")
-            log("Run it again and choose Allow.")
-        else:
-            log("")
-            log("Run it again; the consent screen must reach Allow.")
-        raise SystemExit(f"[auth] {Handler.error}")
-    if not got or not Handler.code:
-        log("nothing came back within five minutes.")
-        log("the tab has to stay open until it says Done.")
-        log("if you pressed Allow but this said no code, run it once more:")
-        log("Google only issues a refresh token on a fresh consent.")
-        raise SystemExit("[auth] no code received")
-    return Handler.code
+    if not got:
+        return manual_code()
+    return finish_reply()
 
 
 def trade(client_id: str, client_secret: str, code: str) -> dict:
@@ -147,7 +224,7 @@ def trade(client_id: str, client_secret: str, code: str) -> dict:
     try:
         with urllib.request.urlopen(req, timeout=45) as r:
             return json.loads(r.read().decode("utf-8"))
-    except urllib.error.HTTPError as e:  # noqa: F405
+    except urllib.error.HTTPError as e:
         detail = e.read().decode("utf-8", "replace")[:300]
         raise SystemExit(f"[auth] Google refused the code: {detail}")
 
