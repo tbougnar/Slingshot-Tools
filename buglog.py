@@ -25,7 +25,14 @@ def load() -> list[dict]:
         return []
     try:
         data = json.loads(BOOK.read_text(encoding="utf-8"))
-        return data if isinstance(data, list) else []
+        if isinstance(data, list):
+            return data
+        # A clean-start reset wrote {"entries": []}. Accept that shape too, so
+        # an empty fixbook is a legitimate empty memory rather than a corrupt
+        # file that silently discards every future entry.
+        if isinstance(data, dict) and isinstance(data.get("entries"), list):
+            return data["entries"]
+        return []
     except Exception:  # noqa: BLE001
         return []
 
