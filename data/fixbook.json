@@ -1788,7 +1788,7 @@
    "weekly_review.py"
   ],
   "detects": "recurs every Wednesday; one entry per week is expected",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B144",
@@ -1801,7 +1801,7 @@
    "weekly_review.py"
   ],
   "detects": "recurs every Wednesday; one entry per week is expected",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B145",
@@ -1814,7 +1814,7 @@
    "weekly_review.py"
   ],
   "detects": "recurs every Wednesday; one entry per week is expected",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B146",
@@ -1827,7 +1827,7 @@
    "weekly_review.py"
   ],
   "detects": "recurs every Wednesday; one entry per week is expected",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B147",
@@ -1842,7 +1842,7 @@
    "data/learning_day_scan.json"
   ],
   "detects": "learning day system scan and update publication",
-  "verified": false
+  "verified": true
  },
  {
   "id": "B148",

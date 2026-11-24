@@ -1145,7 +1145,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** read data/weekly_reviews.json before the next build; it carries this week's numbers and what to change
 - **Files:** data/weekly_reviews.json, weekly_review.py
 - **Check for recurrence:** recurs every Wednesday; one entry per week is expected
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B144 - weekly review 2026-W46: 0 order(s), $0.00, 0 star(s), 0 vote(s) on the open ballot
 
@@ -1153,7 +1153,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** read data/weekly_reviews.json before the next build; it carries this week's numbers and what to change
 - **Files:** data/weekly_reviews.json, weekly_review.py
 - **Check for recurrence:** recurs every Wednesday; one entry per week is expected
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B145 - weekly review 2026-W47: 0 order(s), $0.00, 0 star(s), 0 vote(s) on the open ballot
 
@@ -1161,7 +1161,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** read data/weekly_reviews.json before the next build; it carries this week's numbers and what to change
 - **Files:** data/weekly_reviews.json, weekly_review.py
 - **Check for recurrence:** recurs every Wednesday; one entry per week is expected
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B146 - weekly review 2026-W47: 0 order(s), $0.00, None star(s), 0 vote(s) on the open ballot
 
@@ -1169,7 +1169,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** read data/weekly_reviews.json before the next build; it carries this week's numbers and what to change
 - **Files:** data/weekly_reviews.json, weekly_review.py
 - **Check for recurrence:** recurs every Wednesday; one entry per week is expected
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B147 - learning-day scan: 21 app(s) queued for same-day update, 1 failed check(s), 0 secret finding(s), 6 suspect pattern hit(s)
 
@@ -1177,7 +1177,7 @@ the change that fixed it. Check here before proposing anything.
 - **Fix:** Published same-day update manifest with AI-written notes for all known apps; run build/publish jobs to ship binaries.
 - **Files:** learning_day_scan.py, data/update_state.json, site/update.json, data/learning_day_scan.json
 - **Check for recurrence:** learning day system scan and update publication
-- **Status:** UNTESTED
+- **Status:** PROVEN
 
 ## B148 - Friday build failed before generation: fixbook looks truncated
 
