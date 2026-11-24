@@ -38,6 +38,16 @@ jobs:
         with:
           python-version: "3.12"
 
+      # Invites expire on their own. The bot is already in the server, so let
+      # it replace a dead one before the check below looks at it. Without this
+      # every expiry stopped the site deploy until a person pasted a new URL
+      # into a repository variable.
+      - name: Keep the Discord invite alive
+        env:
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          DISCORD_ANNOUNCEMENTS_CHANNEL_ID: ${{ secrets.DISCORD_ANNOUNCEMENTS_CHANNEL_ID }}
+        run: python discord_invite.py
+
       # CHECK_LIVE_FOOTER=0 because this compares links.py against the page
       # that is already live. Checked here it would refuse the deploy that
       # would satisfy it, so no link could ever be changed. It is run again
