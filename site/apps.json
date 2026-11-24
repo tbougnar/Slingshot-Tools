@@ -1,5 +1,26 @@
 [
   {
+    "slug": "file-renamer",
+    "base_slug": "file-renamer",
+    "title": "Batch file renamer",
+    "tier": "full",
+    "tag": "file",
+    "blurb": "Batch file renamer is a premium offline Windows tool. Buy once and keep it: no account, no subscription, and your data never leaves your device.",
+    "tags": [
+      "file",
+      "batch",
+      "renamer"
+    ],
+    "url": "",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [],
+    "published": false,
+    "badge": "New",
+    "date": "2026-11-24"
+  },
+  {
     "slug": "password-manager",
     "base_slug": "password-manager",
     "title": "Offline password manager",
