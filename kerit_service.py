@@ -94,6 +94,17 @@ def env_bool(name: str, default: bool = False) -> bool:
     return str(v).strip().lower() not in ("0", "false", "no", "off", "")
 
 
+def env_int(name: str, default: int) -> int:
+    """Read a numeric setting without letting a bad value break startup."""
+    raw = os.environ.get(name)
+    if raw is None or str(raw).strip() == "":
+        return default
+    try:
+        return int(str(raw).strip())
+    except (TypeError, ValueError):
+        return default
+
+
 def log(msg: str) -> None:
     ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     print(f"[kerit {ts}] {msg}", flush=True)

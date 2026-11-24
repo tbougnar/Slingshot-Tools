@@ -1858,5 +1858,20 @@
   ],
   "detects": "python selftest.py must report a populated fixbook",
   "verified": true
+ },
+ {
+  "id": "B149",
+  "date": "2026-11-24",
+  "symptom": "Whole-code audit failed: kerit_service.py used undefined env_int",
+  "cause": "The Kerit weekly-cycle fallback called env_int() for its schedule hours, but only env_bool() was defined, so every Friday build died in the whole-code audit before generation.",
+  "fix": "Added a guarded env_int() helper with a safe default for malformed values. The audit now scans kerit_service.py without undefined names.",
+  "files": [
+   "kerit_service.py",
+   "data/fixbook.json",
+   "data/fixbook.md",
+   "data/lessons.txt"
+  ],
+  "detects": "python selftest_audit.py must report zero problems",
+  "verified": true
  }
 ]

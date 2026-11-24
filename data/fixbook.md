@@ -1187,6 +1187,14 @@ the change that fixed it. Check here before proposing anything.
 - **Check for recurrence:** python selftest.py must report a populated fixbook
 - **Status:** PROVEN
 
+## B149 - Whole-code audit failed: kerit_service.py used undefined env_int
+
+- **Cause:** The Kerit weekly-cycle fallback called env_int() for its schedule hours, but only env_bool() was defined, so every Friday build died in the whole-code audit before generation.
+- **Fix:** Added a guarded env_int() helper with a safe default for malformed values. The audit now scans kerit_service.py without undefined names.
+- **Files:** kerit_service.py, data/fixbook.json, data/fixbook.md, data/lessons.txt
+- **Check for recurrence:** python selftest_audit.py must report zero problems
+- **Status:** PROVEN
+
 ## How to use this
 
 1. If the symptom matches an entry, use that fix. Do not invent a new one.
