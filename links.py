@@ -51,7 +51,7 @@ CHANNELS = [
         # the invite. Discord expires these, so the expiry is watched by
         # check_links.py rather than trusted.
         "url": os.environ.get("DISCORD_INVITE_URL", "").strip()
-        or "https://discord.gg/uajfhbkMY",
+        or "https://discord.gg/GpYKHRp73z",
         "icon": "chat",
     },
     {

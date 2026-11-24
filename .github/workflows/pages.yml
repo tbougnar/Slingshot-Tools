@@ -80,6 +80,13 @@ jobs:
         with:
           path: site
 
+      # deploy-pages asks the Actions API for the artifact by name. The upload
+      # step returns before that index is readable, and an immediate deploy
+      # says "No artifacts named github-pages were found" even though the
+      # upload above succeeded. Give the index a moment to catch up.
+      - name: Give the artifact index time to catch up
+        run: sleep 20
+
       - id: deploy
         uses: actions/deploy-pages@v4
       - name: Confirm the deployed footer matches
