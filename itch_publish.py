@@ -183,9 +183,17 @@ def build_is_listed(url: str, filename: str, attempts: int = 3) -> bool:
                 url, headers={"User-Agent": "slingshot-tools"})
             with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
                 body = r.read(400_000).decode("utf-8", "replace").lower()
+                status = r.status
             found = needle in body or filename.lower() in body
-            _PROBE_CACHE[key] = (found, f"HTTP {r.status}")
-            return found
+            if found:
+                _PROBE_CACHE[key] = (True, f"HTTP {status}")
+                return True
+            # A successful fetch that does not list the build yet is the
+            # normal case, not a verdict: butler returns as soon as the bytes
+            # are accepted and says "Build is now processing". Returning here
+            # used to end the release after the first unlucky fetch, a few
+            # seconds after the push, while the build was still being
+            # published. Keep looking until the attempts run out.
         except Exception:  # noqa: BLE001
             pass
         if i < attempts - 1:
@@ -1001,7 +1009,7 @@ def publish(slug: str, title: str, price: float, version: str = "") -> bool:
     # the push, concluded the file was absent, and left a product that WAS
     # uploaded unsold. Drop any earlier answer and give publication time.
     _PROBE_CACHE.pop(f"{url}|{installer.name}", None)
-    if not build_is_listed(url, installer.name, attempts=10):
+    if not build_is_listed(url, installer.name, attempts=20):
         log(f"4. the page answers but does not list {installer.name}, so this "
             "product is not being sold")
         log("   something else may occupy the build's channel, or itch.io has "

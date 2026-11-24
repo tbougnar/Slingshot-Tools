@@ -12,6 +12,7 @@ than through a workflow.
 """
 import json
 import pathlib
+import re
 import sys
 import tempfile
 
@@ -245,10 +246,10 @@ _vi = next(i for i, s in enumerate(_wf["jobs"]["verify"]["steps"])
 check("and it runs before the verifier, which deletes the candidate",
       _fi < _vi,
       "the check runs after the file is gone, so it always says no")
+_upload_if = str(next((s.get("if") for s in _wf["jobs"]["verify"]["steps"]
+                       if "Upload the paid build" in str(s.get("name"))), ""))
 check("the paid build is only uploaded when there is one",
-      next((s.get("if") for s in _wf["jobs"]["verify"]["steps"]
-            if "Upload the paid build" in str(s.get("name"))), None)
-      == "steps.fresh.outputs.fresh == 'yes'",
+      "steps.fresh.outputs.fresh == 'yes'" in _upload_if,
       "paid/ is empty on an empty week and 'No files were found' failed it")
 check("so the whole job is skipped, not just one step of it",
       _wf["jobs"]["installer"].get("if") is not None,
@@ -333,7 +334,8 @@ check("and pages.yml commits nothing back, so it cannot loop either",
               for s in _pg["jobs"]["deploy"]["steps"]),
       "it pushes, so removing [skip ci] would loop")
 check("and the release asks for the deploy, because a push cannot",
-      all("gh workflow run pages.yml" in str(s.get("run", ""))
+      all(("gh workflow run pages.yml" in str(s.get("run", ""))
+           or "actions/workflows/pages.yml/dispatches" in str(s.get("run", "")))
           for job in ("verify", "installer")
           for s in _wf["jobs"][job]["steps"]
           if s.get("name") == "Publish the site"),
@@ -362,7 +364,8 @@ print("\nTHE API KEY IS ENOUGH, SO NO SESSION IS LOOKED FOR\n")
 # straight to the upload without asking for a session at all.
 _real = (ip.load_catalog, ip.page_is_live, ip.working_session,
          ip.find_installer, ip.upload, ip.log, ip.save_catalog,
-         ip.CATALOG, ip.record, ip.remember, ip.STATE)
+         ip.CATALOG, ip.record, ip.remember, ip.STATE,
+         ip.build_is_listed, ip.price_is_asked)
 _tried_session = []
 _touched_catalog = []
 _state_before = (ROOT / "data" / "itch.json").read_text(
@@ -396,11 +399,17 @@ try:
     ip.record = lambda slug, url, price: True
     # remember() appends to data/itch.json the same way, and did so here too.
     ip.remember = lambda slug, url: None
+    # These tests are about how publish() finds its project, not about what
+    # itch.io is serving today. Let build_is_listed wait for real releases;
+    # stub it here so a test never spends minutes polling a fake page.
+    ip.build_is_listed = lambda *a, **k: True
+    ip.price_is_asked = lambda *a, **k: True
     ip.publish("thing", "Thing", 3.0)
 finally:
     (ip.load_catalog, ip.page_is_live, ip.working_session,
      ip.find_installer, ip.upload, ip.log, ip.save_catalog,
-     ip.CATALOG, ip.record, ip.remember, ip.STATE) = _real
+     ip.CATALOG, ip.record, ip.remember, ip.STATE,
+     ip.build_is_listed, ip.price_is_asked) = _real
 
 check("a catalogue entry with a live page does not ask for a session",
       not _tried_session,
@@ -423,7 +432,8 @@ print("\nA PRODUCT THE CATALOGUE HAS NEVER SEEN STILL HAS A HOME\n")
 # live and was the right home for it.
 _real2 = (ip.load_catalog, ip.page_is_live, ip.working_session,
           ip.find_installer, ip.upload, ip.log, ip.save_catalog,
-          ip.remember, ip.record, ip.STORE_URL)
+          ip.remember, ip.record, ip.STORE_URL,
+          ip.build_is_listed, ip.price_is_asked)
 _tried2 = []
 try:
     ip.load_catalog = lambda: []          # the catalogue has never seen it
@@ -436,11 +446,14 @@ try:
     ip.remember = lambda slug, url: None
     ip.record = lambda slug, url, price: True
     ip.STORE_URL = "https://slingshot-tools.itch.io/store"
+    ip.build_is_listed = lambda *a, **k: True
+    ip.price_is_asked = lambda *a, **k: True
     ip.publish("brand-new-product", "Brand new", 3.0)
 finally:
     (ip.load_catalog, ip.page_is_live, ip.working_session,
      ip.find_installer, ip.upload, ip.log, ip.save_catalog,
-     ip.remember, ip.record, ip.STORE_URL) = _real2
+     ip.remember, ip.record, ip.STORE_URL,
+     ip.build_is_listed, ip.price_is_asked) = _real2
 
 check("a product with no catalogue entry uses the store project",
       not _tried2,
@@ -485,7 +498,8 @@ print("\nTHE UPLOAD TARGET IS THE PROJECT, NOT THE PRODUCT\n")
 _seen = {}
 _real3 = (ip.load_catalog, ip.page_is_live, ip.working_session,
           ip.find_installer, ip.log, ip.save_catalog, ip.remember,
-          ip.record, ip.STORE_URL, ip.USER)
+          ip.record, ip.STORE_URL, ip.USER,
+          ip.build_is_listed, ip.price_is_asked)
 
 
 def _capture(installer, slug, version, project=""):
@@ -506,11 +520,14 @@ try:
     ip.record = lambda slug, url, price: True
     ip.STORE_URL = "https://slingshot-tools.itch.io/slingshot-tools"
     ip.USER = "slingshot-tools"
+    ip.build_is_listed = lambda *a, **k: True
+    ip.price_is_asked = lambda *a, **k: True
     ip.publish("chess-board", "Chess board viewer", 3.0)
 finally:
     (ip.load_catalog, ip.page_is_live, ip.working_session,
      ip.find_installer, ip.log, ip.save_catalog, ip.remember,
-     ip.record, ip.STORE_URL, ip.USER) = _real3
+     ip.record, ip.STORE_URL, ip.USER,
+     ip.build_is_listed, ip.price_is_asked) = _real3
 
 check("butler is told the project from the page, not the product slug",
       _seen.get("project") == "slingshot-tools",
@@ -652,10 +669,21 @@ check("and decoded without failing on a byte",
       '.decode(\n        "utf-8", "replace")' in _up_body
       or '"utf-8", "replace"' in _up_body)
 _pub_body = _src_up.split("def publish(", 1)[1]
+_attempts = re.search(r"build_is_listed\([^)]*attempts=(\d+)", _pub_body)
 check("the page is given time to publish the build",
-      "attempts=10" in _pub_body
+      bool(_attempts) and int(_attempts.group(1)) >= 10
       and 'pop(f"{url}|{installer.name}", None)' in _pub_body,
       "the check runs seconds after butler returns and concludes too early")
+# A live page is not a verdict: butler says the build is processing and the
+# file appears later. The first successful fetch without the filename used to
+# end the loop immediately, so the release failed while the build was still
+# being published.
+_list_body = _src_up.split("def build_is_listed", 1)[1].split("def ", 1)[0]
+check("and a successful fetch still waits for the file to appear",
+      "if found:" in _list_body and _list_body.index("if found:") <
+      _list_body.index("time.sleep") and
+      "return found" not in _list_body,
+      "one unlucky fetch concluded the build was absent")
 
 print("\nONE PRODUCT'S INSTALLER IS NEVER ANOTHER'S\n")
 # Building chess-clock reused invoice-maker-Setup.exe out of the shared dist/
