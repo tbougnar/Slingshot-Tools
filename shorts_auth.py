@@ -49,26 +49,38 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:  # noqa: N802
         q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
-        Handler.code = (q.get("code") or [None])[0]
-        Handler.error = (q.get("error") or [None])[0]
-        Handler.detail = (q.get("error_description") or [None])[0]
+        code = (q.get("code") or [None])[0]
+        error = (q.get("error") or [None])[0]
+        detail = (q.get("error_description") or [None])[0]
 
-        # A browser sometimes asks for /favicon.ico first. That is not the
-        # OAuth reply; answering it must not end the wait or we lose the code.
-        if not (Handler.code or Handler.error):
+        # A browser asks for /favicon.ico and may prefetch other URLs after
+        # the OAuth redirect. Those requests carry no code and must never
+        # overwrite the real reply we already caught.
+        if not (code or error):
             self.send_response(404)
             self.send_header("Content-Length", "0")
             self.end_headers()
             return
 
+        if Handler.done.is_set():
+            # Keep the first real reply. Later probes are harmless.
+            self.send_response(200)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+
+        Handler.code = code
+        Handler.error = error
+        Handler.detail = detail
         log("the browser reached the local helper")
+        log(f"callback contained: {', '.join(sorted(q))}")
         reason = {
             "access_denied": "you said no, which is fine",
             "invalid_scope": "the scope was rejected",
-        }.get(Handler.error or "", "Google did not send a code")
+        }.get(error or "", "Google did not send a code")
 
         body = (f"<html><body style='font-family:sans-serif;padding:40px'>"
-                f"<h2>Done</h2><p>{'Authorised.' if Handler.code else reason}"
+                f"<h2>Done</h2><p>{'Authorised.' if code else reason}"
                 f"</p><p>Close this tab and go back to PowerShell.</p>"
                 f"</body></html>").encode()
         self.send_response(200)
@@ -136,7 +148,7 @@ def finish_reply() -> str:
         explain_error(Handler.error, Handler.detail or "")
         raise SystemExit(f"[auth] {Handler.error}")
     if not Handler.code:
-        log("nothing usable came back within five minutes.")
+        log(f"nothing usable came back within {TIMEOUT} seconds.")
         raise SystemExit("[auth] no code received")
     return Handler.code
 
