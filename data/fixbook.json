@@ -1873,5 +1873,22 @@
   ],
   "detects": "python selftest_audit.py must report zero problems",
   "verified": true
+ },
+ {
+  "id": "B150",
+  "date": "2026-11-24",
+  "symptom": "Discord channel check failed with Cloudflare 40333",
+  "cause": "The connection check sent a browser User-Agent with Authorization: Bot. Discord's edge answers that combination with 403/40333 before validating the token, so a correctly permissioned bot looked as though it could not list channels.",
+  "fix": "Added DiscordBot (url, version) User-Agent to every Bot API caller: check_connections.py, discord_post.py and discord_setup_server.py.",
+  "files": [
+   "check_connections.py",
+   "discord_post.py",
+   "discord_setup_server.py",
+   "data/fixbook.json",
+   "data/fixbook.md",
+   "data/lessons.txt"
+  ],
+  "detects": "python check_connections.py must report PASS discord channels",
+  "verified": true
  }
 ]

@@ -458,7 +458,11 @@ async def run(dry_run: bool, keep_legacy: bool) -> int:
         print(f"[setup] DISCORD_GUILD_ID is not a number: {GUILD_ID!r}")
         return 1
 
-    headers = {"Authorization": f"Bot {TOKEN}"}
+    headers = {
+        "Authorization": f"Bot {TOKEN}",
+        "User-Agent": ("DiscordBot (https://github.com/tbougnar/Slingshot-Tools, "
+                       "1.0)"),
+    }
     async with aiohttp.ClientSession(headers=headers) as session:
         d = Discord(session)
 

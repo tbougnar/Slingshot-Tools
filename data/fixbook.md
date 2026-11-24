@@ -1195,6 +1195,14 @@ the change that fixed it. Check here before proposing anything.
 - **Check for recurrence:** python selftest_audit.py must report zero problems
 - **Status:** PROVEN
 
+## B150 - Discord channel check failed with Cloudflare 40333
+
+- **Cause:** The connection check sent a browser User-Agent with Authorization: Bot. Discord's edge answers that combination with 403/40333 before validating the token, so a correctly permissioned bot looked as though it could not list channels.
+- **Fix:** Added DiscordBot (url, version) User-Agent to every Bot API caller: check_connections.py, discord_post.py and discord_setup_server.py.
+- **Files:** check_connections.py, discord_post.py, discord_setup_server.py, data/fixbook.json, data/fixbook.md, data/lessons.txt
+- **Check for recurrence:** python check_connections.py must report PASS discord channels
+- **Status:** PROVEN
+
 ## How to use this
 
 1. If the symptom matches an entry, use that fix. Do not invent a new one.

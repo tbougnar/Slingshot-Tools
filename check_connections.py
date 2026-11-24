@@ -27,6 +27,12 @@ TIMEOUT = 30
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
 
+# Discord is the exception: presenting a browser User-Agent with a Bot token
+# makes its edge return 403/40333 before the token is even checked. Discord's
+# own API docs ask clients to identify as DiscordBot (url, version), so guild
+# and channel calls must override the browser UA above with this one.
+DISCORD_UA = "DiscordBot (https://github.com/tbougnar/Slingshot-Tools, 1.0)"
+
 
 def get(url: str, headers: dict | None = None, data: bytes | None = None,
          timeout: int = TIMEOUT):
@@ -304,7 +310,7 @@ def check_discord() -> bool:
                    "gh secret set DISCORD_GUILD_ID --repo "
                    "tbougnar/Slingshot-Tools")
 
-    head = {"Authorization": f"Bot {token}"}
+    head = {"Authorization": f"Bot {token}", "User-Agent": DISCORD_UA}
     try:
         with get("https://discord.com/api/v10/users/@me", head) as r:
             me = json.loads(r.read().decode("utf-8"))
@@ -381,7 +387,7 @@ def describe_discord_permissions(token: str, guild: str) -> None:
     endpoint below is called with the status and body recorded, so the next
     round of guessing is grounded in what the API returned.
     """
-    head = {"Authorization": f"Bot {token}"}
+    head = {"Authorization": f"Bot {token}", "User-Agent": DISCORD_UA}
     base = "https://discord.com/api/v10"
 
     print("        --- what discord actually returned ---")

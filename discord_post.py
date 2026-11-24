@@ -20,6 +20,11 @@ import urllib.request
 API = "https://discord.com/api/v10"
 TIMEOUT = 30
 
+# Discord's edge blocks Bot requests that do not identify as a bot. The old
+# "slingshot-tools/1.0" string looked like a browser/script fingerprint and
+# earned 403/40333 on every guild and channel route.
+UA = "DiscordBot (https://github.com/tbougnar/Slingshot-Tools, 1.0)"
+
 TOKEN = os.environ.get("DISCORD_BOT_TOKEN", "").strip()
 GUILD_ID = os.environ.get("DISCORD_GUILD_ID", "").strip()
 WEBHOOK = os.environ.get("DISCORD_WEBHOOK_URL", "").strip()
@@ -72,7 +77,7 @@ def post_webhook(url: str, payload: dict) -> bool:
         url,
         data=json.dumps(payload).encode("utf-8"),
         headers={"Content-Type": "application/json",
-                 "User-Agent": "slingshot-tools/1.0"},
+                 "User-Agent": UA},
         method="POST")
     try:
         with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
@@ -102,7 +107,7 @@ def _rest(method: str, path: str, body: dict | None = None) -> tuple[int, object
             API + path, data=data, method=method,
             headers={"Authorization": f"Bot {TOKEN}",
                      "Content-Type": "application/json",
-                     "User-Agent": "slingshot-tools/1.0"})
+                     "User-Agent": UA})
         try:
             with ur.urlopen(req, timeout=TIMEOUT) as r:
                 text = r.read().decode("utf-8")
