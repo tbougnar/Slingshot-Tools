@@ -18,6 +18,9 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  # the invite helper writes DISCORD_INVITE_URL back to the repository so the
+  # next run starts with a working link instead of minting another one
+  actions: write
 
 concurrency:
   group: slingshot-pages
@@ -45,7 +48,10 @@ jobs:
       - name: Keep the Discord invite alive
         env:
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
           DISCORD_ANNOUNCEMENTS_CHANNEL_ID: ${{ secrets.DISCORD_ANNOUNCEMENTS_CHANNEL_ID }}
+          DISCORD_INVITE_URL: ${{ vars.DISCORD_INVITE_URL }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python discord_invite.py
 
       # CHECK_LIVE_FOOTER=0 because this compares links.py against the page

@@ -51,6 +51,7 @@ jobs:
       YOUTUBE_PRIVACY: ${{ vars.YOUTUBE_PRIVACY }}
       SITE_URL: ${{ vars.SITE_URL }}
       DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      DISCORD_INVITE_URL: ${{ vars.DISCORD_INVITE_URL }}
       # Public at job level so a step-level if: can read it. A dry run must
       # not post the preview to Discord, and the announce step runs always().
       DRY_RUN: ${{ inputs.dry_run || 'true' }}
