@@ -507,10 +507,16 @@ def check_youtube() -> bool:
                 .get("error_description", "")[:100]
         except Exception:  # noqa: BLE001
             detail = ""
-        if "revoked" in detail or e.code == 400:
-            return bad("youtube", "the refresh token was revoked or expired",
-                       "run python shorts_auth.py again")
-        return bad("youtube", f"HTTP {e.code} {detail}".strip())
+        # A 400 is not always a revoked token: an old client id/secret paired
+        # with a fresh token gives the same status, and hiding the reason made
+        # every one of those look like "revoked". Show Google's own text.
+        short_detail = (detail or "no error description")[:120]
+        fix = (f"using client id ending {cid[-8:]}; make sure "
+               "YOUTUBE_CLIENT_ID and YOUTUBE_CLIENT_SECRET are the same "
+               "OAuth client that minted this refresh token; then run "
+               "python shorts_auth.py again")
+        return bad("youtube",
+                   f"token rejected (HTTP {e.code}: {short_detail})", fix)
     except Exception as e:  # noqa: BLE001
         return bad("youtube", str(e)[:80])
 
