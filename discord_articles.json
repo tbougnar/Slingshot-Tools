@@ -6,5 +6,9 @@
   "base64-tool": {
     "body": "**Base64 and URL encoding tool** \u2014 A small, focused base64 tool. Base64 and URL encoding tool does one job properly, runs offline, and keeps your data on your device.\n\n**Why it exists**\nBase64 is one of those small irritations that eats a little attention every\nsingle day. This is a single-purpose tool for it: no setup, no sign-in, no\nnetwork calls. Open the page and it works.\n\n**What the free edition does**\nEverything you need for the job itself. It runs straight in the browser and\nyour data never leaves your device.\n\n**Get it**\n- Free: https://tbougnar.github.io/Slingshot-Tools/apps/base64-tool-basic/\n\nOne new tool lands every month. Use `/vote` in the server to pick what comes\nnext.",
     "written": 1793305667
+  },
+  "unit-converter": {
+    "body": "## Unit converter\n\nConverting units is routine work, but the tools for it often come with strings attached: an account",
+    "written": 1795645157
   }
 }
