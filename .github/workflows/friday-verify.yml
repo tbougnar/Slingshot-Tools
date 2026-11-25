@@ -211,15 +211,10 @@ jobs:
 
       - name: Install build tools
         run: |
-          choco install nsis -y --no-progress
-          # The community feed returns 406 now and then. Try again before
-          # declaring the paid edition unbuildable, because the installer is
-          # the whole point of this job.
-          if (-not (Test-Path "$env:ProgramFiles\NSIS\makensis.exe")) {
-            Write-Output "::warning::NSIS was not installed; trying once more"
-            Start-Sleep -Seconds 20
-            choco install nsis -y --no-progress
-          }
+          # NSIS comes from its own installer, not the Chocolatey community
+          # feed. That feed returned 504 twice while a verified app waited for
+          # its installer, and every publish step was skipped as a result.
+          ./install_nsis.ps1
           # playwright and its browser are needed here, not only in the verify
           # job. itch_publish logs in through a browser when the stored session
           # cookie is refused, and without this it stopped with "playwright is
@@ -229,18 +224,6 @@ jobs:
           python -m pip install --quiet pillow requests pyinstaller pywebview playwright
           python -m playwright install chromium
           python -c "from playwright.sync_api import sync_playwright; print('playwright import ok')"
-          # same PATH problem as the generate job: choco reports success, and
-          # the next line says makensis is not recognised
-          $makensis = "$env:ProgramFiles\NSIS\makensis.exe"
-          if (-not (Test-Path $makensis)) {
-            $makensis = "${env:ProgramFiles(x86)}\NSIS\makensis.exe"
-          }
-          if (-not (Test-Path $makensis)) {
-            Write-Output "::error::NSIS installed but makensis.exe was not found"
-            exit 1
-          }
-          Write-Output "makensis at $makensis"
-          Add-Content -Path $env:GITHUB_PATH -Value (Split-Path $makensis)
 
       # butler is itch.io's own uploader. Without it the installer cannot be
       # pushed, so it is fetched here rather than trusted to be on the runner.
