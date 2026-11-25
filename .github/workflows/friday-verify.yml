@@ -8,6 +8,11 @@ on:
     workflows: ["Slingshot — Friday, generate the week's tool"]
     types: [completed]
   workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: "Friday build run whose candidate-paid-build artifact should be verified"
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -86,12 +91,12 @@ jobs:
       # for the staged file. Without this, a perfectly good candidate was
       # deleted as "staged file is gone" and nothing was ever published.
       - name: Restore the paid build from the Friday run
-        if: steps.fresh.outputs.fresh == 'yes' && github.event_name == 'workflow_run'
+        if: steps.fresh.outputs.fresh == 'yes' && (github.event_name == 'workflow_run' || inputs.source_run_id != '')
         uses: actions/download-artifact@v4
         with:
           name: candidate-paid-build
           path: paid/
-          run-id: ${{ github.event.workflow_run.id }}
+          run-id: ${{ github.event.workflow_run.id || inputs.source_run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       # Only when there is a paid build to hand over. With no candidate the

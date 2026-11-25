@@ -138,15 +138,34 @@ jobs:
             git clean -fdq site/ || true
             git checkout -- site/ 2>/dev/null || true
           fi
+          # The identity has to be set for the rebase too. Passing -c only to
+          # git commit made the first push fail, then the fallback rebase died
+          # with "unable to auto-detect email address", so a perfectly good
+          # paid app never reached the verifier.
+          git config user.name "slingshot-bot"
+          git config user.email "bot@users.noreply.github.com"
           git add -A
-          git -c user.name="slingshot-bot" -c user.email="bot@users.noreply.github.com" commit -q -m "candidate: staged for verification" || echo "nothing to commit"
-          git push || (git pull --rebase origin main && git push)
+          git commit -q -m "candidate: staged for verification" || echo "nothing to commit"
+          # Another workflow can push while generation runs. Fetch and rebase
+          # before pushing, and retry, rather than losing the handoff to a race.
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git rebase origin/main || git rebase --abort
+            if git push origin HEAD:main; then exit 0; fi
+            sleep 10
+          done
+          echo "::error::the candidate could not be pushed after three attempts"
+          exit 1
 
   # If generation fails, the model diagnoses it and patches itself.
   selfheal:
     needs: generate
     if: ${{ failure() }}
     runs-on: ubuntu-latest
+    # A failed generation already has its log saved under errors/. An
+    # unavailable debugger team must not turn that into a second failure that
+    # hides the real one, so the repair lane is best-effort.
+    continue-on-error: true
     timeout-minutes: 15
     permissions:
       contents: write
