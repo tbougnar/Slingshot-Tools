@@ -119,7 +119,7 @@ jobs:
         run: python weekly_guard.py check --allow-release
 
       # The installer job runs on a fresh Windows checkout, so everything this
-      # job produced (catalog, free edition, paid source, published manifest)
+      # job produced (catalog, paid source, published manifest)
       # has to be pushed to main before the next job can see it.
       #
       # This runs even when verification refused the app. verify_app deletes a
@@ -265,12 +265,11 @@ jobs:
       # the installer with butler, checks the page really answers, and only then
       # flips the product to published on the site. The order matters: nothing
       # is advertised before itch.io is confirmed to be serving it.
-      # The publish step is recorded, and its outcome is carried into the summary,
-      # but it does not stop the release. The free edition is worth shipping
-      # even when the store has not answered, and a failure here used to be
-      # invisible: the job went green with nothing on sale. What was wrong was
-      # the silence, not the failure, so it is now written where the next step
-      # and the run summary both have to see it.
+      # The publish step is recorded, and its outcome is carried into the summary
+      # and the final gate. This is a paid-only product: a store failure used to
+      # go unnoticed because the job went green with nothing on sale. The result
+      # is now written where the next step and the run summary both have to see
+      # it, and the final gate fails the release when the store did not accept it.
       # Reports which parts of the itch.io path actually work: the key,
       # the account, whether a project can be created through the API, and
       # whether a stored cookie is still good. Read-only. The publish step
@@ -312,8 +311,8 @@ jobs:
         shell: bash
         run: |
           if [ "${{ steps.publish.outcome }}" != "success" ]; then
-            echo "::warning::the paid edition was not published; the free" \
-                 "edition is shipping and the paid card stays hidden"
+            echo "::warning::the paid edition was not published; no product" \
+                 "is on sale and the paid card stays hidden"
             echo "PUBLISHED=no" >> "$GITHUB_OUTPUT"
           else
             echo "PUBLISHED=yes" >> "$GITHUB_OUTPUT"
@@ -326,7 +325,7 @@ jobs:
             else
               echo "- paid edition on itch.io: **NOT PUBLISHED**"
             fi
-            echo "- free edition: shipped"
+            echo "- free edition: none (paid-only product)"
           } >> "$GITHUB_STEP_SUMMARY"
       # the upload step must fail loudly if there is no installer at all,
       # otherwise "no file found" looks like a successful release
@@ -396,12 +395,11 @@ jobs:
           git commit -q -m "feat: verified new Slingshot Tool" || echo "nothing to commit"
           git fetch origin main && git pull --rebase origin main && git push || (git pull --rebase origin main && git push)
 
-      # This runs last on purpose. The free edition has shipped by now, which
-      # is what we want: one dead destination must not cost the customer the
-      # release that did work. But the job must not report success while a
-      # destination it attempted silently failed, because a green run is how
-      # "nothing is on sale and nobody noticed" happens. Set ALLOW_FREE_ONLY
-      # to accept the partial release deliberately.
+      # This runs last on purpose. Discord and the site are secondary: one dead
+      # destination must not cost the customer a release that did reach the
+      # store. But the job must not report success while the store step failed,
+      # because a green run is how "nothing is on sale and nobody noticed"
+      # happens. This is paid-only, so there is no free edition to fall back to.
       # A push made with GITHUB_TOKEN does not trigger workflow runs, so
       # the site never deployed from an automated release no matter what
       # the commit message said. workflow_dispatch does work with the same
@@ -437,20 +435,13 @@ jobs:
         shell: bash
         env:
           PUBLISHED: ${{ steps.paid.outputs.PUBLISHED }}
-          ALLOW_FREE_ONLY: ${{ vars.ALLOW_FREE_ONLY }}
         run: |
           if [ "$PUBLISHED" = "yes" ]; then
             echo "paid edition is on itch.io and advertised"
             exit 0
           fi
-          if [ "$ALLOW_FREE_ONLY" = "true" ]; then
-            echo "::warning::paid edition was NOT published; continuing because" \
-                 "ALLOW_FREE_ONLY is set. The free edition shipped."
-            exit 0
-          fi
           echo "::error::the paid edition was NOT published to itch.io." \
-               "The free edition shipped and the paid card stays hidden, but" \
-               "this release is not complete. Check the itch.io step above for" \
-               "the credentials or upload error, then set ALLOW_FREE_ONLY to" \
-               "true if shipping free-only is intended."
+               "No free edition exists, so this release is not complete." \
+               "Check the itch.io step above for the credentials or upload" \
+               "error, then rerun the publish path once it is fixed."
           exit 1
