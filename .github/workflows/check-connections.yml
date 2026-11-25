@@ -33,10 +33,6 @@ jobs:
       YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
       YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
       YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
-      # The Shorts channel is optional at launch. Without this opt-out a
-      # missing YouTube credential fails the whole connection check, and with
-      # it the absence is stated rather than mistaken for a working upload.
-      ALLOW_FREE_ONLY: "1"
     steps:
       - uses: actions/checkout@v4
         with:

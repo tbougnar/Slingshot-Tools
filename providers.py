@@ -108,21 +108,27 @@ GROQ_BASE = "https://api.groq.com/openai/v1"
 # Free OpenRouter models, best first. A daily cap on one model must never kill
 # a run, so every job has a chain and the caller walks it.
 #
-# These ids come from the live /models catalogue, not memory. The previous
-# chain (deepseek-chat-v3-0324, gemini-2.0-flash-001, llama-3.3-70b-instruct)
-# was retired: the Gemini id was gone and the other two answered with an empty
-# reply, so every generation attempt spent five minutes and produced no app.
-# Keep every id `:free` - backend_selftest.py and self_upgrade.py enforce it.
+# These ids come from the live /models catalogue and a tiny completion probe,
+# not memory. The previous chain (deepseek-chat-v3-0324, gemini-2.0-flash-001,
+# llama-3.3-70b-instruct) was retired: the Gemini id was gone and the other two
+# answered with an empty reply, so every generation attempt spent five minutes
+# and produced no app. Later, ling-3.2-flash was still listed but answered
+# 429 "temporarily rate-limited upstream" while eight other free models replied
+# normally; it stays as a backup, not the first try. Keep every id `:free` -
+# backend_selftest.py and self_upgrade.py enforce it.
 OPENROUTER_CHAINS = {
-    "builder": ("inclusionai/ling-3.2-flash:free",
-                "baidu/ernie-5.5-flash-preview:free",
-                "nvidia/nemotron-3-ultra-550b-a55b:free"),
-    "debug": ("inclusionai/ling-3.2-flash:free",
+    "builder": ("baidu/ernie-5.5-flash-preview:free",
+                "nvidia/nemotron-3.5-lightning:free",
+                "nvidia/nemotron-3-ultra-550b-a55b:free",
+                "inclusionai/ling-3.2-flash:free"),
+    "debug": ("baidu/ernie-5.5-flash-preview:free",
+              "nvidia/nemotron-3.5-lightning:free",
               "nvidia/nemotron-3-ultra-550b-a55b:free",
               "recursive/flint-v1.0:free"),
     "chat": ("baidu/ernie-5.5-flash-preview:free",
-             "inclusionai/ling-3.2-flash:free",
-             "recursive/flint-v1.0:free"),
+             "nvidia/nemotron-3.5-lightning:free",
+             "recursive/flint-v1.0:free",
+             "inclusionai/ling-3.2-flash:free"),
 }
 GROQ_CHAINS = {
     "builder": ("openai/gpt-oss-120b", "qwen/qwen3.8-27b"),
