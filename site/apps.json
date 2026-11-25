@@ -1,5 +1,25 @@
 [
   {
+    "slug": "unit-converter",
+    "base_slug": "unit-converter",
+    "title": "Unit converter",
+    "tier": "full",
+    "tag": "unit",
+    "blurb": "Unit converter is a premium offline Windows tool. Buy once and keep it: no account, no subscription, and your data never leaves your device.",
+    "tags": [
+      "unit",
+      "converter"
+    ],
+    "url": "",
+    "download": "",
+    "price": 3.0,
+    "free": false,
+    "differences": [],
+    "published": false,
+    "badge": "New",
+    "date": "2026-11-25"
+  },
+  {
     "slug": "dev-converter",
     "base_slug": "dev-converter",
     "title": "Developer unit converter",
