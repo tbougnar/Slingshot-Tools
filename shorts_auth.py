@@ -1,26 +1,31 @@
-"""Get the YouTube refresh token, then show the steps to store it.
+"""Get a fresh YouTube refresh token, then hand it to the secret setter.
 
 The refresh token is the only value in this whole pipeline that cannot be
 generated or derived. Google issues it once, in a browser, after a person
 presses Allow. This script drives that flow over the loopback address so the
 only manual step is clicking Allow.
 
-    python shorts_auth.py
+    python shorts_auth.py --save-env
+    python set_youtube_secrets.py
+
+The first command writes the client id, client secret and token into the
+gitignored .env; the second proves they work together and stores them as
+GitHub Actions secrets. Without --save-env the token is only printed, as it
+was before.
 
 If the browser cannot reach the local helper (Windows firewall, proxy, IPv6,
 redirect-URI mismatch), the script asks you to paste the URL from the address
 bar instead. The one-time code in that URL works just as well.
-
-It never stores anything itself: the token goes straight to a GitHub secret,
-not to a file on disk.
 """
 from __future__ import annotations
 
 import http.server
 import json
 import os
+import pathlib
 import secrets
 import socket
+import sys
 import threading
 import urllib.error
 import urllib.parse
@@ -37,6 +42,26 @@ TIMEOUT = int(os.environ.get("SHORTS_AUTH_TIMEOUT", "300"))
 
 def log(m: str) -> None:
     print(f"[auth] {m}", flush=True)
+
+
+def save_env(values: dict[str, str]) -> pathlib.Path:
+    """Keep the fresh pair in the gitignored .env for the secret setter."""
+    path = pathlib.Path(__file__).resolve().parent / ".env"
+    lines = path.read_text(encoding="utf-8", errors="replace").splitlines() \
+        if path.exists() else []
+    keys = set(values)
+    kept = []
+    for line in lines:
+        name = line.split("=", 1)[0].strip() if "=" in line else ""
+        if name in keys:
+            kept.append(f"{name}={values[name]}")
+            keys.discard(name)
+        else:
+            kept.append(line)
+    for name in sorted(keys):
+        kept.append(f"{name}={values[name]}")
+    path.write_text("\n".join(kept).rstrip() + "\n", encoding="utf-8")
+    return path
 
 
 class Handler(http.server.BaseHTTPRequestHandler):
@@ -263,18 +288,25 @@ def main() -> int:
         log("run this again; the consent screen will appear fresh.")
         return 1
 
-    log("")
-    log("Now put the token in GitHub. The gh CLI is not installed here, so")
-    log("use the website (and do not paste the token into a chat or a file):")
-    log("")
-    log("  1. github.com/tbougnar/Slingshot-Tools/settings/secrets/actions")
-    log("  2. Repository secrets -> New repository secret")
-    log("  3. Name: YOUTUBE_REFRESH_TOKEN")
-    log(f"  4. Value: {refresh}")
-    log("")
-    log("If the client id or secret changed, update those two secrets on the")
-    log("same page. YOUTUBE_PRIVACY is a Variable, not a secret; keep it")
-    log("unlisted until you have watched a full Short.")
+    if "--save-env" in sys.argv:
+        path = save_env({"YOUTUBE_CLIENT_ID": cid,
+                         "YOUTUBE_CLIENT_SECRET": csec,
+                         "YOUTUBE_REFRESH_TOKEN": refresh})
+        log(f"saved the working pair to {path.name} (gitignored)")
+        log("now run: python set_youtube_secrets.py")
+    else:
+        log("")
+        log("Put the token in GitHub. The gh CLI is not installed here, so")
+        log("use the website (and do not paste the token into a chat):")
+        log("")
+        log("  1. github.com/tbougnar/Slingshot-Tools/settings/secrets/actions")
+        log("  2. Repository secrets -> New repository secret")
+        log("  3. Name: YOUTUBE_REFRESH_TOKEN")
+        log(f"  4. Value: {refresh}")
+        log("")
+        log("If the client id or secret changed, update those two secrets on")
+        log("the same page. YOUTUBE_PRIVACY is a Variable, not a secret; keep")
+        log("it unlisted until you have watched a full Short.")
     return 0
 
 

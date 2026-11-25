@@ -369,17 +369,32 @@ jobs:
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
 
+      # Without these env vars the bot sees no token and no guild, so every
+      # channel is "missing" and the intro step posts into zero channels.
+      # The article and announcement steps above carry them; these do not.
       - name: Refresh the channels that go stale as tools ship
         continue-on-error: true
         run: python discord_intro.py
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
 
       - name: No channel is left empty
         continue-on-error: true
         run: python discord_intro.py --check
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
 
       - name: Can any product be retired
         continue-on-error: true
         run: python retire_product.py --list
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
 
       - name: How much of the month's budget is gone
         if: always()

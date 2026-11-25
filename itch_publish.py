@@ -34,6 +34,9 @@ import auditlog
 ROOT = Path(__file__).resolve().parent
 CATALOG = ROOT / "site" / "apps.json"
 STATE = ROOT / "data" / "itch.json"
+# The Discord steps are in a different job, on a fresh checkout, so the only
+# way they can know what actually went on sale is a pointer written here.
+HANDOFF = ROOT / "data" / "published.json"
 PAID = ROOT / "paid"
 
 API = "https://api.itch.io"
@@ -829,6 +832,22 @@ def remember(slug: str, url: str) -> None:
     STATE.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
 
 
+def handoff(slug: str, title: str, price: float, url: str) -> None:
+    """Record the product that is really on sale for the Discord steps.
+
+    The installer job publishes from the paid artifact, so the generator's
+    stage file is never present there. The article and announcement scripts
+    both read data/published.json, and used to say "no published product" in
+    the same run that had just put the tool on itch.io. Write the pointer right
+    after the publication succeeds, so it can only describe a real sale.
+    """
+    body = {"slug": slug, "title": title, "price": float(price),
+            "itch_url": url, "published": True,
+            "at": int(__import__("time").time())}
+    HANDOFF.parent.mkdir(parents=True, exist_ok=True)
+    HANDOFF.write_text(json.dumps(body, indent=2) + "\n", encoding="utf-8")
+
+
 # -------------------------------------------------------------------- main
 
 def find_installer(slug: str, title: str = "",
@@ -1111,6 +1130,9 @@ def main() -> int:
                              reason="no stage file; taken from the paid build")
             ok = publish(slug, title, price)
             if ok:
+                # The Discord steps run later on a fresh checkout; hand them
+                # the pointer now, only after the sale has really succeeded.
+                handoff(slug, title, price, STORE_URL)
                 auditlog.succeeded("itch-publish", job=slug,
                                    evidence={"exit_code": 0, "slug": slug,
                                              "price": price})
@@ -1160,6 +1182,7 @@ def main() -> int:
                      reason="the Windows installer was built and verified")
     ok = publish(slug, title, price, stage.get("version") or "")
     if ok:
+        handoff(slug, title, price, STORE_URL)
         auditlog.succeeded("itch-publish", job=slug,
                            evidence={"exit_code": 0, "slug": slug,
                                      "price": price})

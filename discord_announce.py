@@ -13,6 +13,8 @@ import json
 import sys
 from pathlib import Path
 
+import discord_data as dd
+
 ROOT = Path(__file__).resolve().parent
 CATALOG = ROOT / "site" / "apps.json"
 PUBLISHED = ROOT / "data" / "published.json"
@@ -118,9 +120,14 @@ def build_embed(prod: dict) -> dict:
 def main() -> int:
     # --dry-run prints the payload instead of posting it, so the message can
     # be checked before a webhook is connected.
+    explicit = next((a for a in sys.argv[1:] if not a.startswith("-")), "").strip()
     if "--dry-run" in sys.argv:
-        stage = _load(PUBLISHED, {})
-        slug = stage.get("slug") if isinstance(stage, dict) else None
+        if explicit:
+            slug = explicit.lower()
+        else:
+            stage = _load(PUBLISHED, {})
+            slug = stage.get("slug") if isinstance(stage, dict) else ""
+        slug = str(slug or "").strip() or dd.latest_slug()
         if not slug:
             print("[discord] no published product to preview")
             return 0
@@ -135,8 +142,16 @@ def main() -> int:
         log(f"nothing configured ({dp.describe()}) - nothing to do")
         return 0
 
-    stage = _load(PUBLISHED, {})
-    slug = stage.get("slug") if isinstance(stage, dict) else None
+    # An explicit slug wins: it lets a recovered or re-announced release name
+    # the product without relying on a stage file that was never committed.
+    if explicit:
+        slug = explicit.lower()
+    else:
+        stage = _load(PUBLISHED, {})
+        slug = stage.get("slug") if isinstance(stage, dict) else ""
+    slug = str(slug or "").strip()
+    if not slug:
+        slug = dd.latest_slug()
     if not slug:
         log("no published product to announce")
         return 0
@@ -153,6 +168,14 @@ def main() -> int:
     if (prod.get("full") or {}).get("published") is not True:
         # never advertise a paid edition that is not actually on sale
         log(f"{slug} paid tier is not live yet - not announcing")
+        return 0
+
+    # The local sent marker is gitignored, so a fresh CI runner has no memory
+    # of earlier runs. Ask the channel itself before posting: a retry must not
+    # announce the same product twice.
+    if dp.find_message("announcements", prod["title"]):
+        _remember(slug)
+        log(f"{prod['title']} is already in #announcements - skipping")
         return 0
 
     if dp.post("announcements", build_embed(prod)):

@@ -124,6 +124,22 @@ def tool_by_slug(slug: str) -> dict | None:
     return None
 
 
+def latest_slug() -> str:
+    """Newest product genuinely on sale, for jobs with no stage pointer.
+
+    The installer job publishes from a private artifact on a fresh checkout, so
+    data/published.json may not be there. The catalog is committed and knows
+    which products are live, so it is the fallback for release announcements.
+    """
+    live = [a for a in catalog()
+            if a.get("published") is True
+            and str(a.get("itch_url") or "").startswith("https://")]
+    live.sort(key=lambda a: str(a.get("date") or ""), reverse=True)
+    if not live:
+        return ""
+    return str(live[0].get("base_slug") or live[0].get("slug") or "").strip()
+
+
 # --------------------------------------------------------------------- polls
 
 def polls() -> dict:

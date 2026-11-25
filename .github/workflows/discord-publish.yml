@@ -1,0 +1,90 @@
+name: Slingshot — post a released tool to Discord
+
+# A release can reach itch.io while its Discord steps are skipped (for example
+# when a recovered build has no stage pointer). This posts the article and the
+# announcement for a product that is already on sale, without rebuilding or
+# re-uploading anything. Both scripts check the channel first, so a retry does
+# not post the same message twice.
+
+on:
+  workflow_dispatch:
+    inputs:
+      slug:
+        description: "Product slug (blank = newest published product)"
+        required: false
+        type: string
+      dry_run:
+        description: "Print the messages without posting"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: slingshot-discord-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+      DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
+      SITE_URL: ${{ vars.SITE_URL }}
+      SLUG: ${{ inputs.slug }}
+      DRY: ${{ inputs.dry_run }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install the small dependencies
+        run: python -m pip install --quiet requests
+        continue-on-error: true
+
+      - name: Write and post the article
+        shell: bash
+        run: |
+          if [ "$DRY" = "true" ]; then
+            python discord_article.py --dry-run "$SLUG"
+          else
+            python discord_article.py "$SLUG"
+          fi
+
+      - name: Announce the product
+        shell: bash
+        run: |
+          if [ "$DRY" = "true" ]; then
+            python discord_announce.py --dry-run "$SLUG"
+          else
+            python discord_announce.py "$SLUG"
+          fi
+
+      - name: Keep the public article in the repository
+        if: ${{ inputs.dry_run == false }}
+        shell: bash
+        run: |
+          git config user.name "slingshot-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add discord_articles.json
+          if git diff --cached --quiet; then
+            echo "no article changed"
+            exit 0
+          fi
+          git commit -q -m "docs: Discord article for $SLUG"
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git rebase origin/main || git rebase --abort
+            if git push origin HEAD:main; then exit 0; fi
+            sleep 10
+          done
+          echo "::error::the Discord article could not be committed"
+          exit 1

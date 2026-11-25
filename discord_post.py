@@ -174,6 +174,11 @@ def find_channel(name: str, fresh: bool = False) -> str | None:
         _CACHE_STAMP = now
         st, data = _rest("GET", f"/guilds/{GUILD_ID}/channels")
         _CHANNEL_CACHE.clear()
+        if st != 200:
+            # Silent failure looked like "every channel is missing", when the
+            # real cause was a wrong guild id or a bot that was never invited.
+            log(f"could not list the configured server's channels: "
+                f"HTTP {st} - {str(data)[:160]}")
         if st == 200 and isinstance(data, list):
             text = [c for c in data if c.get("type") in (0, 5)]
             for c in text:

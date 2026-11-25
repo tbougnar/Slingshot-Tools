@@ -134,6 +134,10 @@ def main() -> int:
         stage = dd._load(dd.PUBLISHED, {})
         slug = stage.get("slug") if isinstance(stage, dict) else ""
     if not slug:
+        # A recovered release has no stage pointer on a fresh checkout, but the
+        # committed catalog still knows which product just went on sale.
+        slug = dd.latest_slug()
+    if not slug:
         log("no product to write about")
         return 0
 
@@ -165,6 +169,11 @@ def main() -> int:
     if not dry:
         dd.save_article(tool["base"], body)
         log(f"wrote {len(body)} characters for {tool['base']}")
+        # A CI runner has no gitignored sent-marker, so ask the channel itself
+        # before posting; a retry must not publish the same article twice.
+        if dp.find_message("articles", tool["title"]):
+            log(f"{tool['base']} is already in #articles - not posting twice")
+            return 0
 
     if dry:
         print(json.dumps(article_message(tool, body), indent=2,
