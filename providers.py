@@ -107,16 +107,22 @@ GROQ_BASE = "https://api.groq.com/openai/v1"
 
 # Free OpenRouter models, best first. A daily cap on one model must never kill
 # a run, so every job has a chain and the caller walks it.
+#
+# These ids come from the live /models catalogue, not memory. The previous
+# chain (deepseek-chat-v3-0324, gemini-2.0-flash-001, llama-3.3-70b-instruct)
+# was retired: the Gemini id was gone and the other two answered with an empty
+# reply, so every generation attempt spent five minutes and produced no app.
+# Keep every id `:free` - backend_selftest.py and self_upgrade.py enforce it.
 OPENROUTER_CHAINS = {
-    "builder": ("deepseek/deepseek-chat-v3-0324",
-                "google/gemini-2.0-flash-001",
-                "meta-llama/llama-3.3-70b-instruct"),
-    "debug": ("deepseek/deepseek-chat-v3-0324",
-              "google/gemini-2.0-flash-001",
-              "meta-llama/llama-3.3-70b-instruct"),
-    "chat": ("deepseek/deepseek-chat-v3-0324",
-             "google/gemini-2.0-flash-001",
-             "meta-llama/llama-3.3-70b-instruct"),
+    "builder": ("google/gemma-4-31b-it:free",
+                "google/gemma-4-26b-a4b-it:free",
+                "nvidia/nemotron-3.5-lightning:free"),
+    "debug": ("google/gemma-4-31b-it:free",
+              "google/gemma-4-26b-a4b-it:free",
+              "inclusionai/ling-3.2-flash:free"),
+    "chat": ("google/gemma-4-26b-a4b-it:free",
+             "google/gemma-4-31b-it:free",
+             "inclusionai/ling-3.2-flash:free"),
 }
 GROQ_CHAINS = {
     "builder": ("openai/gpt-oss-120b", "qwen/qwen3.8-27b"),

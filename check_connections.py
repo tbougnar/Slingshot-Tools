@@ -178,6 +178,41 @@ def check_model() -> bool:
             limit = info.get("limit")
             if limit is not None:
                 detail += f", ${limit} credit limit"
+            # A good key says nothing about the chain: the builder can still
+            # point at a retired id and fail five minutes into every build.
+            # Prove the head model with one tiny completion here instead.
+            try:
+                import providers
+                head = providers.model_chain("builder")[0]
+            except Exception:  # noqa: BLE001
+                head = ""
+            if head:
+                probe = json.dumps({
+                    "model": head,
+                    "messages": [{"role": "user", "content": "Reply with: ok"}],
+                    "max_tokens": 8,
+                    "temperature": 0,
+                }).encode("utf-8")
+                headers = {"Authorization": f"Bearer {key}",
+                           "Content-Type": "application/json",
+                           "HTTP-Referer": "https://tbougnar.github.io/Slingshot-Tools/",
+                           "X-Title": "Slingshot Tools"}
+                try:
+                    with get(f"{providers.OPENROUTER_BASE}/chat/completions",
+                             headers, probe) as r:
+                        reply = json.loads(r.read().decode("utf-8"))
+                    (reply.get("choices") or [{}])[0].get("message", {})
+                    detail += f", builder {head} replied"
+                except urllib.error.HTTPError as e:
+                    body = e.read().decode("utf-8", "replace")[:120]
+                    return bad("model",
+                               f"key works but {head} refused: HTTP {e.code} "
+                               f"{body}",
+                               "pick a live free id from openrouter.ai/models "
+                               "and update providers.OPENROUTER_CHAINS")
+                except Exception as e:  # noqa: BLE001
+                    return bad("model",
+                               f"key works but {head} failed: {str(e)[:120]}")
             return ok(name, detail)
         return ok(name, f"{len(data.get('data') or [])} models reachable")
     except urllib.error.HTTPError as e:
