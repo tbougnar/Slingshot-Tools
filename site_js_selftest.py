@@ -89,12 +89,10 @@ try:
                         hasFull: !!(out[0] && out[0].full),
                         hasBasic: !!(out[0] && out[0].basic)};
             }""")
-        # The bug this fixes: a product whose paid edition is not on sale yet
-        # still has a full entry in the catalogue, marked published:false. The
-        # grouping dropped it, so the pair held only the basic entry and
-        # `full` fell back to it. The card then said "Full edition" and priced
-        # it at $0.00, and the dialog offered a Full edition that was free. On
-        # the live site that was thirty-two of the thirty-four products.
+        # Paid-only: a product whose paid edition is not on sale yet must not
+        # appear at all. It used to fall back to the basic entry, so the card
+        # said "Full edition" and priced it at $0.00, giving away software
+        # that is sold on itch.io. There is no free edition any more.
         got2 = _pg.evaluate(
             """() => {
                 const d = [
@@ -103,26 +101,21 @@ try:
                   {slug:'a-basic', base_slug:'a', tier:'basic', title:'Thing (Basic)',
                    price:0, published:true, url:'/apps/a-basic/'}];
                 const out = groupProducts(d);
-                return {n: out.length, onSale: out[0] && out[0].onSale,
-                        lead: out[0] && out[0].lead && out[0].lead.tier,
-                        full: out[0] && out[0].full};
+                return {n: out.length,
+                        basicCount: out.filter(x => x.basic).length};
             }""")
         _b.close()
     check("groupProducts runs in a browser", got.get("n") == 1, str(got))
-    check("it groups both tiers into one product",
-          bool(got.get("hasFull")) and bool(got.get("hasBasic")))
+    check("a listed product has one paid edition",
+          bool(got.get("hasFull")) and not got.get("hasBasic"), str(got))
     check("the family key is the base slug", got.get("key") == "a")
     check("a product with a store page is on sale", got.get("onSale") is True,
           "it is not offered for sale even though it has an itch.io page")
 
-    check("a product with an unsold paid edition is still listed",
-          got2.get("n") == 1, str(got2))
-    check("and it is not treated as being on sale",
-          got2.get("onSale") is False,
-          "the group claims the paid edition is on sale")
-    check("the card shows the free edition, not the unsold one",
-          got2.get("lead") == "basic" and not got2.get("full"),
-          f"lead={got2.get('lead')} full={got2.get('full')}")
+    check("a product with no live paid edition is not listed",
+          got2.get("n") == 0, str(got2))
+    check("and no free edition is offered anywhere",
+          got2.get("basicCount") == 0, str(got2))
 
     # fetch() from file:// is blocked by CORS, so apps.json legitimately does
     # not load here; a ReferenceError from groupProducts would still show up.
@@ -205,6 +198,13 @@ check("a payment return does not promise an email nobody sends",
 check("and it points the buyer at the store page instead",
       "Download the Full edition from the store page" in co_html
       and "slingshot-tools.itch.io/slingshot-tools" in co_html)
+check("the catalogue advertises no free edition",
+      "Download free" not in html and "Free basic" not in html
+      and "Free forever" not in html and "free tools" not in html.lower(),
+      "the site still offers software that is only sold on itch.io")
+check("the checkout page advertises no free edition either",
+      "free edition" not in co_html.lower(),
+      "checkout still promises a free tier")
 check("the store link it builds is validated, not injected",
       'test(itch)?itch:' in co_html and "n.textContent=''" in co_html,
       "the itch URL must start with https://<name>.itch.io/ and be inserted "
