@@ -31,15 +31,16 @@ def _product_page(url: str) -> bool:
 
 
 def check_tier_families(catalog):
-    """Both tiers of a product must share one base_slug.
+    """A paid-only catalogue has one paid card per product, and no free card.
 
-    If they drift apart the site renders two separate cards instead of a
-    single product offering a free and a paid option.
+    The old rule demanded a basic tier beside every published full tier. That
+    was correct when there were two editions, but after the paid-only change a
+    lone published ``full`` card is the intended shape. It blocked the first
+    release after the conversion, so the rule was wrong, not the catalogue.
 
-    A published product showing only its free edition is allowed: that is what
-    a tool looks like between its build and the moment somebody uploads it to
-    itch.io. What must never happen is a product whose two entries have drifted
-    onto different base_slugs, which is checked separately.
+    What is still wrong: a free edition at all, or more than one paid card for
+    the same product, which would either give away what must be sold or render
+    two cards for one tool.
     """
     families = {}
     for a in catalog:
@@ -48,16 +49,10 @@ def check_tier_families(catalog):
 
     problems = []
     for key, tiers in families.items():
-        if "basic" in tiers and "full" in tiers:
-            continue
-        # a lone tier is only a problem when it is on sale and the other tier
-        # exists nowhere in the catalog: the two would never regroup
-        on_sale = [a for a in catalog
-                   if (a.get("base_slug") or a.get("slug")) == key
-                   and a.get("published") is not False]
-        if len(on_sale) == 1 and len(tiers) == 1 and on_sale[0].get("tier") == "full":
-            problems.append(f"{key} is on sale with no free edition beside it")
-
+        if "basic" in tiers:
+            problems.append(f"{key} still has a free edition")
+        if tiers.count("full") > 1:
+            problems.append(f"{key} has more than one paid edition")
     return families, problems
 
 
