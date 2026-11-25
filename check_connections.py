@@ -578,13 +578,19 @@ def check_youtube() -> bool:
         # fingerprint. Token length is also safe: it catches a secret stored
         # with quotes or placeholder text without revealing the token.
         token_shape = (f"{len(tok)} chars"
+                       + (", starts 1//" if tok.startswith("1//")
+                          else ", unexpected prefix")
                        + (", has whitespace" if any(c.isspace()
                                                     for c in tok) else ""))
-        fix = (f"client id starts {cid[:24]}; token is {token_shape}. "
-               "Make sure YOUTUBE_CLIENT_ID and YOUTUBE_CLIENT_SECRET are "
-               "the same OAuth client that minted this refresh token, and "
-               "that the secret is only the token with no quotes; then run "
-               "python shorts_auth.py again")
+        # Only the shape is printed, never the value. A secret from a
+        # different OAuth client is the usual cause of a bare 400 here.
+        secret_shape = ("GOCSPX- shape" if csec.startswith("GOCSPX-")
+                        else "unexpected shape")
+        fix = (f"client id starts {cid[:24]}; client secret has {secret_shape}; "
+               f"token is {token_shape}. Make sure YOUTUBE_CLIENT_ID and "
+               "YOUTUBE_CLIENT_SECRET are the same OAuth client that minted "
+               "this refresh token, and that the secret is only the token "
+               "with no quotes; then run python shorts_auth.py again")
         return bad("youtube",
                    f"token rejected (HTTP {e.code}: {short_detail})", fix)
     except Exception as e:  # noqa: BLE001
