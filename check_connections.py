@@ -181,40 +181,63 @@ def check_model() -> bool:
             if limit is not None:
                 detail += f", ${limit} credit limit"
             # A good key says nothing about the chain: the builder can still
-            # point at a retired id and fail five minutes into every build.
-            # Prove the head model with one tiny completion here instead.
+            # point at a retired or temporarily throttled id and fail five
+            # minutes into every build. Probe every currently free model with
+            # one tiny completion and print which ones actually answer. On a
+            # free-tier key the paid ids are useless, so this is the only
+            # reliable way to choose a chain head.
             try:
                 import providers
-                head = providers.model_chain("builder")[0]
+                base = providers.OPENROUTER_BASE
             except Exception:  # noqa: BLE001
-                head = ""
-            if head:
-                probe = json.dumps({
-                    "model": head,
-                    "messages": [{"role": "user", "content": "Reply with: ok"}],
-                    "max_tokens": 8,
-                    "temperature": 0,
-                }).encode("utf-8")
+                base = "https://openrouter.ai/api/v1"
+            candidates: list[str] = []
+            try:
+                with get("https://openrouter.ai/api/v1/models") as r:
+                    catalogue = json.loads(r.read().decode("utf-8"))
+                candidates = [m["id"] for m in catalogue.get("data", [])
+                              if str(m.get("id", "")).endswith(":free")]
+            except Exception:  # noqa: BLE001
+                try:
+                    import providers
+                    candidates = list(providers.model_chain("builder"))
+                except Exception:  # noqa: BLE001
+                    candidates = []
+            candidates = candidates[:12]
+            if candidates:
+                good = []
                 headers = {"Authorization": f"Bearer {key}",
                            "Content-Type": "application/json",
                            "HTTP-Referer": "https://tbougnar.github.io/Slingshot-Tools/",
                            "X-Title": "Slingshot Tools"}
-                try:
-                    with get(f"{providers.OPENROUTER_BASE}/chat/completions",
-                             headers, probe, retry_429=False) as r:
-                        reply = json.loads(r.read().decode("utf-8"))
-                    (reply.get("choices") or [{}])[0].get("message", {})
-                    detail += f", builder {head} replied"
-                except urllib.error.HTTPError as e:
-                    body = e.read().decode("utf-8", "replace")[:120]
+                for model_id in candidates:
+                    probe = json.dumps({
+                        "model": model_id,
+                        "messages": [{"role": "user", "content": "Reply: ok"}],
+                        "max_tokens": 8,
+                        "temperature": 0,
+                    }).encode("utf-8")
+                    try:
+                        with get(f"{base}/chat/completions", headers, probe,
+                                 retry_429=False) as r:
+                            reply = json.loads(r.read().decode("utf-8"))
+                        content = ((reply.get("choices") or [{}])[0]
+                                   .get("message", {}).get("content") or "")
+                        print(f"  PASS  free model {model_id} - {content[:20]!r}")
+                        good.append(model_id)
+                    except urllib.error.HTTPError as e:
+                        body = e.read().decode("utf-8", "replace")[:180]
+                        print(f"  FAIL  free model {model_id} - HTTP {e.code} "
+                              f"{body}")
+                    except Exception as e:  # noqa: BLE001
+                        print(f"  FAIL  free model {model_id} - {str(e)[:120]}")
+                if not good:
                     return bad("model",
-                               f"key works but {head} refused: HTTP {e.code} "
-                               f"{body}",
-                               "pick a live free id from openrouter.ai/models "
+                               "no free model answered a tiny completion",
+                               "the free tier may have rotated its ids; "
+                               "pick a working one from openrouter.ai/models "
                                "and update providers.OPENROUTER_CHAINS")
-                except Exception as e:  # noqa: BLE001
-                    return bad("model",
-                               f"key works but {head} failed: {str(e)[:120]}")
+                detail += f", {len(good)}/{len(candidates)} free models replied"
             return ok(name, detail)
         return ok(name, f"{len(data.get('data') or [])} models reachable")
     except urllib.error.HTTPError as e:
