@@ -266,16 +266,43 @@ def trade(client_id: str, client_secret: str, code: str) -> dict:
         raise SystemExit(f"[auth] Google refused the code: {detail}")
 
 
+def _saved_env() -> dict[str, str]:
+    """Use an existing gitignored .env when one is present."""
+    path = pathlib.Path(__file__).resolve().parent / ".env"
+    if not path.exists():
+        return {}
+    out = {}
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        if "=" in line and not line.strip().startswith("#"):
+            k, v = line.split("=", 1)
+            out[k.strip()] = v.strip().strip('"').strip("'")
+    return out
+
+
 def main() -> int:
-    cid = os.environ.get("YOUTUBE_CLIENT_ID", "").strip()
-    csec = os.environ.get("YOUTUBE_CLIENT_SECRET", "").strip()
+    saved = _saved_env()
+    cid = os.environ.get("YOUTUBE_CLIENT_ID", "").strip() \
+        or saved.get("YOUTUBE_CLIENT_ID", "").strip()
+    csec = os.environ.get("YOUTUBE_CLIENT_SECRET", "").strip() \
+        or saved.get("YOUTUBE_CLIENT_SECRET", "").strip()
 
     if not cid or not csec:
-        log("paste these two from the Google Cloud console first:")
-        log("  $env:YOUTUBE_CLIENT_ID='1234567890-abc.apps.googleusercontent.com'")
-        log("  $env:YOUTUBE_CLIENT_SECRET='GOCSPX-xxxxxxxxxxxx'")
-        log("then run this again")
-        return 1
+        # Asking here keeps the whole re-auth to two commands. Exporting two
+        # environment variables first was easy to get wrong on Windows, and a
+        # pasted secret stays on this machine in the gitignored .env.
+        log("paste the OAuth client from the Google Cloud console:")
+        try:
+            if not cid:
+                cid = input("[auth] client id: ").strip()
+            if not csec:
+                csec = input("[auth] client secret: ").strip()
+        except EOFError:
+            cid = csec = ""
+        if not cid or not csec:
+            log("both are needed. From Google Cloud Console -> APIs & Services")
+            log("-> Credentials -> OAuth client ID -> the desktop client.")
+            log("http://localhost:8765 must be an authorised redirect URI.")
+            return 1
 
     code = ask_for_code(cid)
     log("got the code, trading it for a refresh token")

@@ -1,1 +1,11 @@
-[]
+[
+  {
+    "slug": "password-manager",
+    "source": "catalog"
+  },
+  {
+    "slug": "password-manager",
+    "title": "PassPal",
+    "date": "2026-11-22"
+  }
+]
