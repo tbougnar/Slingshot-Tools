@@ -213,8 +213,9 @@ def check_model() -> bool:
                 for model_id in candidates:
                     probe = json.dumps({
                         "model": model_id,
-                        "messages": [{"role": "user", "content": "Reply: ok"}],
-                        "max_tokens": 8,
+                        "messages": [{"role": "user", "content": "Reply with "
+                                                         "the single word: ok"}],
+                        "max_tokens": 128,
                         "temperature": 0,
                     }).encode("utf-8")
                     try:
@@ -223,6 +224,8 @@ def check_model() -> bool:
                             reply = json.loads(r.read().decode("utf-8"))
                         content = ((reply.get("choices") or [{}])[0]
                                    .get("message", {}).get("content") or "")
+                        if not content.strip():
+                            raise ValueError("empty reply")
                         print(f"  PASS  free model {model_id} - {content[:20]!r}")
                         good.append(model_id)
                     except urllib.error.HTTPError as e:
