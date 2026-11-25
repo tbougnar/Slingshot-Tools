@@ -35,7 +35,7 @@ DISCORD_UA = "DiscordBot (https://github.com/tbougnar/Slingshot-Tools, 1.0)"
 
 
 def get(url: str, headers: dict | None = None, data: bytes | None = None,
-         timeout: int = TIMEOUT):
+         timeout: int = TIMEOUT, retry_429: bool = True):
     """urllib with the User-Agent Cloudflare expects.
 
     Discord rate limits hard, and answers a burst with 429. Waiting out the
@@ -50,7 +50,9 @@ def get(url: str, headers: dict | None = None, data: bytes | None = None,
         try:
             return urllib.request.urlopen(req, timeout=timeout)
         except urllib.error.HTTPError as e:
-            if e.code != 429:
+            # The model probe needs the original body: a 429 there often says
+            # "free-models-per-day" and tells us which limit actually fired.
+            if e.code != 429 or not retry_429:
                 raise
             try:
                 raw = json.loads(e.read().decode("utf-8", "replace"))
@@ -199,7 +201,7 @@ def check_model() -> bool:
                            "X-Title": "Slingshot Tools"}
                 try:
                     with get(f"{providers.OPENROUTER_BASE}/chat/completions",
-                             headers, probe) as r:
+                             headers, probe, retry_429=False) as r:
                         reply = json.loads(r.read().decode("utf-8"))
                     (reply.get("choices") or [{}])[0].get("message", {})
                     detail += f", builder {head} replied"
