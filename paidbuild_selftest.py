@@ -158,15 +158,13 @@ else:
     print("skip  published.json is untracked and absent, which is correct "
           "between runs")
 
-print("\nTHE FREE EDITION'S FOLDER IS NAMED ONCE\n")
-# The free edition lives in site/apps/<slug>-basic, and that is the folder the
-# catalogue links to. write_app adds the "-basic" suffix, so the slug it is
-# given is the product's own slug. One caller passed an already-suffixed slug
-# and produced "<slug>-basic-basic": the inner app file landed there, the
-# published copy stayed stale, a duplicated slug went to GitHub Pages, and the
-# release gate refused the build. Both forms have to give the same folder.
-_html = ("<html><body><script>const TIER=\"basic\";</script></body></html>"
-         * 30)
+print("\nTHE PAID FOLDER IS NAMED ONCE\n")
+# A stale "-basic" suffix used to name the free edition that is no longer
+# published. If a caller still passes one, writing a second paid folder would
+# make a duplicate product the catalogue cannot link to. Both forms have to
+# give the same paid folder.
+_html = ("<html><body><script>localStorage.setItem('k','1');</script>"
+         "</body></html>" * 30)
 _tmp3 = pathlib.Path(tempfile.mkdtemp())
 _real_apps, _real_paid = make_app.APPS_DIR, make_app.PAID_DIR
 try:
@@ -174,20 +172,23 @@ try:
     make_app.PAID_DIR = _tmp3 / "paid"
     _concept = {"slug": "widget", "title": "Widget"}
     _plain = make_app.write_app({**_concept, "brand": "Widget"},
-                                 _html, tier="basic")
+                                 _html, tier="full")
     _suffixed = make_app.write_app({**_concept, "brand": "Widget",
                                     "slug": "widget-basic"},
-                                   _html, tier="basic")
-    check("the free edition's folder ends in -basic exactly once",
-          _plain.name == "widget-basic" and _suffixed.name == "widget-basic",
+                                   _html, tier="full")
+    check("a paid build has no -basic suffix in its folder name",
+          _plain.name == "widget" and _suffixed.name == "widget",
           f"got {_plain.name!r} and {_suffixed.name!r}")
     check("and the app file is inside it",
           (_plain / "app" / "index.html").exists(),
-          "the published copy the catalogue links to would be stale")
-    check("the recorded slug matches the folder",
-          json.loads((_plain / "concept.json").read_text(
-              encoding="utf-8")).get("slug") == "widget-basic",
-          "the catalogue would name a folder that does not exist")
+          "the installer job would have nothing to build")
+    _meta = json.loads((_plain / "concept.json").read_text(encoding="utf-8"))
+    check("the recorded slug and tier match the paid folder",
+          _meta.get("slug") == "widget"
+          and _meta.get("base_slug") == "widget"
+          and _meta.get("tier") == "full", str(_meta)[:100])
+    check("nothing is written to the public site folder",
+          not make_app.APPS_DIR.exists())
 finally:
     make_app.APPS_DIR, make_app.PAID_DIR = _real_apps, _real_paid
     shutil.rmtree(_tmp3, ignore_errors=True)
@@ -216,6 +217,20 @@ check("butler is given a project slug and not a URL",
       "STORE_PROJECT.rstrip(\"/\").rsplit(\"/\", 1)[-1]" in _rp_code,
       "the target is user/project:channel, and a URL in the project part "
       "is not a project")
+check("it reuses the paid source instead of rebuilding from a free edition",
+      "PAID / slug" in _rp_code and "-basic" not in _rp_code
+      and "set_edition(html" not in _rp_code,
+      "a paid-only catalog has no free edition to flip into a paid one")
+
+_rw = (ROOT / ".github" / "workflows" / "rebuild-paid.yml").read_text(
+    encoding="utf-8")
+check("the repair lane restores the verifier's private paid artifact",
+      "name: paid-build" in _rw and "path: paid/" in _rw
+      and "run-id: ${{ inputs.source_run_id }}" in _rw,
+      "without the artifact there is no paid source to rebuild")
+check("and it installs NSIS directly, not from the flaky Chocolatey feed",
+      "./install_nsis.ps1" in _rw and "choco install nsis" not in _rw,
+      "the community feed returned 406/504 and stopped a real release")
 
 print("\nSECOND PASS: STATE, PACKAGING, CAPTIONS AND FRAMES\n")
 # Found by an independent audit pass, all reproduced before being fixed.

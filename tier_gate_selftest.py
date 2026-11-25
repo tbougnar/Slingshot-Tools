@@ -12,18 +12,19 @@ twenty-five apps is a paid product, and two of them - password-manager and
 base64-tool - are on the store for $3, so this was live and free to anyone who
 guessed.
 
-The current generator bakes the edition into the file instead: ``TIER`` is
-either "basic" or "full", set at build time, and ``rebuild_paid.py`` produces
-the paid edition by flipping that one constant. There is no runtime switch, so
-there is nothing for a URL to reach.
+The current generator is paid-only: there is no free folder to unlock. The
+paid source is kept in the private paid-build artifact and restored verbatim
+by ``rebuild_paid.py``, so no tier is flipped at rebuild time. The bypass that
+would still let a visitor take the product for free is a runtime switch, and
+that has to be refused before an app is written.
 
 This checks the property directly, because it is a text property and text is
 what shipped the bug:
 
-1. no app gates anything on the query string,
-2. the free editions are actually limited, not just labelled basic,
-3. flipping TIER still produces the full edition, so the paid build is the
-   full product and not the limited one.
+1. no shipped app gates anything on the query string, and the detector still
+   catches the classic ``?paid`` form,
+2. the catalogue lists only paid products at the advertised price,
+3. the repair lane reuses the exact paid source from the private artifact.
 
     python tier_gate_selftest.py
 """
@@ -49,18 +50,18 @@ def check(label: str, ok: bool, detail: str = "") -> None:
         fails.append(label)
 
 
-SOURCES = sorted(APPS.glob("*/app/index.html"))
-# The standalone single-file copy the site actually links to for a free app is
-# <app>/index.html, a copy of <app>/app/index.html made at generation time. It
-# is the file served at the catalogue's URL, so it is the one a visitor can put
-# ?paid on. It carries the same gate and has to be checked too - fixing only
-# app/index.html left the live exploit in place.
-OUTER = sorted(APPS.glob("*/index.html"))
-ALL = SOURCES + OUTER
-check("there are free editions to check", len(SOURCES) > 0,
-      f"{len(SOURCES)} found under site/apps")
-check("and the standalone copies are checked too", len(OUTER) == len(SOURCES),
-      f"{len(OUTER)} outer index.html files against {len(SOURCES)} app ones")
+SOURCES = sorted(APPS.glob("*/app/index.html")) if APPS.exists() else []
+# An older checkout also served <app>/index.html, a standalone copy of the
+# app file. It is gone in paid-only mode, but if one is still present it can
+# still be opened with ?paid, so check it too.
+OUTER = sorted(APPS.glob("*/index.html")) if APPS.exists() else []
+PAID_SOURCES = sorted((ROOT / "paid").glob("*/app/index.html")) \
+    if (ROOT / "paid").exists() else []
+ALL = SOURCES + OUTER + PAID_SOURCES
+# A paid-only checkout has no site/apps, and a fresh CI runner has no paid/
+# until the private artifact is restored. The detector is unit-tested below,
+# so an empty tree cannot hide the bypass.
+print(f"checking {len(SOURCES)} site and {len(PAID_SOURCES)} paid app sources")
 
 # ------------------------------------------------- no query-string unlocking
 # A URLSearchParams read on location.search that feeds a limit, a tier or a
@@ -79,6 +80,15 @@ for p in ALL:
 check("no app unlocks anything from the query string",
       not unlockers,
       f"{len(unlockers)} still do: {unlockers[:5]}")
+# An empty checkout is not proof the detector works. Feed it the exact line
+# that shipped in twenty-five products, so a broken regex cannot pass just
+# because there are no files to scan.
+_classic = ("const PAID=new URLSearchParams(location.search).has('paid');"
+            "const LIM=PAID?{max:Infinity}:{max:3};")
+check("the detector catches the classic ?paid unlocker",
+      bool(QLOCK.search(_classic))
+      and bool(make_app._TIER_FROM_URL.search(_classic)),
+      "an empty tree would hide a broken gate")
 
 # ----------------------------------------------- free editions are limited
 # TIER="basic" has to come with a real limitation. An app labelled basic that
@@ -92,8 +102,9 @@ for p in ALL:
     s = p.read_text(encoding="utf-8", errors="ignore")
     name = p.parent.parent.name
     if 'TIER="basic"' not in s and "TIER='basic'" not in s:
-        check(f"{name} declares its edition", False,
-              "no TIER constant, so the edition is unknown at runtime")
+        # A paid-only app is generated with no tier table at all, so there is
+        # no edition to decide and nothing to flip. The query-string check
+        # above is the bypass that still matters for these files.
         continue
     if not any(m in s for m in LIMITED_MARK):
         check(f"{name} is genuinely limited", False,
@@ -148,9 +159,22 @@ check("a false limit claim is removed, not relabelled",
       and not re.search(r"free\s+edition", _fixed, re.I),
       _fixed[:80])
 _rb = (ROOT / "rebuild_paid.py").read_text(encoding="utf-8")
-check("the repair lane flips the edition the same way the builder does",
-      'set_edition(html, "full")' in _rb and "_set_tier(" not in _rb,
-      "rebuild_paid uploaded a paid build whose footer still said free")
+_rb_code = "\n".join(ln for ln in _rb.splitlines()
+                     if not ln.strip().startswith("#"))
+check("the repair lane reuses the exact paid source, not a rebuilt free one",
+      "PAID / slug" in _rb_code and 'app" / "index.html"' in _rb_code
+      and 'set_edition(html, "full")' not in _rb_code
+      and "-basic" not in _rb_code,
+      "a paid-only catalog has no free edition to flip into a paid one")
+check("and it refuses a missing paid source instead of inventing one",
+      "no paid source for" in _rb_code and "artifact" in _rb_code.lower())
+_rw = (ROOT / ".github" / "workflows" / "rebuild-paid.yml").read_text(
+    encoding="utf-8")
+check("the repair lane restores the private paid-build artifact",
+      "name: paid-build" in _rw and "path: paid/" in _rw
+      and "run-id: ${{ inputs.source_run_id }}" in _rw
+      and "./install_nsis.ps1" in _rw and "choco install nsis" not in _rw,
+      "without that artifact there is no paid source to rebuild")
 
 # ------------------------------------ the shop must say what the money buys
 # Batch file renamer sold for $3 with the differences "Export and import your
@@ -267,46 +291,25 @@ except (OSError, ValueError) as _e:
     _cat = []
     check("the catalogue can be read", False, str(_e)[:60])
 if _cat:
-    _fams = {}
-    for _e in _cat:
-        _fams.setdefault(_e.get("base_slug") or _e.get("slug"), {})[
-            _e.get("tier")] = _e
+    # A paid-only shop has one edition per product. The old check demanded a
+    # committed free edition to compare against, which made every real
+    # product look like a mismatch after the free tiers were removed.
     _drift = []
-    for _base, _pair in _fams.items():
-        _full, _basic = _pair.get("full"), _pair.get("basic")
-        if not _full or not _basic:
-            _drift.append(f"{_base}: an edition is missing")
-            continue
-        _src = APPS / f"{_base}-basic" / "app" / "index.html"
-        if not _src.exists():
-            continue
-        _real = make_app.paid_features(_src.read_text(encoding="utf-8"))
-        # The catalogue may word a feature for a customer, so the check is
-        # that it says each one at all. It used to demand the exact label
-        # list, which could only pass if a human copied the labels by hand -
-        # and it let "unlimited" be missing for as long as the list happened
-        # to match the app's own blind spot.
-        _need = {
-            "Unlimited items":
-                r"unlimited|no limit|as many|without (?:a )?limit",
-            "Export and import your data": r"export",
-            "Import your data": r"import",
-            "Every theme": r"theme",
-            "Bulk actions": r"bulk",
-            "Keeps a history": r"history",
-        }
-        _said = " ".join(str(d) for d in (_full.get("differences") or []))
-        for _label in _real:
-            _pattern = _need.get(_label, re.escape(_label.split()[0]))
-            if not re.search(_pattern, _said, re.I):
-                _drift.append(f"{_base}: never mentions {_label!r}")
-        if not _full.get("differences"):
-            _drift.append(f"{_base}: the paid edition has no differences list")
-        if _full.get("blurb") == _basic.get("blurb"):
-            _drift.append(f"{_base}: both editions say the same thing")
-    check("the catalogue says what each paid edition really adds",
-          not _drift,
-          f"{len(_drift)} disagree: {_drift[:3]}")
+    for _e in _cat:
+        _base = _e.get("base_slug") or _e.get("slug")
+        if _e.get("tier") != "full" or _e.get("free") is not False:
+            _drift.append(f"{_base}: not a single paid edition")
+        try:
+            _price = float(_e.get("price") or 0)
+        except (TypeError, ValueError):
+            _price = 0.0
+        if not 2.99 <= _price <= 4.99:
+            _drift.append(f"{_base}: ${_price:.2f} is outside the paid bundle")
+        if _e.get("published") is True and not str(
+                _e.get("itch_url") or "").startswith("https://"):
+            _drift.append(f"{_base}: advertised as live with no store URL")
+    check("the catalogue lists only paid products at the advertised price",
+          not _drift, f"{len(_drift)} disagree: {_drift[:3]}")
 
 # ------------------------------------------------- every app actually works
 # The chess-board app was served for weeks with one stray brace in its
@@ -436,7 +439,7 @@ except Exception as _e:  # noqa: BLE001
 # the folder before deciding the edition and the paid half then failed the tier
 # gate. The folder was in no catalogue, so nothing linked to it, but it
 # answered 200 on the live site.
-print("\nA REFUSED EDITION LEAVES NOTHING IN THE PUBLISHED FOLDER\n")
+print("\nA REFUSED APP LEAVES NOTHING BEHIND\n")
 _was_apps, _was_paid = make_app.APPS_DIR, make_app.PAID_DIR
 _was_site, _was_cat = make_app.SITE_APPS, make_app.CATALOG
 _scratch = pathlib.Path(tempfile.mkdtemp(prefix="refuse-"))
@@ -448,15 +451,19 @@ try:
     make_app.CATALOG.write_text("[]", encoding="utf-8")
     _concept = {"slug": "no-tier-app", "title": "No Tier"}
     _no_tier = "<html><body><script>const LIMITS = {a: 1};</script></body></html>"
-    _raised = False
-    try:
-        make_app.write_app(_concept, _no_tier, tier="basic")
-    except RuntimeError:
-        _raised = True
-    check("an app whose edition cannot be decided is refused", _raised)
-    check("and no free edition is left in the published folder",
+    _stage_src = (ROOT / "stage_app.py").read_text(encoding="utf-8")
+    check("an app whose edition comes from the URL cannot be staged",
+          "issues = make_app.html_looks_fine(html)" in _stage_src
+          and any("address bar" in p
+                  for p in make_app.html_looks_fine(_bad_app)))
+    check("nothing is written to a public folder for a paid-only app",
           not (make_app.APPS_DIR / "no-tier-app-basic").exists(),
           str(make_app.APPS_DIR / "no-tier-app-basic"))
+    _written = make_app.write_app(_concept, _no_tier, tier="full")
+    _meta = json.loads((_written / "concept.json").read_text(encoding="utf-8"))
+    check("the one paid edition is recorded as full",
+          _meta.get("tier") == "full" and _meta.get("slug") == "no-tier-app",
+          str(_meta)[:100])
 
     # the same folder is cleared after a run that produced nothing
     _left = make_app.APPS_DIR / "no-tier-app-basic" / "app"
@@ -481,6 +488,6 @@ finally:
     make_app.SITE_APPS, make_app.CATALOG = _was_site, _was_cat
     shutil.rmtree(_scratch, ignore_errors=True)
 
-print(f"\nchecked {len(SOURCES)} free editions for a paid-tier bypass")
+print(f"\nchecked {len(ALL)} shipped app sources for a paid-tier bypass")
 print("FAILURES:", fails if fails else "none")
 sys.exit(1 if fails else 0)

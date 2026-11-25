@@ -4,30 +4,29 @@ The pipeline generates one new product per run, so a product whose build is
 missing has no way back: its paid source lives in paid/, which is gitignored
 and never committed, and nothing regenerates a product that already exists.
 
-This closes that gap. Both editions of a product are the same generated file
-with one constant changed (make_app.set_edition), and the basic edition *is*
-committed under site/apps/. So the paid edition can be reconstructed exactly,
-from source that is in the repository, rather than by asking the model to
-invent the product a second time.
+This closes that gap from the private artifact the verifier uploads on every
+release. The repository is public and the paid source is deliberately never
+committed, so an earlier design that rebuilt from a committed free edition
+could not work in a paid-only catalog: there is no free edition to copy from.
+The Windows workflow restores the paid-build artifact before calling this
+script; the script only rebuilds from that real source and never invents one.
 
-    python rebuild_paid.py chess-clock
     python rebuild_paid.py chess-clock --no-upload
+    # in GitHub Actions, with source_run_id pointing at the verify run
 
-It refuses to touch a product whose free edition is missing or whose price is
+It refuses to touch a product whose paid source is absent or whose price is
 outside the floor and ceiling, and it says plainly when the store refuses the
 upload rather than claiming the product is back on sale.
 """
 from __future__ import annotations
 
 import json
-import shutil
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 
-SITE_APPS = ROOT / "site" / "apps"
 PAID = ROOT / "paid"
 CATALOG = ROOT / "site" / "apps.json"
 
@@ -57,36 +56,27 @@ def entry_for(slug: str) -> dict:
 
 
 def reconstruct(slug: str, concept: dict) -> Path:
-    """Recreate paid/<slug> from the committed basic edition.
+    """Use the paid source restored from the verifier's private artifact.
 
-    make_app writes the same html to both editions and flips one constant, so
-    the basic edition already carries the full edition's code with the tier set
-    to basic. Flipping it back is the whole reconstruction.
+    The artifact is the only copy of the exact file customers bought. Rebuilding
+    it from a free edition would change the product, and with a paid-only
+    catalog there is no free edition anyway. Nothing is guessed here.
     """
-    from make_app import set_edition
-
-    basic = SITE_APPS / f"{slug}-basic"
-    src = basic / "app" / "index.html"
+    out = PAID / slug
+    src = out / "app" / "index.html"
     if not src.exists():
         raise SystemExit(
-            f"[rebuild] {slug} has no committed free edition at "
-            f"{src.relative_to(ROOT)}, so its paid edition cannot be "
-            f"reconstructed. Nothing is guessed here.")
-    html = src.read_text(encoding="utf-8", errors="replace")
+            f"[rebuild] no paid source for {slug} at "
+            f"{src.relative_to(ROOT)}. Download the verifier's paid-build "
+            f"artifact (source_run_id) into paid/ first; the paid source is "
+            f"never committed to this public repository.")
 
-    out = PAID / slug
-    if out.exists():
-        shutil.rmtree(out)
-    (out / "app").mkdir(parents=True, exist_ok=True)
-    (out / "app" / "index.html").write_text(set_edition(html, "full"),
-                                             encoding="utf-8")
-    for name in ("icon.png",):
-        src_icon = basic / name
-        if src_icon.exists():
-            shutil.copy2(src_icon, out / name)
-    meta = {**concept, "slug": slug, "tier": "full", "base_slug": slug}
-    (out / "concept.json").write_text(json.dumps(meta, indent=2),
-                                      encoding="utf-8")
+    # Keep the real source unchanged. Only fill in metadata the artifact may
+    # not carry, so the catalog's title and price stay the authority.
+    meta_path = out / "concept.json"
+    if not meta_path.exists():
+        meta = {**concept, "slug": slug, "tier": "full", "base_slug": slug}
+        meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")
     return out
 
 

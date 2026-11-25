@@ -15,6 +15,7 @@ Three faults this suite exists to catch, all of which shipped:
 """
 from __future__ import annotations
 
+import json
 import pathlib
 import re
 import sys
@@ -54,40 +55,48 @@ check("a comparison is not mistaken for the assignment",
                          "basic") ==
       "<script>const PAID = TIER === 'full';</script>")
 
-print("\nAN APP WITH NO EDITION CONSTANT IS REFUSED\n")
+print("\nAN ADDRESS-BAR EDITION SWITCH IS REFUSED\n")
+# In paid-only mode the generated app has no TIER constant and no free folder.
+# The bypass that still matters is a visitor unlocking the paid product with
+# ?paid. That has to be refused before the app is written anywhere.
+url_app = ("<html><body><script>const PAID=new URLSearchParams("
+           "location.search).has('paid');"
+           "localStorage.setItem('k','1');</script>"
+           + "x" * 2000 + "</body></html>")
+problems = make_app.html_looks_fine(url_app)
+check("the staging gate refuses an app whose edition comes from the URL",
+      any("address bar" in p for p in problems), str(problems)[:120])
 no_tier = ("<html><body><script>localStorage.setItem('k','1');</script>"
            + "x" * 2000 + "</body></html>")
-problems = make_app.html_looks_fine(no_tier)
-check("the staging gate says the free edition cannot be limited",
-      any("TIER" in p for p in problems), str(problems))
+check("an app with no tier constant is allowed in a paid-only build",
+      not any("TIER" in p for p in make_app.html_looks_fine(no_tier)),
+      "paid-only apps are told to have no limits, so they write no tier table")
 
 _real_apps, _real_paid = make_app.APPS_DIR, make_app.PAID_DIR
 _scratch = pathlib.Path(tempfile.mkdtemp(prefix="verifygate-"))
 make_app.APPS_DIR = _scratch / "site" / "apps"
 make_app.PAID_DIR = _scratch / "paid"
 try:
-    try:
-        make_app.write_app({"slug": "no-tier", "title": "No Tier"},
-                           no_tier, tier="basic")
-        check("write_app refuses to publish an unlocked free edition", False,
-              "the unlocked app was written to the public folder")
-    except RuntimeError as e:
-        check("write_app refuses to publish an unlocked free edition",
-              "TIER" in str(e), str(e)[:80])
+    _stage_src = (ROOT / "stage_app.py").read_text(encoding="utf-8",
+                                                   errors="replace")
+    check("the stager checks the app before writing it",
+          _stage_src.index("html_looks_fine(html)")
+          < _stage_src.index("write_app("))
+    check("no file is written for an app the gate refused",
+          not (make_app.PAID_DIR / "no-tier").exists())
 
     concept = {"slug": "quote-test", "title": "Quote Test"}
-    basic = make_app.write_app(
-        concept, "<html><script>const TIER = 'full';</script></html>",
-        tier="basic")
-    full = make_app.write_app(
-        concept, "<html><script>const TIER = 'basic';</script></html>",
-        tier="full")
-    basic_html = (basic / "app" / "index.html").read_text(encoding="utf-8")
+    html = "<html><script>const TIER = 'basic';</script></html>"
+    full = make_app.write_app(concept, html, tier="full")
     full_html = (full / "app" / "index.html").read_text(encoding="utf-8")
-    check("the public folder holds the basic edition",
-          make_app._tier_value(basic_html) == "basic", basic_html[:80])
-    check("the paid folder holds the full edition",
-          make_app._tier_value(full_html) == "full", full_html[:80])
+    meta = json.loads((full / "concept.json").read_text(encoding="utf-8"))
+    check("the paid folder holds the generated app unchanged",
+          full_html == html, full_html[:80])
+    check("and its metadata declares one paid edition",
+          meta.get("tier") == "full" and meta.get("base_slug") == "quote-test",
+          str(meta)[:100])
+    check("no free folder is written to the public site",
+          not (make_app.APPS_DIR / "quote-test-basic").exists())
 finally:
     make_app.APPS_DIR, make_app.PAID_DIR = _real_apps, _real_paid
     import shutil

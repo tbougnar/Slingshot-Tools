@@ -859,14 +859,21 @@ def set_edition(html, tier):
 
 def write_app(concept, html, tier="full"):
     """Write one edition. PAID-ONLY MODE."""
-    slug = concept["slug"]
+    # A stale "-basic" suffix used to name the public, limited edition. There
+    # is no such edition now; keeping the suffix would write a second paid
+    # folder and record a slug the catalogue never links to.
+    slug = str(concept["slug"] or "").strip()
+    if slug.endswith("-basic"):
+        slug = slug[:-6]
+    if not slug:
+        raise RuntimeError("an app needs a slug before it can be written")
     out = PAID_DIR / slug
     # Make sure it's a full edition
     edition = html
     # Remove any tier logic if present
     (out / "app").mkdir(parents=True, exist_ok=True)
     (out / "app" / "index.html").write_text(edition, encoding="utf-8")
-    meta = {**concept, "slug": slug, "tier": "full", "base_slug": concept["slug"]}
+    meta = {**concept, "slug": slug, "tier": "full", "base_slug": slug}
     (out / "concept.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
     return out
 
