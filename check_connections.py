@@ -511,9 +511,16 @@ def check_youtube() -> bool:
         # with a fresh token gives the same status, and hiding the reason made
         # every one of those look like "revoked". Show Google's own text.
         short_detail = (detail or "no error description")[:120]
-        fix = (f"using client id ending {cid[-8:]}; make sure "
-               "YOUTUBE_CLIENT_ID and YOUTUBE_CLIENT_SECRET are the same "
-               "OAuth client that minted this refresh token; then run "
+        # A client id is public in the OAuth URL, so a prefix is a safe
+        # fingerprint. Token length is also safe: it catches a secret stored
+        # with quotes or placeholder text without revealing the token.
+        token_shape = (f"{len(tok)} chars"
+                       + (", has whitespace" if any(c.isspace()
+                                                    for c in tok) else ""))
+        fix = (f"client id starts {cid[:24]}; token is {token_shape}. "
+               "Make sure YOUTUBE_CLIENT_ID and YOUTUBE_CLIENT_SECRET are "
+               "the same OAuth client that minted this refresh token, and "
+               "that the secret is only the token with no quotes; then run "
                "python shorts_auth.py again")
         return bad("youtube",
                    f"token rejected (HTTP {e.code}: {short_detail})", fix)
