@@ -114,15 +114,15 @@ GROQ_BASE = "https://api.groq.com/openai/v1"
 # reply, so every generation attempt spent five minutes and produced no app.
 # Keep every id `:free` - backend_selftest.py and self_upgrade.py enforce it.
 OPENROUTER_CHAINS = {
-    "builder": ("google/gemma-4-31b-it:free",
-                "google/gemma-4-26b-a4b-it:free",
-                "nvidia/nemotron-3.5-lightning:free"),
-    "debug": ("google/gemma-4-31b-it:free",
-              "google/gemma-4-26b-a4b-it:free",
-              "inclusionai/ling-3.2-flash:free"),
-    "chat": ("google/gemma-4-26b-a4b-it:free",
-             "google/gemma-4-31b-it:free",
-             "inclusionai/ling-3.2-flash:free"),
+    "builder": ("inclusionai/ling-3.2-flash:free",
+                "baidu/ernie-5.5-flash-preview:free",
+                "nvidia/nemotron-3-ultra-550b-a55b:free"),
+    "debug": ("inclusionai/ling-3.2-flash:free",
+              "nvidia/nemotron-3-ultra-550b-a55b:free",
+              "recursive/flint-v1.0:free"),
+    "chat": ("baidu/ernie-5.5-flash-preview:free",
+             "inclusionai/ling-3.2-flash:free",
+             "recursive/flint-v1.0:free"),
 }
 GROQ_CHAINS = {
     "builder": ("openai/gpt-oss-120b", "qwen/qwen3.8-27b"),

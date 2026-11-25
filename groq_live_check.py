@@ -26,9 +26,9 @@ GROQ_BASE = "https://api.groq.com/openai/v1"
 # first model on every run, so one of these failing is a real outage rather
 # than a spare fallback being retired.
 NEEDED = {
-    "openrouter": ["google/gemma-4-31b-it:free",
-                   "google/gemma-4-26b-a4b-it:free",
-                   "nvidia/nemotron-3.5-lightning:free"],
+    "openrouter": ["inclusionai/ling-3.2-flash:free",
+                   "baidu/ernie-5.5-flash-preview:free",
+                   "nvidia/nemotron-3-ultra-550b-a55b:free"],
     "groq": ["openai/gpt-oss-120b", "qwen/qwen3.8-27b",
              "llama-3.3-70b-versatile"],
 }
