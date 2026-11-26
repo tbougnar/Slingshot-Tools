@@ -63,7 +63,10 @@ jobs:
       DISCORD_INVITE_URL: ${{ vars.DISCORD_INVITE_URL }}
       # Public at job level so a step-level if: can read it. A dry run must
       # not post the preview to Discord, and the announce step runs always().
-      DRY_RUN: ${{ inputs.dry_run || 'true' }}
+      # `inputs.dry_run || 'true'` looked harmless but `false || 'true'` is
+      # true in GitHub expressions, so every real run was treated as dry by
+      # the gate and never announced. Spell the two cases out instead.
+      DRY_RUN: ${{ inputs.dry_run == true && 'true' || 'false' }}
     steps:
       - uses: actions/checkout@v4
 

@@ -117,6 +117,17 @@ finally:
         os.environ["SHORTS_SLUG"] = _old_slug
     shutil.rmtree(_tmp, ignore_errors=True)
 
+# GitHub's `false || 'true'` is true. That silent coercion made every real
+# Short run look dry to the announcement gate; keep the explicit form.
+_wf = ss.ROOT / ".github" / "workflows" / "shorts-publish.yml"
+_wf_text = _wf.read_text(encoding="utf-8") if _wf.exists() else ""
+_ok = ("inputs.dry_run == true && 'true' || 'false'" in _wf_text
+       and "inputs.dry_run || 'true'" not in _wf_text)
+print(("ok    " if _ok else "FAIL  "),
+      "a real Short run is not treated as a dry run")
+if not _ok:
+    fails.append("dry run gate")
+
 print()
 print("FAILURES:", fails if fails else "none")
 sys.exit(1 if fails else 0)
