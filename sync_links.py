@@ -11,6 +11,7 @@ what makes it safe to wire into the deploy step.
 from __future__ import annotations
 
 import re
+import sys
 from pathlib import Path
 
 import links
@@ -24,7 +25,15 @@ END = "  <!-- slingshot-links:end -->"
 
 
 def log(m: str) -> None:
-    print(f"[links] {m}", flush=True)
+    text = f"[links] {m}"
+    try:
+        print(text, flush=True)
+    except UnicodeEncodeError:
+        # A Windows console uses cp1252 by default and cannot print the
+        # lightning bolt in the sample description. That used to abort the
+        # Pages job after the links had already been written.
+        enc = getattr(sys.stdout, "encoding", None) or "utf-8"
+        print(text.encode(enc, errors="replace").decode(enc), flush=True)
 
 
 def block() -> str:

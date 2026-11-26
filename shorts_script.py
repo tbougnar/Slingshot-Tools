@@ -88,11 +88,47 @@ def price_label(raw) -> str:
 
 
 def product() -> dict:
-    """The product as published, so the video cannot invent features."""
+    """The product as published, so the video cannot invent features.
+
+    itch_publish writes a gitignored handoff on the runner that published the
+    app, but the Shorts job starts from a fresh checkout and never sees it.
+    The committed catalogue is the authority on what is actually on sale, so
+    fall back to its newest published product. An explicit SHORTS_SLUG narrows
+    the choice; nothing is guessed when the catalogue has no live product.
+    """
     stage = ROOT / "data" / "published.json"
-    if not stage.exists():
-        raise SystemExit("[shorts] no product record; nothing to advertise")
-    return json.loads(stage.read_text(encoding="utf-8"))
+    if stage.exists():
+        try:
+            return json.loads(stage.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            pass
+
+    slug = (os.environ.get("SHORTS_SLUG") or "").strip().lower()
+    try:
+        apps = json.loads((ROOT / "site" / "apps.json").read_text(
+            encoding="utf-8"))
+    except (OSError, ValueError):
+        apps = []
+    live = [a for a in apps if isinstance(a, dict)
+            and a.get("tier") == "full" and a.get("published") is True
+            and str(a.get("itch_url") or "").startswith("https://")]
+    if slug:
+        live = [a for a in live
+                if str(a.get("base_slug") or a.get("slug") or "").lower() == slug]
+    live.sort(key=lambda a: str(a.get("date") or ""), reverse=True)
+    if not live:
+        raise SystemExit(
+            "[shorts] no published product to advertise; the catalogue has "
+            "no paid product with a live store URL")
+    p = live[0]
+    return {
+        "slug": p.get("base_slug") or p.get("slug"),
+        "title": p.get("title"),
+        "name": p.get("title"),
+        "price": p.get("price"),
+        "blurb": p.get("blurb") or p.get("description") or "",
+        "itch_url": p.get("itch_url"),
+    }
 
 
 def real_features(slug: str, limit: int = 10) -> list[str]:

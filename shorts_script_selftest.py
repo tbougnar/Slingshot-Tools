@@ -7,7 +7,11 @@ it actually did, because a model that ignores an instruction silently is the
 normal case, not the exception.
 """
 import json
+import os
+import pathlib
+import shutil
 import sys
+import tempfile
 
 import shorts_script as ss
 
@@ -59,6 +63,59 @@ ok = (d["hook"] == good["hook"] and d["proof"] == good["proof"]
 print(("ok   " if ok else "FAIL "), "a clean script is not mangled")
 if not ok:
     fails.append("clean script")
+
+# A fresh Actions checkout has no gitignored published.json. The Shorts job
+# must still find the newest product that is genuinely on sale, and must not
+# fall back to a draft just because it has a later date.
+_tmp = pathlib.Path(tempfile.mkdtemp(prefix="shorts-product-"))
+(_tmp / "site").mkdir(parents=True)
+(_tmp / "site" / "apps.json").write_text(json.dumps([
+    {"slug": "older", "base_slug": "older", "tier": "full",
+     "published": True, "itch_url": "https://example.test/p",
+     "date": "2026-01-01", "title": "Older", "price": 3.0},
+    {"slug": "newer", "base_slug": "newer", "tier": "full",
+     "published": True, "itch_url": "https://example.test/p",
+     "date": "2026-11-25", "title": "Newer", "price": 3.0},
+    {"slug": "draft", "base_slug": "draft", "tier": "full",
+     "published": False, "date": "2026-12-01", "title": "Draft", "price": 3.0},
+]), encoding="utf-8")
+_real_root, _old_slug = ss.ROOT, os.environ.get("SHORTS_SLUG")
+try:
+    ss.ROOT = _tmp
+    os.environ["SHORTS_SLUG"] = ""
+    got = ss.product()
+    ok = got.get("slug") == "newer" and got.get("price") == 3.0
+    print(("ok   " if ok else "FAIL "),
+          "a fresh checkout finds the newest product on sale")
+    if not ok:
+        fails.append("catalog fallback")
+
+    os.environ["SHORTS_SLUG"] = "older"
+    got = ss.product()
+    ok = got.get("slug") == "older"
+    print(("ok   " if ok else "FAIL "),
+          "an explicit slug picks that published product")
+    if not ok:
+        fails.append("explicit slug")
+
+    os.environ["SHORTS_SLUG"] = "draft"
+    refused = False
+    try:
+        ss.product()
+    except SystemExit:
+        refused = True
+    ok = refused
+    print(("ok   " if ok else "FAIL "),
+          "a product that is not on sale is never advertised")
+    if not ok:
+        fails.append("draft refused")
+finally:
+    ss.ROOT = _real_root
+    if _old_slug is None:
+        os.environ.pop("SHORTS_SLUG", None)
+    else:
+        os.environ["SHORTS_SLUG"] = _old_slug
+    shutil.rmtree(_tmp, ignore_errors=True)
 
 print()
 print("FAILURES:", fails if fails else "none")

@@ -50,6 +50,8 @@ jobs:
       YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
       YOUTUBE_PRIVACY: ${{ vars.YOUTUBE_PRIVACY }}
       SITE_URL: ${{ vars.SITE_URL }}
+      # Blank means "the newest published product"; a dispatch can name one.
+      SHORTS_SLUG: ${{ inputs.slug }}
       DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
       DISCORD_INVITE_URL: ${{ vars.DISCORD_INVITE_URL }}
       # Public at job level so a step-level if: can read it. A dry run must
