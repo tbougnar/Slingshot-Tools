@@ -14,6 +14,7 @@ the result is what caused the problem.
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -49,19 +50,52 @@ def browser() -> str | None:
 
 
 def apps() -> list[tuple[str, Path]]:
-    root = ROOT / "site" / "apps"
-    if not root.exists():
-        return []
-    out: list[tuple[str, Path]] = []
-    for d in sorted(root.iterdir()):
-        if not d.is_dir():
+    """Every app page this checkout can actually show.
+
+    A paid-only checkout has no ``site/apps``. The real interface lives in the
+    verifier's private ``paid-build`` artifact, which the Shorts job restores
+    into ``paid/`` before this step runs. Looking in both places means the same
+    script also works on an older checkout that still has the public demos.
+    """
+    found: dict[str, Path] = {}
+    for root in (ROOT / "paid", ROOT / "site" / "apps"):
+        if not root.exists():
             continue
-        for rel in ("app/index.html", "index.html"):
-            p = d / rel
-            if p.exists():
-                out.append((d.name, p))
-                break
-    return out
+        for d in sorted(root.iterdir()):
+            if not d.is_dir() or d.name in found:
+                continue
+            for rel in ("app/index.html", "index.html"):
+                p = d / rel
+                if p.exists():
+                    found[d.name] = p
+                    break
+    return sorted(found.items())
+
+
+def target_slug() -> str:
+    """Which product the video is about.
+
+    The Shorts workflow writes ``data/shorts_script.json`` first, so an empty
+    dispatch slug still resolves to the product the narration was written
+    about. An explicit argument or environment value wins; both are lowercased
+    because catalogue slugs are.
+    """
+    if "--slug" in sys.argv:
+        i = sys.argv.index("--slug")
+        if i + 1 < len(sys.argv):
+            return sys.argv[i + 1].strip().lower()
+    for var in ("SHORTS_SLUG", "SLUG"):
+        value = (os.environ.get(var) or "").strip().lower()
+        if value:
+            return value
+    path = ROOT / "data" / "shorts_script.json"
+    if path.exists():
+        try:
+            return str(json.loads(path.read_text(encoding="utf-8"))
+                       .get("slug") or "").strip().lower()
+        except (OSError, ValueError):
+            pass
+    return ""
 
 
 def shoot(exe: str, page: Path, dest: Path, theme: str = "") -> bool:
@@ -128,14 +162,25 @@ def main() -> int:
     log(f"browser: {Path(exe).name}")
     OUT.mkdir(parents=True, exist_ok=True)
 
-    only = None
-    if "--slug" in sys.argv:
-        only = sys.argv[sys.argv.index("--slug") + 1]
+    only = target_slug()
+    all_apps = apps()
+    if only:
+        log(f"the product being advertised is {only}")
+        chosen = [(name, page) for name, page in all_apps
+                  if name.lower() == only or name.lower().startswith(only)]
+    else:
+        chosen = all_apps
+    if not chosen:
+        # A missing screenshot is not a reason to lose the whole video. The
+        # renderer draws a labelled stand-in from the product's real features,
+        # and says plainly at the end that there was no screenshot.
+        log(f"no app page found for {only or 'any product'}; checked paid/ "
+            f"and site/apps/; the renderer will use its feature stand-in")
+        (ROOT / "data" / "shots.json").write_text("{}", encoding="utf-8")
+        return 0
 
     made: dict[str, object] = {}
-    for name, page in apps():
-        if only and not name.startswith(only):
-            continue
+    for name, page in chosen:
 
         entry: dict[str, str] = {}
         for theme in ("", "light", "dark"):
