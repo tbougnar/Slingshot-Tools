@@ -1,20 +1,17 @@
 {
-  "version": "0.0.0",
-  "updated": "2026-11-21",
-  "phase": "clean",
-  "next_major": null,
-  "days_left": null,
-  "next_major_title": "",
+  "version": "1.0.0",
+  "updated": "2026-11-26",
+  "phase": "announced",
+  "next_major": "2026-11-29",
+  "days_left": 3,
+  "next_major_title": null,
   "next_major_notes": [],
-  "trailer": {},
+  "trailer": null,
   "apps": {},
   "latest_update": {
-    "title": "Clean start",
-    "description": "Prototype apps removed. Fresh clean start.",
-    "notes": [
-      "Prototype app data cleared",
-      "Ready for new paid-only builds"
-    ],
-    "released": "2026-11-21"
+    "title": null,
+    "description": "",
+    "notes": [],
+    "released": "2026-11-26"
   }
 }
