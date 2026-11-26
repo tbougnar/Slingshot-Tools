@@ -121,8 +121,7 @@ finally:
 # Short run look dry to the announcement gate; keep the explicit form.
 _wf = ss.ROOT / ".github" / "workflows" / "shorts-publish.yml"
 _wf_text = _wf.read_text(encoding="utf-8") if _wf.exists() else ""
-_ok = ("inputs.dry_run == true && 'true' || 'false'" in _wf_text
-       and "inputs.dry_run || 'true'" not in _wf_text)
+_ok = "DRY_RUN: ${{ inputs.dry_run == true && 'true' || 'false' }}" in _wf_text
 print(("ok    " if _ok else "FAIL  "),
       "a real Short run is not treated as a dry run")
 if not _ok:
