@@ -1,10 +1,18 @@
 {
+  "unit-converter": {
+    "url": "https://slingshot-tools.itch.io/unit-converter",
+    "at": 1795644696
+  },
   "file-renamer": {
-    "url": "https://slingshot-tools.itch.io/slingshot-tools",
+    "url": "https://slingshot-tools.itch.io/file-renamer",
     "at": 1795555111
   },
-  "unit-converter": {
-    "url": "https://slingshot-tools.itch.io/slingshot-tools",
-    "at": 1795644696
+  "dev-converter": {
+    "url": "https://slingshot-tools.itch.io/dev-converter",
+    "at": 1795780451
+  },
+  "password-manager": {
+    "url": "https://slingshot-tools.itch.io/password-manager",
+    "at": 1795780453
   }
 }

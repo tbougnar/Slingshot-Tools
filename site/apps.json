@@ -18,7 +18,7 @@
     "published": true,
     "badge": "New",
     "date": "2026-11-25",
-    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools",
+    "itch_url": "https://slingshot-tools.itch.io/unit-converter",
     "built": true
   },
   {
@@ -39,9 +39,10 @@
     "price": 3.0,
     "free": false,
     "differences": [],
-    "published": false,
+    "published": true,
     "badge": "New",
-    "date": "2026-11-25"
+    "date": "2026-11-25",
+    "itch_url": "https://slingshot-tools.itch.io/dev-converter"
   },
   {
     "slug": "file-renamer",
@@ -63,7 +64,7 @@
     "published": true,
     "badge": "New",
     "date": "2026-11-24",
-    "itch_url": "https://slingshot-tools.itch.io/slingshot-tools",
+    "itch_url": "https://slingshot-tools.itch.io/file-renamer",
     "built": true
   },
   {
@@ -82,9 +83,9 @@
     "price": 3.0,
     "free": false,
     "differences": [],
-    "published": false,
+    "published": true,
     "badge": "New",
     "date": "2026-11-24",
-    "itch_url": ""
+    "itch_url": "https://slingshot-tools.itch.io/password-manager"
   }
 ]
