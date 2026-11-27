@@ -34,6 +34,7 @@ CATALOG = ROOT / "site" / "apps.json"
 
 PRICE_FLOOR = float(__import__("os").environ.get("PRICE_FLOOR", "1.00"))
 PRICE_CEILING = float(__import__("os").environ.get("PRICE_CEILING", "10.00"))
+USER = os.environ.get("ITCH_USER", "").strip()
 
 def log(msg: str) -> None:
     print(f"[rebuild] {msg}", flush=True)
@@ -56,19 +57,28 @@ def project_for(entry: dict, slug: str) -> str:
     """The butler project for this product, never the old shared page.
 
     A rebuild must replace this product's build on this product's page. The
-    catalog's per-product itch_url is the authority; if it still points at the
-    shared project, the page has to be corrected before anything is uploaded.
+    catalog's per-product itch_url is preferred. A fresh checkout can still
+    carry the old shared URL, so an empty or shared URL falls back to the
+    account plus this product's slug, in the same way the publisher does. A URL
+    that names another product is never accepted.
     """
     url = str(entry.get("itch_url") or "").strip()
     parts = [p for p in urlparse(url).path.split("/") if p]
     project = parts[0].lower() if parts else ""
-    if project in ("", "slingshot-tools") or project != slug.lower():
+    if project == "slingshot-tools":
+        log("the catalogue still points at the old shared project; using "
+            "this product's own project name instead")
+        project = ""
+    if not project:
+        if not USER:
+            raise SystemExit(
+                "[rebuild] neither the catalogue nor ITCH_USER names this "
+                "product's own itch.io project")
+        return slug.strip().lower()
+    if project != slug.strip().lower():
         raise SystemExit(
-            f"[rebuild] {slug} has no own itch.io project in the catalogue "
-            f"(found {url or '(nothing)'}). Create "
-            f"https://slingshot-tools.itch.io/{slug} and run "
-            f"python set_itch_url.py {slug} "
-            f"https://slingshot-tools.itch.io/{slug} first")
+            f"[rebuild] {slug} points at another product's page ({project}); "
+            "refusing to sell one tool as another")
     return project
 
 
