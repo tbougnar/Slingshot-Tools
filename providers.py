@@ -129,13 +129,22 @@ OPENROUTER_CHAINS = {
              "nvidia/nemotron-3.5-lightning:free",
              "recursive/flint-v1.0:free",
              "inclusionai/ling-3.2-flash:free"),
+    # The design gate looks at a screenshot, so it needs a model that can see.
+    # These ids come from the live catalogue filtered on input_modalities
+    # containing "image", and are all free. A vision call that fails falls back
+    # to the static design rules, so an unavailable model never blocks a run.
+    "vision": ("nvidia/nemotron-3.5-super-vl:free",
+               "google/gemma-4-31b-it:free",
+               "google/gemma-4-26b-a4b-it:free",
+               "particle-ai/particle-1:free"),
 }
 GROQ_CHAINS = {
     "builder": ("openai/gpt-oss-120b", "qwen/qwen3.8-27b"),
     "debug": ("qwen/qwen3.8-27b", "openai/gpt-oss-20b"),
     "chat": ("qwen/qwen3.8-27b", "llama-3.3-70b-versatile"),
+    "vision": ("openai/gpt-oss-120b", "qwen/qwen3.8-27b"),
 }
-ROLES = ("builder", "debug", "chat")
+ROLES = ("builder", "debug", "chat", "vision")
 
 
 def compat() -> tuple[str, str, str, dict]:
@@ -455,6 +464,77 @@ def chat(model: str, system: str, user: str, temperature: float = 0.2,
                 if e.code in (401, 403):
                     # A bad key is not model-specific; walking the chain only
                     # spends time and hides the real cause.
+                    raise RuntimeError(f"{e.code}: {body[:200]}") from None
+                if _is_model_not_found(e.code, body):
+                    break
+                if e.code == 429:
+                    if _is_daily_cap(body):
+                        break
+                    time.sleep(_rate_limit_wait(attempt))
+            except Exception as e:  # noqa: BLE001
+                last = f"{m}: {str(e)[:200]}"
+                if _is_model_not_found(0, last):
+                    break
+                if "429" in last or "Rate limit" in last:
+                    if _is_daily_cap(last):
+                        break
+                    time.sleep(_rate_limit_wait(attempt))
+    raise RuntimeError(last or "no reply")
+
+
+def vision(model: str, system: str, user: str, image_png: bytes,
+           temperature: float = 0.2, max_tokens: 900, tries: int = 2,
+           role: str = "vision") -> str:
+    """Ask the job's backend with a screenshot attached.
+
+    The design gate is the only caller: it photographs the app it just built
+    and asks a model what is wrong with the way it looks. A text model cannot
+    do this, so the chain for this role only holds models whose input modalities
+    include images. Everything else - walking the chain on a 404, sitting out a
+    rate limit, refusing a daily cap by moving on - matches chat() on purpose,
+    so a vision failure is as ordinary as any other model failure.
+    """
+    import base64
+
+    try:
+        name, base, key, _ = compat()
+    except SystemExit as e:
+        raise RuntimeError(str(e) or "no model provider is configured") from None
+    b64 = base64.b64encode(image_png).decode("ascii")
+    headers = {"Authorization": f"Bearer {key}"}
+    if name == "openrouter":
+        headers["HTTP-Referer"] = "https://tbougnar.github.io/Slingshot-Tools/"
+        headers["X-Title"] = "Slingshot Tools"
+    payload = {
+        "model": model,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": [
+                {"type": "text", "text": user},
+                {"type": "image_url",
+                 "image_url": {"url": f"data:image/png;base64,{b64}"}},
+            ]},
+        ],
+    }
+    order = list(dict.fromkeys([m for m in [model] + model_chain(role) if m]))
+    last = ""
+    for m in order:
+        payload["model"] = m
+        for attempt in range(tries):
+            try:
+                d = _post(f"{base}/chat/completions", payload, headers)
+                _account(d, m, name)
+                out = (d.get("choices") or [{}])[0].get("message", {}) \
+                    .get("content") or ""
+                if out:
+                    return out
+                last = f"{m}: empty reply"
+            except urllib.error.HTTPError as e:
+                body = e.read().decode("utf-8", "replace")
+                last = f"{m}: {e.code}: {body[:200]}"
+                if e.code in (401, 403):
                     raise RuntimeError(f"{e.code}: {body[:200]}") from None
                 if _is_model_not_found(e.code, body):
                     break

@@ -248,7 +248,11 @@ def api_login() -> str:
             "unattended run cannot mint a session this way")
         return ""
     if not d.get("success"):
-        log(f"    refused: {str(d.get('errors'))[:160]}")
+        # The body can carry a one-time login token, which must never reach a
+        # log, so its value is blanked before anything is printed.
+        safe = re.sub(r'("(?:token|cookie|key)"\s*:\s*")[^"]*(")',
+                      r"\1***\2", body)
+        log(f"    refused: {safe[:300]}")
         return ""
     log(f"    success; keys returned: {', '.join(sorted(d))}")
     cookies = d.get("cookie") or {}
