@@ -10,5 +10,9 @@
   "unit-converter": {
     "body": "## Unit converter\n\nConverting units is routine work, but the tools for it often come with strings attached: an account",
     "written": 1795645157
+  },
+  "dev-converter": {
+    "body": "Developers often need to convert units while staying offline and keeping their work private. Developer unit converter is a Windows tool built for that workflow: no account, no subscription, and no data sent off your device.\n\nThe free edition is available as a free download. The provided brief does not specify which conversion features are included in the free edition.\n\nThe full edition costs $3.00 and is a buy-once purchase: no account, no subscription, and your data never leaves your device. The brief does not list additional features added by the full edition beyond the one-time purchase.\n\nTags: dev, developer, unit, converter.",
+    "written": 1795780932
   }
 }
