@@ -606,23 +606,77 @@ def capture(text) -> str:
 
 APP_SPEC = """Build a COMPLETE single-file HTML app that is PAID-ONLY. This is the entire deliverable.
 
-This is a premium offline Windows app sold as part of a $3 bundle. Make it genuinely impressive with the best features - don't hold back.
+This is a premium offline Windows app sold on its own for $3.00. It is judged on how it LOOKS as hard as on whether it works: an app that is correct but resembles a form someone filled in in ten minutes has failed, because nobody pays for that.
 
 HARD RULES
 - ONE file: valid HTML5 with inline CSS and inline JavaScript. No build step, no
   external CDN, no external fonts, no network calls, no frameworks.
 - Works offline forever after first open. Data in localStorage.
-- Theme follows Slingshot Tools: dark mode is dark red (#14100F background,
-  #C1272D red, #F6EFEC text) with a working light mode toggle, remembered.
-- Modern and genuinely good looking: rounded cards, soft shadows, clear hierarchy,
-  generous spacing, header with the app name, footer. Must look like a premium paid app.
-- Fully responsive on phone and desktop. Accessible: real labels, keyboard operable.
+- Theme follows Slingshot Tools: dark is the default (#14100F background,
+  #C1272D red accent, #F6EFEC text), with a working light mode toggle on
+  html[data-theme] remembered in localStorage and read before first paint.
+- Fully responsive: one column below 720px, grid above. Accessible: a real
+  <label for> on every input, keyboard operable, visible :focus-visible ring.
 - Useful for real: sensible defaults, validation, helpful empty states. No
   placeholder buttons, no "coming soon".
 - No limits whatsoever - everything unlimited.
 - Add "export my data" and "import my data" (JSON) controls.
 - No analytics, no tracking, no network.
-- Include all the best features for this type of app. Make it noticeably better than a basic version would be.
+
+THE DESIGN SYSTEM (this section decides whether it sells)
+
+Red is an ACCENT, not the palette. Use it for the one primary action in each
+section, the brand mark, and small highlights. Everything else stays neutral:
+surfaces, borders, secondary buttons, text. A page where every button is red
+reads as unfinished, because then nothing stands out.
+
+Type - one stack everywhere: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif.
+- Sizes only: 12px caption, 13-14px small/label, 15-16px body, 18-20px section
+  title, 26-30px page title. NOTHING above 32px anywhere in the file. The app
+  name is a line of type, never a banner.
+- line-height 1.5 body, 1.2 headings. Weight 600 headings, 400 body.
+
+Layout
+- A compact header bar: a small rounded square brand mark (first letter, red
+  background) + the app name at 17px, and the theme toggle pushed right.
+  About 56px tall. NOT a full-width coloured slab behind the title.
+- One container, max-width: 880px, margin: 0 auto, padding: 24px.
+- Every section is a CARD: background var(--surface), 1px solid var(--border),
+  border-radius 12px, padding 20-24px, box-shadow 0 1px 3px rgba(0,0,0,.25).
+  Cards live in a grid with gap: 16-20px. Never put a bare heading directly on
+  the page background with controls floating under it.
+- A card must hold real content: a form, a list of records, real values. Never
+  a card that is only labels with nothing filled in beside them.
+- Section heading 18-20px with a one-line muted subtitle under it.
+
+Controls
+- Input / textarea / select: background var(--surface2), 1px solid var(--border),
+  border-radius 8px, padding 10px 12px, font-size 15px, width 100%. A <label>
+  above each, 13px, var(--muted), 6px gap.
+- Buttons: border-radius 8px, padding 10px 16px, font-size 14-15px, weight 600,
+  cursor pointer, transition .15s.
+    primary   = var(--accent) background, white text, hover to --accent-hover
+    secondary = transparent, 1px solid var(--border), hover tints the surface
+  Every button needs :hover AND :focus-visible.
+- Checkboxes and switches must be restyled with appearance:none or a custom
+  track. A browser-default checkbox makes the whole app look like a 1998 form.
+- Empty state: muted text + what to do first + the primary button, centred,
+  32px padding. Never leave a card blank.
+
+Colour - define ALL of these in :root and override under html[data-theme="light"].
+Every colour in the file comes from a variable; no stray hex literals.
+  dark:  --bg #14100F  --surface #1E1817  --surface2 #272020
+         --border #3A2F2E  --text #F6EFEC  --muted #A89996
+         --accent #C1272D  --accent-hover #A01F24
+  light: --bg #F7F4F3  --surface #FFFFFF  --surface2 #F0EBEA
+         --border #E2D9D7  --text #1B1514  --muted #6B5E5C
+         --accent #C1272D  --accent-hover #A01F24
+
+Motion: transition .15s on background, border, colour, transform, opacity, so
+state changes move instead of jumping.
+
+Footer: one quiet line, 13px, muted, centred, "Full edition". No coloured bar
+across the bottom of the window.
 
 CONTENT RULES
 - Invent a short, friendly brand name for the app.
@@ -653,8 +707,10 @@ def builder_prompt(concept, lessons, attempt=1, feedback=""):
         + f"\n\nKNOWN BUGS TO AVOID:\n{lessons or '(none yet)'}"
     )
     if attempt > 1:
-        user += ("\n\nKeep it COMPACT and make sure it is complete: short CSS, "
-                 "no comments, and it must end with </html>.")
+        user += ("\n\nKeep it COMPLETE and make sure it ends with </html>. "
+                 "Write the design system once and reuse its variables rather "
+                 "than dropping it to save space: a shorter app that looks "
+                 "plain is a worse failure than a longer one that does not.")
     if feedback:
         user += (
             "\n\nYOUR PREVIOUS REPLY WAS REJECTED BEFORE ANYONE COULD SEE IT."
@@ -715,8 +771,11 @@ def build_html(concept, lessons, attempt=1):
         "You return JSON only.",
         APP_SPEC
         + f"\n\nTHE APP: {json.dumps(concept, indent=2)}\n"
-        + ("\n\nIMPORTANT: keep the HTML compact - short CSS, short JS, no comments. "
-           "It MUST be complete and end with </html>." if attempt > 1 else "")
+        + ("\n\nIMPORTANT: it MUST be complete and end with </html>. Keep the "
+           "design system described above - CSS custom properties, cards, the "
+           "full type scale. Do not shorten the CSS to save space: a compact "
+           "app that looks plain is a worse failure than a longer one that "
+           "looks like a paid product." if attempt > 1 else "")
         + f"\nLESSONS FROM REAL USERS (apply them):\n{lessons or '(none yet)'}"
         + f"\n\nPATTERNS YOU MUST FOLLOW:\n{patterns()}",
         max_tokens=14000, temperature=0.35,

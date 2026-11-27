@@ -13,8 +13,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 
 # A file this size or larger is too big to generate and verify in one minute.
-SOFT_CEILING = 9000
-HARD_CEILING = 16000
+# Raised from 9000/16000 when the design gate arrived: a page with a real
+# design system - tokens, cards, a type scale, light and dark - does not fit
+# in 9 KB, and the old ceiling is what taught the builder to strip the CSS
+# down until the app looked unfinished. The ceilings still track the model's
+# output window, which is what actually limits a single reply.
+SOFT_CEILING = 14000
+HARD_CEILING = 24000
 
 
 def verdict(nbytes: int) -> tuple[bool, str]:

@@ -30,6 +30,8 @@ MANDATORY PATTERNS (violating these makes the app fail QA):
    listener added before the element exists; duplicate ids; <input
    type=number> returning "".
 
-7. SIZE: aim under 7 KB. The whole reply counts against a per-minute limit,
-   so a long app leaves nothing for checking or fixing. Tight and correct
-   beats long and clever. No comments, no repeated markup.
+7. SIZE: aim for 11-14 KB. The reply counts against a per-minute limit, so
+   past about 16 KB nothing is left for checking or fixing. Small does not
+   mean plain: write the design system once as CSS custom properties and
+   reuse those variables, which is how an app stays compact AND looks
+   designed. No comments, no repeated markup.

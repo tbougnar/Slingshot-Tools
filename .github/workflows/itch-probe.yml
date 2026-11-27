@@ -1,9 +1,10 @@
 name: Slingshot — read the itch.io forms
 
 # Project creation is the one thing the API key cannot do, so it is done by
-# submitting the same form a person submits. This reads those forms with the
-# stored session and prints their field names, which is what the creation code
-# is written against. It writes nothing.
+# submitting the same form a person submits. Two things had never been
+# established: where that form actually lives, and whether a headless browser
+# on a runner can reach it at all. The first job reads the page with plain
+# HTTP; the second opens it in a real browser. Neither writes anything.
 
 on:
   workflow_dispatch:
@@ -26,3 +27,18 @@ jobs:
           python-version: "3.12"
       - name: Read the forms
         run: python itch_probe.py
+
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      ITCH_SESSION_COOKIE: ${{ secrets.ITCH_SESSION_COOKIE }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install a browser
+        run: python -m pip install --quiet playwright && python -m playwright install --with-deps chromium
+      - name: Open the create-project page
+        run: python itch_browser_probe.py
