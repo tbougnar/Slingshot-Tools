@@ -40,5 +40,13 @@ jobs:
           python-version: "3.12"
       - name: Install a browser
         run: python -m pip install --quiet playwright && python -m playwright install --with-deps chromium
-      - name: Open the create-project page
+      - name: Open the create-project page (headless)
+        id: headless
+        continue-on-error: true
         run: python itch_browser_probe.py
+      - name: Open the create-project page (headed under xvfb)
+        if: steps.headless.outcome != 'success'
+        run: |
+          sudo apt-get update -qq >/dev/null 2>&1 || true
+          sudo apt-get install -y -qq xvfb >/dev/null 2>&1 || true
+          HEADED=1 xvfb-run -a python itch_browser_probe.py

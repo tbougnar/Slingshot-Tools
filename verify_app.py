@@ -126,6 +126,46 @@ def main() -> int:
                 discard(stage, stage_file)
                 return 1
     html = candidate.read_text(encoding="utf-8", errors="replace")
+
+    # Working is not enough. The password manager that shipped first passed
+    # every check in this file and still looked like a form someone filled in
+    # in ten minutes, because nothing here had ever looked at it. The design
+    # gate photographs the page and refuses it if it does not look like
+    # something worth charging for; the restyle loop then hands the critique
+    # back to the model, which is the only way the complaint can be acted on.
+    import design_gate
+    problems = design_gate.check(html, stage["slug"])
+    restyles = 0
+    while problems and restyles < 2:
+        restyles += 1
+        print(f"[verify] design gate: {len(problems)} problem(s), "
+              f"asking for a restyle ({restyles}/2)")
+        for p in problems[:6]:
+            print(f"    - {p}")
+        previous = html
+        fixed = design_gate.repair(html, problems, stage["slug"])
+        if not fixed or fixed.strip() == previous.strip():
+            print("[verify] the restyle produced no change")
+            break
+        # A restyle is only allowed to change how the app looks. If it broke a
+        # control, the previous file was better and is put back rather than
+        # traded for a prettier app that does not work.
+        worked = app_scanner.verdict(app_scanner.scan(candidate))
+        candidate.write_text(fixed, encoding="utf-8")
+        if worked and not app_scanner.verdict(app_scanner.scan(candidate)):
+            candidate.write_text(previous, encoding="utf-8")
+            print("[verify] the restyle broke a working control; reverted it")
+            break
+        html = fixed
+        problems = design_gate.check(html, stage["slug"])
+    if problems:
+        print("[verify] NOT publishing: it does not look like a paid product")
+        for p in problems[:8]:
+            print(f"    - {p}")
+        discard(stage, stage_file)
+        return 1
+    print("[verify] design gate passed")
+
     concept = {"slug": stage["slug"], "brand": stage["brand"],
                "title": stage["title"], "tag": stage["tag"],
                "blurb": stage.get("paid_blurb") or stage.get("blurb") or ""}

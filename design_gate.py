@@ -69,10 +69,17 @@ def lint(html: str) -> list[str]:
     if not css:
         return ["there is no <style> block at all, so the page is unstyled"]
 
+    # One custom property is not a design system. The rejected app defined
+    # nothing at all and painted every surface by hand, which is why nothing
+    # lined up; a palette is several variables that are referenced everywhere.
+    tokens = set(re.findall(r"(--[\w-]+)\s*:", css))
+    if len(tokens) < 6:
+        problems.append(
+            f"only {len(tokens)} design token(s) defined: a paid app builds "
+            "its palette from at least six CSS custom properties in :root, "
+            "so light and dark and every surface come from one place")
+
     checks = [
-        (r"--[\w-]+\s*:", "no design tokens: CSS custom properties define "
-                          "the palette and spacing, without them every value "
-                          "is a one-off"),
         (r"@media", "not responsive: no @media breakpoint, so the layout "
                     "cannot adapt to a phone"),
         (r":hover", "no hover state: nothing tells the user what is clickable"),
@@ -97,6 +104,14 @@ def lint(html: str) -> list[str]:
     for pattern, why in checks:
         if not re.search(pattern, css):
             problems.append(why)
+
+    # A stock checkbox is one of the most recognisable marks of an unstyled
+    # page, and it was sitting in the middle of the rejected app.
+    if re.search(r'type\s*=\s*["\']checkbox["\']', low) and \
+            "appearance" not in css and "appearance" not in low:
+        problems.append("a browser-default checkbox: checkboxes and switches "
+                        "have to be restyled with appearance:none or a "
+                        "custom track")
 
     for m in re.finditer(r"font-size\s*:\s*(\d+(?:\.\d+)?)px", css):
         if float(m.group(1)) >= MAX_FONT_PX:
@@ -218,6 +233,47 @@ def review(html: str, slug: str = "app") -> tuple[float | None, list[str], str]:
         log(f"review by {model}: {score:.1f}/10, {len(issues)} issue(s)")
         return score, issues, model
     return None, [], last or "no vision model answered"
+
+
+REPAIR_SYSTEM = """You restyle one single-file HTML app so it looks like a product worth paying for.
+
+You are given the complete file and the list of design problems found by looking at a screenshot of it. Reply with the complete HTML file and nothing else - no commentary before it, no explanation after it, no markdown fences.
+
+Rules:
+- Change the CSS and the markup only. Keep every id, every event handler, every function name, every localStorage key and every feature exactly as they are. This app already works; a restyle that breaks it is a failure.
+- Fix exactly the problems listed. Do not redesign what was not criticised.
+- One file: inline CSS, inline JS, no external resources, no build step.
+- Keep every colour as a CSS custom property defined in :root and overridden under html[data-theme="light"].
+- Nothing above 32px. Red is an accent, not the palette.
+- End with </html>."""
+
+
+def repair(html: str, problems: list[str], slug: str = "app") -> str:
+    """Ask for the file again with the critique attached. Empty means no change.
+
+    The complaint is passed verbatim, the same way the staging gate feeds its
+    rejection back: a model told only that something is wrong will guess, and
+    the guess is usually to change something that was already fine.
+    """
+    import make_app
+
+    if not problems:
+        return ""
+    user = ("These are the design problems with the app, found by inspecting "
+            "a screenshot of it:\n"
+            + "\n".join(f"- {p}" for p in problems)
+            + "\n\nFix them. Here is the complete current file:\n\n" + html)
+    try:
+        raw = make_app.groq(REPAIR_SYSTEM, user, max_tokens=16000,
+                            temperature=0.4)
+    except Exception as e:  # noqa: BLE001
+        log(f"the restyle call failed: {str(e)[:120]}")
+        return ""
+    fixed = make_app._salvage_html(raw or "")
+    if not fixed:
+        log("the restyle reply contained no html")
+        return ""
+    return fixed
 
 
 def check(html: str, slug: str = "app", want_review: bool = True) -> list[str]:

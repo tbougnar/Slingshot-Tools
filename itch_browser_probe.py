@@ -59,8 +59,15 @@ def main() -> int:
         log("playwright is not installed")
         return 1
 
+    # headless is tried first because it needs no display. HEADED=1 opens a
+    # real window instead, which is the difference between a browser Cloudflare
+    # recognises as a browser and one it does not; under xvfb on a runner the
+    # window has nowhere to be drawn, but it is still a headed browser.
+    headed = os.environ.get("HEADED", "").strip() not in ("", "0", "false")
+    log(f"launching {'headed' if headed else 'headless'} chromium")
+
     with sync_playwright() as pw:
-        browser = pw.chromium.launch()
+        browser = pw.chromium.launch(headless=not headed)
         ctx = browser.new_context()
         ctx.add_cookies([{"name": "itchio_token", "value": token,
                           "domain": ".itch.io", "path": "/"}])
