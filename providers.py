@@ -483,7 +483,7 @@ def chat(model: str, system: str, user: str, temperature: float = 0.2,
 
 
 def vision(model: str, system: str, user: str, image_png: bytes,
-           temperature: float = 0.2, max_tokens: 900, tries: int = 2,
+           temperature: float = 0.2, max_tokens: int = 900, tries: int = 2,
            role: str = "vision") -> str:
     """Ask the job's backend with a screenshot attached.
 

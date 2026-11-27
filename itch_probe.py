@@ -273,34 +273,73 @@ def api_login() -> str:
     return ""
 
 
-def main() -> int:
-    cookie = env("ITCH_SESSION_COOKIE")
-    log(f"stored session cookie: {'present' if cookie else 'absent'}")
-    if cookie:
-        status, landed, _, body = request(
-            "https://itch.io/settings/mine/new/game",
-            cookie=f"itchio_token={cookie}")
-        if status == 200 and "/login" not in landed and "search" not in body[:4000]:
-            log("the stored session still works")
-            cookie = f"itchio_token={cookie}"
-        else:
-            log(f"the stored session is dead (HTTP {status} on {landed}); "
-                "trying to log in fresh")
-            cookie = ""
-    if not cookie:
-        cookie = api_login()
-    if not cookie:
-        cookie = try_login()
-    if not cookie:
-        log("no session, so the forms cannot be read")
-        return 1
+def token_only(raw: str) -> str:
+    """The itchio_token value out of whatever the secret holds.
 
-    for label, url in (
-        ("create form", "https://itch.io/settings/mine/new/game"),
-        ("projects list", "https://itch.io/settings/mine"),
-        ("unit-converter edit", "https://slingshot-tools.itch.io/unit-converter/edit"),
-    ):
+    People paste the whole ``document.cookie`` string or just the token, so
+    both shapes arrive here. Prefixing blindly produced
+    ``itchio_token=itchio_token=abc``, which itch.io refuses, and that refusal
+    looks identical to an expired session. This is the same parse
+    check_connections.py does, kept in step with it on purpose.
+    """
+    for part in raw.split(";"):
+        part = part.strip()
+        if part.startswith("itchio_token="):
+            return part.split("=", 1)[1].strip()
+        if "=" not in part and len(part) > 20:
+            return part
+    return ""
+
+
+# The old create page is gone - a 404 here has been read as "the session
+# expired" for a while, when it only means the address moved. These are the
+# places itch.io could plausibly keep it now, tried in order of likelihood.
+CANDIDATES = (
+    ("create form (old address)", "https://itch.io/settings/mine/new/game"),
+    ("create form /game/new", "https://itch.io/game/new"),
+    ("create form /project/new", "https://itch.io/project/new"),
+    ("create form /settings/project/new",
+     "https://itch.io/settings/project/new"),
+    ("create form /dashboard/projects/new",
+     "https://itch.io/dashboard/projects/new"),
+    ("create form /new", "https://itch.io/new"),
+    ("projects list /settings", "https://itch.io/settings"),
+    ("projects list /dashboard", "https://itch.io/dashboard"),
+    ("own profile", "https://itch.io/user/slingshot-tools"),
+    ("unit-converter edit",
+     "https://slingshot-tools.itch.io/unit-converter/edit"),
+)
+
+
+def main() -> int:
+    raw = env("ITCH_SESSION_COOKIE")
+    log(f"stored session cookie: {'present' if raw else 'absent'}")
+    token = token_only(raw)
+    if not token:
+        log("no itchio_token found in the stored value")
+        return 1
+    log(f"token parsed: {len(token)} chars")
+    cookie = f"itchio_token={token}"
+
+    # First, does this session say who we are at all? A logged-out homepage
+    # and a logged-out settings page are indistinguishable by status code,
+    # so the answer has to come from the page's own words.
+    status, landed, _, home = request("https://itch.io/", cookie=cookie)
+    signed_in = any(m in home for m in
+                    ("/logout", "data-user_id", "/dashboard", "sign out"))
+    log(f"homepage HTTP {status}; signed in: {signed_in}")
+    who = re.search(r"@?([a-z0-9][a-z0-9-]{2,30})</", home, re.I)
+    if who:
+        log(f"    itch.io says the account is {who.group(1)!r}")
+
+    for label, url in CANDIDATES:
         status, landed, _, body = request(url, cookie=cookie)
+        if status == 404:
+            log(f"{label}: HTTP 404 ({url}) - address does not exist")
+            continue
+        if "/login" in landed:
+            log(f"{label}: HTTP {status} but bounced to login ({url})")
+            continue
         show_fields(label, status, landed, body)
     return 0
 
