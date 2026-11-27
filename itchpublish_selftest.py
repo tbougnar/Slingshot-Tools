@@ -208,7 +208,7 @@ if "no paid build" not in _out:
           any(m in _out for m in ("no installer was found", "no project",
                                   "not publicly reachable",
                                   "butler failed", "invalid target",
-                                  "the upload did not finish",
+                                  "the upload did not finish", "create one project", "set_itch_url.py",
                                   "refusing to guess")),
           _out.strip()[-140:])
 else:
@@ -425,40 +425,44 @@ check("and this test leaves the catalogue and the store state untouched",
       "reader without also intercepting the writers destroyed the store "
       "front: site/apps.json went from 48 entries to 1.")
 
-print("\nA PRODUCT THE CATALOGUE HAS NEVER SEEN STILL HAS A HOME\n")
-# Run 38794633538 released a product generated after the catalogue was last
-# written. It had no itch_url, so publish() concluded the project did not exist
-# and went looking for a browser session, even though the store project was
-# live and was the right home for it.
+print("\nA PRODUCT THE CATALOGUE HAS NEVER SEEN GETS ITS OWN PAGE\n")
+# A product generated after the catalogue was last written must not inherit
+# another product's page. The account plus its own slug gives the only safe
+# guess, and the public page has to answer before anything is uploaded.
 _real2 = (ip.load_catalog, ip.page_is_live, ip.working_session,
           ip.find_installer, ip.upload, ip.log, ip.save_catalog,
-          ip.remember, ip.record, ip.STORE_URL,
+          ip.remember, ip.record, ip.USER, ip.KEY,
           ip.build_is_listed, ip.price_is_asked)
 _tried2 = []
+_seen2 = {}
 try:
     ip.load_catalog = lambda: []          # the catalogue has never seen it
-    ip.page_is_live = lambda url: url == "https://slingshot-tools.itch.io/store"
+    ip.page_is_live = lambda url: url == \
+        "https://slingshot-tools.itch.io/brand-new-product"
     ip.working_session = lambda: _tried2.append(1) or ""
     ip.find_installer = lambda slug, title="", dist=None: pathlib.Path(__file__)
-    ip.upload = lambda installer, slug, version, project="": True
+    ip.upload = lambda installer, slug, version, project="": (
+        _seen2.update(project=project) or True)
     ip.log = lambda *a, **k: None
     ip.save_catalog = lambda apps: None
     ip.remember = lambda slug, url: None
     ip.record = lambda slug, url, price: True
-    ip.STORE_URL = "https://slingshot-tools.itch.io/store"
+    ip.USER = "slingshot-tools"
+    ip.KEY = ""
     ip.build_is_listed = lambda *a, **k: True
     ip.price_is_asked = lambda *a, **k: True
     ip.publish("brand-new-product", "Brand new", 3.0)
 finally:
     (ip.load_catalog, ip.page_is_live, ip.working_session,
      ip.find_installer, ip.upload, ip.log, ip.save_catalog,
-     ip.remember, ip.record, ip.STORE_URL,
+     ip.remember, ip.record, ip.USER, ip.KEY,
      ip.build_is_listed, ip.price_is_asked) = _real2
 
-check("a product with no catalogue entry uses the store project",
-      not _tried2,
-      "publish() looked for a browser session for a product the catalogue "
-      "had not seen yet, even though the store project is its home")
+check("a product with no catalogue entry uses its own page",
+      not _tried2 and _seen2.get("project") == "brand-new-product",
+      f"looked for a browser session={bool(_tried2)}, "
+      f"upload project={_seen2.get('project')!r}. The old shared project "
+      "sold every tool from one Purchase block.")
 
 print("\nTHE CHANNEL IN THE WORKFLOW IS ONE BUTLER ACCEPTS\n")
 # Every product used to be pushed to the same channel, so each release replaced
@@ -491,14 +495,14 @@ check("and no job pins one channel for everything",
       "back on top of the last")
 
 print("\nTHE UPLOAD TARGET IS THE PROJECT, NOT THE PRODUCT\n")
-# Run 38800149146 pushed to 'slingshot-tools/chess-board:windows-64'. The
-# channel was right and the key worked, but the store project is named
-# 'slingshot-tools', so itch.io answered 'invalid game' for a project that had
-# never existed. The target has to come from the page the product resolved to.
+# The butler target must come from this product's resolved page. Pushing to
+# 'slingshot-tools/chess-board' answered 'invalid game', and pushing an app's
+# build to another app's project would sell one tool as another even if the
+# upload succeeded.
 _seen = {}
 _real3 = (ip.load_catalog, ip.page_is_live, ip.working_session,
           ip.find_installer, ip.log, ip.save_catalog, ip.remember,
-          ip.record, ip.STORE_URL, ip.USER,
+          ip.record, ip.KEY, ip.USER,
           ip.build_is_listed, ip.price_is_asked)
 
 
@@ -518,7 +522,7 @@ try:
     ip.save_catalog = lambda apps: None
     ip.remember = lambda slug, url: None
     ip.record = lambda slug, url, price: True
-    ip.STORE_URL = "https://slingshot-tools.itch.io/slingshot-tools"
+    ip.KEY = ""
     ip.USER = "slingshot-tools"
     ip.build_is_listed = lambda *a, **k: True
     ip.price_is_asked = lambda *a, **k: True
@@ -526,13 +530,13 @@ try:
 finally:
     (ip.load_catalog, ip.page_is_live, ip.working_session,
      ip.find_installer, ip.log, ip.save_catalog, ip.remember,
-     ip.record, ip.STORE_URL, ip.USER,
+     ip.record, ip.KEY, ip.USER,
      ip.build_is_listed, ip.price_is_asked) = _real3
 
-check("butler is told the project from the page, not the product slug",
-      _seen.get("project") == "slingshot-tools",
+check("butler is told this product's own project",
+      _seen.get("project") == "chess-board",
       f"upload got slug={_seen.get('slug')!r} project={_seen.get('project')!r},"
-      " so itch.io was asked for a project that does not exist")
+      " so a buyer would land on the wrong product's page")
 
 print("\nTHE INSTALLER SEES THE CATALOGUE THE VERIFY JOB WROTE\n")
 # Run 38804041777 uploaded successfully and then said 'calendar-diff is not in

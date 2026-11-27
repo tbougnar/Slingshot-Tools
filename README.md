@@ -23,14 +23,13 @@ live catalog lists for that tool — typically export and import, extra themes,
 bulk actions and a history — and it is a real Windows app, with Desktop and
 Start Menu shortcuts and a standard uninstall.
 
-The full edition is a native app. The free edition is a single HTML file.
+Every published tool is a paid native Windows app. There is no free edition.
 
 ## Getting the tools
 
-- The **Basic** edition is free. Open it in any browser, or download it and use
-  it offline.
-- The **Full** edition is bought on [itch.io](https://slingshot-tools.itch.io/slingshot-tools),
-  our store, and downloaded from there straight after payment.
+- Each tool is bought for **$3.00** on its **own** itch.io page, linked from
+  [our itch.io profile](https://slingshot-tools.itch.io).
+- Payment and the installer happen on that page; this site only sends you there.
 
 Every tool works offline once you have it. No account, no sign-up.
 

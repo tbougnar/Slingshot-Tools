@@ -46,23 +46,21 @@ TIMEOUT = 60
 SESSION = os.environ.get("ITCH_SESSION_COOKIE", "").strip()
 KEY = os.environ.get("ITCH_API_KEY", "").strip()
 USER = (os.environ.get("ITCH_USER") or "").strip()
-# The store is one itch.io project and every product is a build in it, so a
-# product the catalogue has never seen still has a home. Without this, the
-# first release of any new product found no itch_url, decided the project did
-# not exist and went looking for a browser session, because the URL is only in
-# the catalogue for products that were there when it was last written.
-STORE_URL = os.environ.get("ITCH_STORE_URL", "").strip().rstrip("/")
+# Each product owns one itch.io project. The old shared project accumulated
+# every installer in one Purchase block; that is why a $3 purchase could see
+# four tools. There is deliberately no store-wide fallback URL here: a product
+# with no page of its own stays unpublished until that page is created.
+LAST_URL = ""
+SHARED_PROJECT = "slingshot-tools"
 
 # the channel butler pushes the installer to
 # butler requires the target as user/project:channel and refuses anything else
 # with "missing channel".
 #
-# Every product gets its own channel inside the shared project. They used to
-# share one, "windows-64", and each release replaced the last: after three
-# successes the store listed only the newest build while the catalogue still
-# advertised all three, so two customers could pay for a download that was no
-# longer there. A channel per product means the builds accumulate, which is
-# what one project holding every product has to mean.
+# Each product has its own project now, so one stable channel per product is
+# enough. The slug-derived name is kept: it makes a butler target readable and
+# means an operator who pins ITCH_CHANNEL for one tool cannot accidentally
+# reuse another tool's channel.
 #
 # ITCH_CHANNEL overrides this for anyone who genuinely wants one channel.
 CHANNEL = os.environ.get("ITCH_CHANNEL", "").strip()
@@ -305,6 +303,59 @@ def page_is_live(url: str, attempts: int = 3) -> bool:
             return live
     log(f"   {url} did not answer after {attempts} tries ({detail})")
     return False
+
+
+def project_from_url(url: str) -> str:
+    """The itch.io project name, the first segment after the host."""
+    parts = [p for p in urlparse(url).path.split("/") if p]
+    return parts[0].lower() if parts else ""
+
+
+def project_url(slug: str) -> str:
+    """This product's own live itch.io page, or nothing.
+
+    The catalogue is the authority once it has been set with set_itch_url.py.
+    It used to hold the one shared page for every product, which is exactly the
+    bug that put four installers behind one Purchase button. A URL whose
+    project is not this product is therefore refused, not inherited. For a
+    product that has never been recorded, the account plus the slug gives the
+    only safe guess, and the public page has to prove it is really there.
+    """
+    clean = slug.strip().lower()
+    # A page that declines to answer is not the same as not existing: it has
+    # been rate-limited before. This path stops rather than borrowing another
+    # product's page, because a wrong page is worse than no page at all.
+    for a in load_catalog():
+        if (a.get("base_slug") or a.get("slug")) != slug:
+            continue
+        candidate = str(a.get("itch_url") or "").strip().rstrip("/")
+        if not candidate:
+            continue
+        project = project_from_url(candidate)
+        if project == SHARED_PROJECT:
+            log(f"   the catalogue still points at the old shared project "
+                f"({candidate}); one product needs one page")
+            continue
+        if project and project != clean:
+            log(f"   the catalogue points {slug} at another product's page "
+                f"({project}); refusing to sell one tool as another")
+            return ""
+        if page_is_live(candidate):
+            return candidate
+        log(f"   the catalogued page for {slug} is not live: {candidate}")
+        return ""
+
+    if USER:
+        derived = f"https://{USER}.itch.io/{clean}"
+        if page_is_live(derived):
+            return derived
+    if KEY:
+        found = find_game(clean)
+        url = str(found.get("url") or "").replace("http://", "https://") \
+            if found else ""
+        if url and project_from_url(url) == clean and page_is_live(url):
+            return url.rstrip("/")
+    return ""
 
 
 # ------------------------------------------------------- create with a browser
@@ -928,62 +979,33 @@ def _title_for_slug(slug: str) -> str:
 
 def publish(slug: str, title: str, price: float, version: str = "") -> bool:
     """The whole sequence, in an order that cannot advertise a missing file."""
+    global LAST_URL
+    LAST_URL = ""
     log(f"=== {title} (${price:.2f}) ===")
 
-    # 1. does it already exist?
-    # itch.io has no listing endpoint this pipeline can read: every path on
-    # the API answers 'invalid api endpoint', so find_game() always came back
-    # empty and every release fell through to browser project creation, which
-    # the bot challenge stops. What can be trusted is the catalogue, which
-    # records where the project lives once set_itch_url.py has run, and the
-    # public page, which answers if and only if the project exists.
-    url = ""
-    for a in load_catalog():
-        if (a.get("base_slug") or a.get("slug")) == slug:
-            candidate = (a.get("itch_url") or "").strip()
-            if candidate and page_is_live(candidate):
-                url = candidate
-                log(f"1. the catalogue already points at a live project: {url}")
-                break
-    if not url and STORE_URL:
-        # A product generated after the catalogue was last written has no URL
-        # yet. It belongs to the same project as everything else, so it is
-        # used rather than inventing a second project per product.
-        if page_is_live(STORE_URL):
-            url = STORE_URL
-            log(f"1. the store project is live and holds this product: {url}")
-        else:
-            _verdict, _why = page_probe(STORE_URL)
-            if _verdict is None:
-                # The store declined to answer. It has products on it, so
-                # saying it does not exist would send the account holder off to
-                # create a project they already created.
-                log(f"1. the store project did not answer ({_why}), which is "
-                    f"not the same as not existing. It has been uploading "
-                    f"all along, so this run stops rather than guess: "
-                    f"{STORE_URL}")
-                return False
-            log(f"1. the store project did not answer: {STORE_URL}")
-    if not url and KEY:
-        found = find_game(slug)
-        if found:
-            url = (found.get("url") or "").replace("http://", "https://")
-            log(f"1. the project already exists: {url}")
-    if not url:
-        log("1. no project yet, so one has to be created")
+    # 1. does this product have a project of its own?
+    # itch.io has no create/list API this pipeline can rely on. The catalogue
+    # records each product's page, and the public page is the proof it exists.
+    # A missing page is never borrowed from another product: the old shared
+    # project was the reason one Purchase block offered several tools.
+    url = project_url(slug)
+    if url:
+        log(f"1. this product has its own live project: {url}")
+    else:
+        log("1. no page of its own yet, so one has to be created")
         # Creating a project is the one thing the API key cannot do, because
         # itch.io has no endpoint for it. It needs a browser session, and the
         # login that would provide one is behind a bot challenge.
         cookie = working_session()
         if not cookie:
-            log("   no project exists and one cannot be created from here")
             log("   itch.io has no API for creating a project, and its web")
             log("   login is behind a bot challenge that this will not work")
-            log("   around. Create one empty project once, by hand:")
+            log("   around. Create one project for THIS product by hand:")
             log("     https://itch.io/settings/mine/new/game")
-            log("   then record where it lives:")
+            log("   set classification Downloadable and minimum price "
+                f"${price:.2f}, make it public, then record it:")
             log("     python set_itch_url.py <slug> "
-                "https://slingshot-tools.itch.io/<project>")
+                f"https://slingshot-tools.itch.io/{slug}")
             log("   after that every release uploads with the API key alone")
             return False
         url = create_project(title, slug, price, (PAID / slug / "icon.png"),
@@ -1018,10 +1040,10 @@ def publish(slug: str, title: str, price: float, version: str = "") -> bool:
     if not page_is_live(url):
         log("4. the page stopped answering after the upload; not publishing")
         return False
-    # The page answering is not enough. The store is one project holding every
-    # product, so it answers whatever else is on it. Advertising a product
-    # whose build is not actually listed means taking money for a download
-    # nobody can be given, so this product's own file has to be on the page.
+    # The page answering is not enough. A project can answer while holding an
+    # old build or no paid uploads at all. Advertising a product whose own
+    # installer is not listed means taking money for a download nobody can be
+    # given, so this product's file has to be on this product's page.
     #
     # butler returns as soon as the bytes are accepted; itch.io publishes the
     # build a little later. The first run of this checked once, seconds after
@@ -1052,6 +1074,7 @@ def publish(slug: str, title: str, price: float, version: str = "") -> bool:
     if not record(slug, url, price):
         return False
     remember(slug, url)
+    LAST_URL = url
     log("5. published on the site")
     return True
 
@@ -1132,7 +1155,7 @@ def main() -> int:
             if ok:
                 # The Discord steps run later on a fresh checkout; hand them
                 # the pointer now, only after the sale has really succeeded.
-                handoff(slug, title, price, STORE_URL)
+                handoff(slug, title, price, LAST_URL or project_url(slug))
                 auditlog.succeeded("itch-publish", job=slug,
                                    evidence={"exit_code": 0, "slug": slug,
                                              "price": price})
@@ -1182,7 +1205,7 @@ def main() -> int:
                      reason="the Windows installer was built and verified")
     ok = publish(slug, title, price, stage.get("version") or "")
     if ok:
-        handoff(slug, title, price, STORE_URL)
+        handoff(slug, title, price, LAST_URL or project_url(slug))
         auditlog.succeeded("itch-publish", job=slug,
                            evidence={"exit_code": 0, "slug": slug,
                                      "price": price})

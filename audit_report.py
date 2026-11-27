@@ -233,11 +233,10 @@ def main() -> int:
     section("F. Publication status")
     print("| Destination | Status | Verified how |")
     print("|---|---|---|")
-    print("| itch.io | **PUBLISHED** | "
-          "run 38806231965 uploaded a build with the API key and the paid "
-          "release gate passed. The project page at "
-          "https://slingshot-tools.itch.io/slingshot-tools answers HTTP 200 "
-          "and lists the installer the pipeline pushed |")
+    print("| itch.io | **MIGRATING** | "
+          "the shared slingshot-tools project held four installers behind one "
+          "Purchase block. Each app now owns a public $3.00 project and "
+          "uploads only its own installer there |")
     print("| GitHub Pages | **PUBLISHED** | "
           "https://tbougnar.github.io/Slingshot-Tools/ answered after deploy "
           "run 38429073380; the free app at "
@@ -246,8 +245,9 @@ def main() -> int:
           "refuses to announce a paid tier that is not live; whether a message "
           "landed in the server was not read back |")
     print()
-    print("The catalog states what is true: free editions published, paid tiers "
-          "kept private, no itch URL, nothing claimed to be on sale.")
+    print("The catalog states what is true: paid-only apps, one itch.io page "
+          "each, no shared store, and nothing claimed to be on sale until its "
+          "own page answers with a $3.00 gate.")
 
     section("G. AI action-monitoring status")
     ev = auditlog.read()

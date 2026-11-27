@@ -29,12 +29,11 @@ CHANNELS = [
     {
         "key": "itch",
         "label": "itch.io",
-        # The project page, where the builds actually are. The fallback used
-        # to be the account page, which answers HTTP 200 and lists nothing, so
-        # a customer following "itch.io" in the footer arrived at an empty
-        # shop and the link check could not tell the difference.
-        "url": os.environ.get("ITCH_STORE_URL", "").strip()
-        or "https://slingshot-tools.itch.io/slingshot-tools",
+        # A brand-level link to the account, which lists one project per app.
+        # It used to point at a single project that held every installer: one
+        # Purchase block sold all the tools and buyers saw each other's files.
+        # Each product's own buy link comes from site/apps.json, never here.
+        "url": "https://slingshot-tools.itch.io",
         "icon": "bag",
         "primary": True,
     },

@@ -21,8 +21,10 @@ upload rather than claiming the product is back on sale.
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
+from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
@@ -32,11 +34,6 @@ CATALOG = ROOT / "site" / "apps.json"
 
 PRICE_FLOOR = float(__import__("os").environ.get("PRICE_FLOOR", "1.00"))
 PRICE_CEILING = float(__import__("os").environ.get("PRICE_CEILING", "10.00"))
-
-# The one store project, from the same configuration the pipeline uses.
-STORE_PROJECT = (__import__("os").environ.get("ITCH_STORE_URL", "").strip()
-                 or "https://slingshot-tools.itch.io/slingshot-tools")
-
 
 def log(msg: str) -> None:
     print(f"[rebuild] {msg}", flush=True)
@@ -53,6 +50,26 @@ def entry_for(slug: str) -> dict:
         if e.get("tier") == "full" and (e.get("base_slug") or e.get("slug")) == slug:
             return e
     raise SystemExit(f"[rebuild] {slug} is not a paid product in the catalogue")
+
+
+def project_for(entry: dict, slug: str) -> str:
+    """The butler project for this product, never the old shared page.
+
+    A rebuild must replace this product's build on this product's page. The
+    catalog's per-product itch_url is the authority; if it still points at the
+    shared project, the page has to be corrected before anything is uploaded.
+    """
+    url = str(entry.get("itch_url") or "").strip()
+    parts = [p for p in urlparse(url).path.split("/") if p]
+    project = parts[0].lower() if parts else ""
+    if project in ("", "slingshot-tools") or project != slug.lower():
+        raise SystemExit(
+            f"[rebuild] {slug} has no own itch.io project in the catalogue "
+            f"(found {url or '(nothing)'}). Create "
+            f"https://slingshot-tools.itch.io/{slug} and run "
+            f"python set_itch_url.py {slug} "
+            f"https://slingshot-tools.itch.io/{slug} first")
+    return project
 
 
 def reconstruct(slug: str, concept: dict) -> Path:
@@ -152,7 +169,7 @@ def main() -> int:
 
     # butler wants the project's slug, not its URL. The target is
     # user/project:channel, and a URL in the project part is not a project.
-    project = STORE_PROJECT.rstrip("/").rsplit("/", 1)[-1] or slug
+    project = project_for(concept, slug)
     if not ip.upload(installer, slug, "", project=project):
         log("the upload did not finish, so this product stays off sale")
         return 1

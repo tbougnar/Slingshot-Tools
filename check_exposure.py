@@ -30,6 +30,11 @@ def _product_page(url: str) -> bool:
     return valid(url)
 
 
+def _project(url: str) -> str:
+    from set_itch_url import project_of
+    return project_of(url)
+
+
 def check_tier_families(catalog):
     """A paid-only catalogue has one paid card per product, and no free card.
 
@@ -155,6 +160,7 @@ def main() -> int:
     # over it would block the rest of the work indefinitely on something that
     # needs one person to open an itch.io page, and a gate nobody can pass is a
     # gate that stops being read.
+    seen_pages: dict[str, str] = {}
     for a in catalog:
         url = str(a.get("itch_url") or "")
         # Any entry at all, published or not, must not carry a URL that is not
@@ -166,6 +172,23 @@ def main() -> int:
                 f"{a['slug']} has an itch_url that is not a product page: "
                 f"{url} (a buy button must go to "
                 f"https://yourslug.itch.io/the-product)")
+        project = _project(url)
+        if project == "slingshot-tools":
+            problems.append(
+                f"{a['slug']} still points at the old shared project. One "
+                f"project must hold one product, not every installer.")
+        elif project and project != str(a.get("base_slug") or a["slug"]).lower():
+            problems.append(
+                f"{a['slug']} points at another product's page "
+                f"({project}), so a buyer would be sent the wrong tool")
+        if url:
+            previous = seen_pages.get(url)
+            if previous:
+                problems.append(
+                    f"{previous} and {a['slug']} share one itch.io page; "
+                    f"each product needs its own project")
+            else:
+                seen_pages[url] = a["slug"]
         if a.get("tier") != "full" or a.get("published") is not True:
             continue
         if not url.startswith("http"):

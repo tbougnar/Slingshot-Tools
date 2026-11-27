@@ -195,9 +195,9 @@ check("a payment return does not promise an email nobody sends",
       "have been emailed" not in co_html
       and "licence key have been" not in co_html,
       "the paid state still claims an emailed link and licence key")
-check("and it points the buyer at the store page instead",
-      "Download the Full edition from the store page" in co_html
-      and "slingshot-tools.itch.io/slingshot-tools" in co_html)
+check("and it points the buyer at this product's own store page instead",
+      "Download this product from its own store page" in co_html
+      and "slingshot-tools.itch.io/slingshot-tools" not in co_html)
 check("the catalogue advertises no free edition",
       "Download free" not in html and "Free basic" not in html
       and "Free forever" not in html and "free tools" not in html.lower(),

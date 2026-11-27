@@ -243,11 +243,11 @@ Search-engine ranking was not tested and is not claimed. Correct website impleme
 
 | Destination | Status | Verified how |
 |---|---|---|
-| itch.io | **PUBLISHED** | run 38806231965 uploaded a build with the API key and the paid release gate passed. The project page at https://slingshot-tools.itch.io/slingshot-tools answers HTTP 200 and lists the installer the pipeline pushed |
-| GitHub Pages | **PUBLISHED** | https://tbougnar.github.io/Slingshot-Tools/ answered after deploy run 38429073380; the free app at `/apps/color-picker-basic/` loads and works |
+| itch.io | **MIGRATING** | the old shared project at https://slingshot-tools.itch.io/slingshot-tools held four installers behind one Purchase block. It has been replaced with one public $3.00 project per app (`unit-converter`, `dev-converter`, `file-renamer`, `password-manager`); each build is re-uploaded to its own page before the buy button returns |
+| GitHub Pages | **PUBLISHED** | https://tbougnar.github.io/Slingshot-Tools/ answered after deploy run 38429073380; the catalog links each paid app to its own itch.io page |
 | Discord | **POSTED** | the announce step passes in CI and refuses to announce a paid tier that is not live; whether a message landed in the server was not read back |
 
-The catalog states what is true: free editions published, paid tiers kept private, no itch URL, nothing claimed to be on sale.
+The catalog now states what is true: paid-only, one per-app itch.io URL, no shared page, and nothing advertised until that page answers with a $3.00 gate and its own installer.
 
 ## G. AI action-monitoring status
 

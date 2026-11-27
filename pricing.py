@@ -312,21 +312,15 @@ def main():
         # then failed the release. An empty value means "not for sale yet",
         # which is true and is what publish_paid.py needs to see.
         #
-        # The environment variable was the same fallback with the page
-        # hidden, and it was worse: it applied to the free editions as well,
-        # so one variable put a buy button on every free product in the
-        # catalogue, and no test could see it, because they look for a
-        # literal URL and not for a value read from the environment. It is
-        # only used for a paid edition, and only when it is a real product
-        # page and not the account's front page.
+        # An environment fallback was the same mistake with the page hidden:
+        # one variable pointed every product at one project, which put all the
+        # installers in one Purchase block. Each product owns its URL now, so
+        # an empty value means "not for sale yet" and nothing invents one.
         if a.get("tier") == "basic":
             a.pop("itch_url", None)
         else:
-            _fallback = os.environ.get("ITCH_PAGE_URL", "").strip()
-            if _fallback and set_itch_url.valid(_fallback):
-                a["itch_url"] = a.get("itch_url") or _fallback
-            else:
-                a["itch_url"] = a.get("itch_url") or ""
+            _url = str(a.get("itch_url") or "").strip()
+            a["itch_url"] = _url if set_itch_url.valid(_url) else ""
 
     _atomic(PRICES, json.dumps(prices, indent=2))
     _atomic(LOG, json.dumps(history[-200:], indent=2))

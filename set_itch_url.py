@@ -1,14 +1,15 @@
-"""Point a product at its itch.io page.
+"""Point a product at its own itch.io page.
 
 The site has no checkout of its own any more: itch.io takes the payment and
 hands over the paid file. So all that is needed per product is the URL of its
 itch.io project, and this writes it into the catalog.
 
-    python set_itch_url.py password-manager https://yourslug.itch.io/offline-password-manager
+    python set_itch_url.py password-manager https://slingshot-tools.itch.io/password-manager
 
-Both editions of the family get the URL, because they are one product as far
-as a buyer is concerned. A product with no URL stays unpublished rather than
-showing a button that leads nowhere.
+Each paid product must have its OWN project. The old shared project
+``slingshot-tools`` accumulated every installer and let a buyer of one tool see
+all the others, so it is refused here. A product with no URL stays unpublished
+rather than showing a button that leads nowhere.
 """
 from __future__ import annotations
 
@@ -61,6 +62,27 @@ def valid(url: str) -> bool:
     return len(segments) >= 1
 
 
+def project_of(url: str) -> str:
+    """The project slug at the end of an itch.io product URL."""
+    parts = [s for s in urlparse(url).path.split("/") if s]
+    return parts[0].lower() if parts else ""
+
+
+def for_product(url: str, slug: str) -> bool:
+    """Is this URL a real product page belonging to this exact product?
+
+    A page for another app is as wrong as an account page: the buy button would
+    take money for one tool and hand over a different one. The shared
+    ``slingshot-tools`` project is specifically refused, because it used to
+    hold every installer at once.
+    """
+    if not valid(url):
+        return False
+    project = project_of(url)
+    return bool(project) and project == slug.strip().lower() and \
+        project != "slingshot-tools"
+
+
 def show(apps: list) -> int:
     print(f"{'product':<26} {'price':>7}  itch.io page")
     print("-" * 76)
@@ -77,7 +99,12 @@ def show(apps: list) -> int:
 def set_url(apps: list, slug: str, url: str) -> int:
     if not valid(url):
         log(f"{url!r} is not an https itch.io page")
-        log("expected something like https://yourslug.itch.io/your-tool")
+        log("expected something like https://slingshot-tools.itch.io/your-tool")
+        return 1
+    if not for_product(url, slug):
+        log(f"{url!r} is not this product's own itch.io page")
+        log(f"expected the project slug {slug!r} at the end of the URL")
+        log("the old shared 'slingshot-tools' project is not a product page")
         return 1
 
     touched = []
@@ -119,41 +146,19 @@ def set_url(apps: list, slug: str, url: str) -> int:
 
 
 def set_all(apps: list, url: str) -> int:
-    """Point every paid product at one project.
+    """Refuse to point several products at one project.
 
-    The store holds one itch.io project and the paid products are builds in
-    it, so those entries get the same URL. The free editions are deliberately
-    not given one: they are served from this site and have never been uploaded
-    to itch.io, so recording a store URL for them is a claim that is not true.
-    A free app that later needs a store of its own gets one explicitly.
-
-    Only itch_url is written here. Nothing is marked published, because a Buy
-    button that leads to a project without that product's build is the
-    advertising this audit spent most of its effort removing. Each product
-    becomes purchasable when its own build is uploaded and the page answers.
+    This command was how the old shared page was seeded. Every product then
+    appeared in the same Purchase block, and a buyer of one tool could download
+    all the others. Each product now needs its own page and its own URL, so the
+    only safe answer is to stop and say so.
     """
-    if not valid(url):
-        log(f"{url!r} is not an https itch.io page")
-        return 1
-    free = [e for e in apps if e.get("tier") == "basic"]
-    paid = [e for e in apps if e.get("tier") != "basic"]
-    for entry in paid:
-        entry["itch_url"] = url
-    # clear a stale store URL from the free editions, which should never have
-    # one, so nothing claims they are on itch.io when they are not
-    for entry in free:
-        entry.pop("itch_url", None)
-    if not paid:
-        log("the catalogue has no paid editions, so there is nothing to point")
-        return 1
-    slugs = sorted({(a.get("base_slug") or a.get("slug")) for a in paid})
-    save(apps)
-    log(f"{len(slugs)} paid products now point at {url}")
-    log(f"updated {len(paid)} paid entries; {len(free)} free editions left"
-        " without a store URL, because they are not on itch.io")
-    log("none are marked published yet: each becomes purchasable when its")
-    log("own build is uploaded and the project page answers")
-    return 0
+    log("--all is no longer supported: each product needs its own itch.io page")
+    log("the old shared project sold several tools from one Purchase block")
+    log("run this once per product instead:")
+    log("  python set_itch_url.py <slug> "
+        "https://slingshot-tools.itch.io/<slug>")
+    return 1
 
 
 def main() -> int:
@@ -161,7 +166,7 @@ def main() -> int:
     if "--all" in sys.argv[1:]:
         urls = [a for a in args if a.startswith("https://")]
         if len(urls) != 1:
-            log("usage: python set_itch_url.py --all <https://...itch.io/page>")
+            log("--all is disabled; use: python set_itch_url.py <slug> <page URL>")
             return 1
         return set_all(load(), urls[0])
     if not args:

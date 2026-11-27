@@ -9,6 +9,7 @@ door into it at all.
 """
 from __future__ import annotations
 
+import json
 import pathlib
 import re
 import sys
@@ -51,21 +52,19 @@ def main() -> int:
                 f"{code} -> {final[:60]}" if good
                 else f"HTTP {code} {final[:60]}")
             if "itch" in c["key"]:
-                # The store page has to list something to buy, not merely
-                # answer. It answering 200 is not the same as there being
-                # something to buy, which is how an empty shop looks healthy.
-                #
-                # It is checked against whatever is actually for sale rather
-                # than against a fixed product name. The store is one project
-                # holding every product, so it shows whichever build was
-                # uploaded last; hardcoding one name made this fail the moment
-                # a different product shipped, which is the normal case.
-                builds = re.findall(r"[^<>]{1,80}Setup\.exe", body)
-                say(bool(builds),
-                    "the itch.io store lists a build to buy",
-                    "the page answers but lists no build, which is how an "
-                    "empty shop looks healthy"
-                    if not builds else "")
+                # The account has to list every product as its own project.
+                # It used to hold one project that sold four installers; the
+                # page answering 200 is not evidence that the shop is right.
+                catalog = json.loads(
+                    (ROOT / "site" / "apps.json").read_text(encoding="utf-8"))
+                titles = [a.get("title", "") for a in catalog
+                          if a.get("tier") == "full"]
+                missing = [t for t in titles
+                           if t.lower() not in body.lower()]
+                say(not missing,
+                    "the itch.io account lists one project per paid app",
+                    "missing: " + ", ".join(missing) if missing else
+                    f"{len(titles)} paid projects listed")
         except urllib.error.HTTPError as e:
             say(False, f"the {c['label']} link works", f"HTTP {e.code}")
         except Exception as e:  # noqa: BLE001
@@ -94,17 +93,38 @@ def main() -> int:
     except Exception as e:  # noqa: BLE001
         say(False, "the live site answers", str(e)[:60])
 
-    print("\nTHE APPS A CUSTOMER CAN OPEN\n")
-    base = "https://tbougnar.github.io/Slingshot-Tools"
-    for path, label in (("/apps/password-manager-basic/",
-                         "the free app on the live site"),):
+    print("\nTHE PAGES A CUSTOMER CAN BUY FROM\n")
+    catalog = json.loads(
+        (ROOT / "site" / "apps.json").read_text(encoding="utf-8"))
+    for app in catalog:
+        if app.get("tier") != "full":
+            continue
+        url = str(app.get("itch_url") or "").rstrip("/")
+        label = app.get("title", app["slug"])
+        if not url:
+            say(False, f"{label} has its own itch.io page",
+                "the catalogue has no URL for it")
+            continue
         try:
-            code, final, body = get(base + path)
-            say(code == 200, label, f"{code}")
-            say(len(body) > 2000, "it is a real application, not a stub",
-                f"{len(body)} bytes")
+            code, final, body = get(url)
+            say(code == 200 and final.rstrip("/") == url,
+                f"{label} has its own itch.io page", f"{code} -> {final}")
+            say('"min_price":300' in body or "$3.00" in body,
+                f"{label} asks for exactly $3.00",
+                "the page does not show the $3.00 minimum")
+            builds = sorted(set(re.findall(r">([^<>]{1,80}Setup\.exe)<", body)))
+            alien = [b for b in builds
+                     if label.lower() not in b.lower()
+                     and str(app["slug"]).lower() not in b.lower()]
+            say(bool(builds) and len(builds) == 1 and not alien,
+                f"{label} lists only its own installer",
+                "found: " + ", ".join(builds) if builds else
+                "the page answers but has no paid upload")
         except Exception as e:  # noqa: BLE001
-            say(False, label, str(e)[:60])
+            say(False, f"{label} has its own itch.io page", str(e)[:60])
+
+    print("\nTHE SITE IS PAID-ONLY\n")
+    base = "https://tbougnar.github.io/Slingshot-Tools"
 
     print("\nWHAT A CUSTOMER CANNOT GET\n")
     # the paid page must NOT exist, which is correct, but then the paid

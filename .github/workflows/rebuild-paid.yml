@@ -76,5 +76,4 @@ jobs:
         run: python rebuild_paid.py "${{ inputs.slug }}"
         env:
           ITCH_USER: ${{ vars.ITCH_USER }}
-          ITCH_STORE_URL: ${{ vars.ITCH_STORE_URL }}
           ITCH_API_KEY: ${{ secrets.ITCH_API_KEY }}

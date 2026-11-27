@@ -71,21 +71,26 @@ if(cancelled){
   document.getElementById('ss').style.display='none';
   document.getElementById('how').style.display='none';
   const n=document.getElementById('soon');
-  const store=/^https:\/\/[^/]+\.itch\.io\/[^\s"'<>]+$/.test(itch)?itch:'https://slingshot-tools.itch.io/slingshot-tools';
+  const store=/^https:\/\/[^/]+\.itch\.io\/[^\s"'<>]+$/.test(itch)?itch:'';
   n.textContent='';
-  const b=document.createElement('b');
-  b.textContent='Payment received.';
-  n.appendChild(b);
-  n.appendChild(document.createElement('br'));
-  n.appendChild(document.createTextNode('Download the Full edition from the store page, using the same account you paid with: '));
-  const link=document.createElement('a');
-  link.href=store;
-  link.rel='noopener';
-  link.textContent=store;
-  n.appendChild(link);
-  n.appendChild(document.createElement('br'));
-  n.appendChild(document.createTextNode('If it is not there, ask in the Discord server and we will sort it out.'));
-  n.style.display='block';
+  if(!store||/\/slingshot-tools\/?$/.test(store)){
+    n.textContent='This product has no store page of its own yet. Nothing was charged for a download that is not ready; ask in Discord and we will sort it out.';
+    n.style.display='block';
+  }else{
+    const b=document.createElement('b');
+    b.textContent='Payment received.';
+    n.appendChild(b);
+    n.appendChild(document.createElement('br'));
+    n.appendChild(document.createTextNode('Download this product from its own store page, using the same account you paid with: '));
+    const link=document.createElement('a');
+    link.href=store;
+    link.rel='noopener';
+    link.textContent=store;
+    n.appendChild(link);
+    n.appendChild(document.createElement('br'));
+    n.appendChild(document.createTextNode('If it is not there, ask in the Discord server and we will sort it out.'));
+    n.style.display='block';
+  }
 }else if(itch&&/^https:\/\/[^/]+\.itch\.io\//.test(itch)){
   const a=document.getElementById('go');
   a.href=itch;

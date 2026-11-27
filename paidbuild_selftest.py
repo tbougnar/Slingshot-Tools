@@ -213,10 +213,11 @@ check("and it accepts an installer named after the title",
       "concept.get(\"title\")" in _rp_code or "concept.get('title')" in _rp_code,
       "it compares the slug against the file name, and the installer is "
       "named after the title, so it refuses the correct one")
-check("butler is given a project slug and not a URL",
-      "STORE_PROJECT.rstrip(\"/\").rsplit(\"/\", 1)[-1]" in _rp_code,
-      "the target is user/project:channel, and a URL in the project part "
-      "is not a project")
+check("butler is given this product's own project slug",
+      "project_for(concept, slug)" in _rp_code
+      and "STORE_PROJECT" not in _rp_code,
+      "the target is user/project:channel, and a shared project would put "
+      "every installer back into one Purchase block")
 check("it reuses the paid source instead of rebuilding from a free edition",
       "PAID / slug" in _rp_code and "-basic" not in _rp_code
       and "set_edition(html" not in _rp_code,
@@ -344,7 +345,7 @@ try:
         "tier": "full", "title": "Unit converter", "tag": "convert",
         "blurb": "old", "tags": ["convert"], "url": "", "price": 3.0,
         "free": False, "published": True,
-        "itch_url": "https://slingshot-tools.itch.io/slingshot-tools",
+        "itch_url": "https://slingshot-tools.itch.io/dev-converter",
         "built": True, "date": "2026-01-01"}]), encoding="utf-8")
     make_app.publish({"slug": "dev-converter", "base_slug": "dev-converter",
                       "title": "Unit converter", "tag": "convert",
@@ -354,7 +355,7 @@ try:
     _kept = json.loads(make_app.CATALOG.read_text(encoding="utf-8"))[0]
     check("a re-published paid entry keeps its itch.io page",
           _kept.get("itch_url")
-          == "https://slingshot-tools.itch.io/slingshot-tools", str(_kept))
+          == "https://slingshot-tools.itch.io/dev-converter", str(_kept))
     check("and still says a build exists", _kept.get("built") is True,
           str(_kept))
 finally:

@@ -235,7 +235,8 @@ def services() -> None:
         return
 
     site = "https://tbougnar.github.io/Slingshot-Tools/"
-    store = "https://slingshot-tools.itch.io/slingshot-tools"
+    cat = []
+    store = ""
 
     try:
         st, body = get(site, timeout=40)
@@ -254,10 +255,14 @@ def services() -> None:
                f"{len(cat)} entries" if isinstance(cat, list) else "not a list")
         print(f"  {'EXECUTED' if ok else 'BROKEN':9s} catalogue              "
               f"{len(cat)} entries")
+        store = next((str(a.get("itch_url") or "") for a in cat
+                      if a.get("published") and a.get("itch_url")), "")
     except Exception as e:  # noqa: BLE001
         record("services", "the catalogue the site serves is valid",
                "BROKEN", str(e)[:80])
         print(f"  BROKEN    catalogue              {e}")
+    if not store:
+        store = "https://slingshot-tools.itch.io"
 
     try:
         st, body = get_retry(store, timeout=40)
