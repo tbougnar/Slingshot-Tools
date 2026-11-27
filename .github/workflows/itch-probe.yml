@@ -1,0 +1,28 @@
+name: Slingshot — read the itch.io forms
+
+# Project creation is the one thing the API key cannot do, so it is done by
+# submitting the same form a person submits. This reads those forms with the
+# stored session and prints their field names, which is what the creation code
+# is written against. It writes nothing.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      ITCH_SESSION_COOKIE: ${{ secrets.ITCH_SESSION_COOKIE }}
+      ITCH_LOGIN: ${{ secrets.ITCH_LOGIN }}
+      ITCH_PASSWORD: ${{ secrets.ITCH_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Read the forms
+        run: python itch_probe.py
