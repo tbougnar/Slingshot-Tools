@@ -81,24 +81,44 @@ def main() -> int:
             return 1
         log(f"loaded in {time.time() - started:.1f}s -> {page.url}")
 
+        # Cloudflare's JS challenge resolves itself within a few seconds in a
+        # browser it accepts, so the page is polled instead of judged on its
+        # first paint. Reading it immediately is what reported "challenge" for
+        # a page that may have been about to let us straight through.
+        deadline = time.time() + 45
+        title_field = None
+        while time.time() < deadline:
+            if "/login" in page.url:
+                log("RESULT: bounced to /login - the session cookie is dead")
+                browser.close()
+                return 3
+            title_field = page.query_selector("input[name='game[title]']")
+            if title_field:
+                break
+            time.sleep(1.5)
+        waited = time.time() - started
+
         body = ""
         try:
             body = page.content()
         except Exception:  # noqa: BLE001
             pass
         low = body.lower()
+        turnstile = "challenges.cloudflare.com" in low or "cf-turnstile" in low
 
-        if any(m in low for m in CHALLENGE_MARKERS):
-            log("RESULT: CLOUDFLARE CHALLENGE - a headless browser from this "
-                "address never reached the form")
+        if not title_field:
+            if any(m in low for m in CHALLENGE_MARKERS):
+                log(f"RESULT: CLOUDFLARE CHALLENGE still up after "
+                    f"{waited:.0f}s"
+                    + ("; an interactive Turnstile widget is present, which a "
+                       "pipeline must not attempt to solve"
+                       if turnstile else ""))
+                browser.close()
+                return 2
+            log("RESULT: page loaded but the form was not found")
             browser.close()
-            return 2
-        if "/login" in page.url:
-            log("RESULT: bounced to /login - the session cookie is dead")
-            browser.close()
-            return 3
+            return 4
 
-        title_field = page.query_selector("input[name='game[title]']")
         slug_field = page.query_selector("input[name='game[slug]']")
         csrf = page.query_selector("input[name='csrf_token']")
         paid_btn = page.query_selector("button.payment_mode_paid")
@@ -110,15 +130,21 @@ def main() -> int:
                 submit_txt = t
                 break
 
+        log(f"reached the form after {waited:.1f}s")
         log(f"page title: {page.title()!r}")
         log(f"game[title] field: {'FOUND' if title_field else 'missing'}")
         log(f"game[slug] field:  {'FOUND' if slug_field else 'missing'}")
         log(f"csrf_token field:  {'FOUND' if csrf else 'missing'}")
         log(f"paid-mode button:  {'FOUND' if paid_btn else 'missing'}")
-        log(f"input[type=submit]: {'FOUND' if submit else 'missing'}"
-            + (f" ({submit_txt})" if submit_txt else ""))
-        log(f"signed in as: "
-            f"{page.eval_on_selector_all('a', 'els => els.map(e=>e.textContent.trim()).filter(t=>/slingshot/i.test(t)).slice(0,3)')}")
+        log(f"submit control:    {submit_txt or ('input[type=submit]' if submit else 'missing')}")
+        try:
+            who = page.eval_on_selector_all(
+                "a",
+                "els => els.map(e => e.textContent.trim())"
+                ".filter(t => /slingshot/i.test(t)).slice(0, 3)")
+            log(f"signed in as: {who}")
+        except Exception as e:  # noqa: BLE001
+            log(f"account check failed: {str(e)[:100]}")
 
         # What the classification dropdown really offers, which the static HTML
         # does not say: only the current value is rendered until it is opened.
@@ -130,11 +156,11 @@ def main() -> int:
         except Exception as e:  # noqa: BLE001
             log(f"classification read failed: {str(e)[:120]}")
 
-        if title_field and slug_field and csrf:
+        if slug_field and csrf:
             log("RESULT: FORM REACHED - creation can be automated")
             browser.close()
             return 0
-        log("RESULT: page loaded but the form was not found")
+        log("RESULT: form reached but a required field was missing")
         browser.close()
         return 4
 
