@@ -109,9 +109,9 @@ def main() -> int:
             code, final, body = get(url)
             say(code == 200 and final.rstrip("/") == url,
                 f"{label} has its own itch.io page", f"{code} -> {final}")
-            say('"min_price":300' in body or "$3.00" in body,
-                f"{label} asks for exactly $3.00",
-                "the page does not show the $3.00 minimum")
+            priced = '"min_price":300' in body or "$3.00" in body
+            say(priced, f"{label} asks for exactly $3.00",
+                "" if priced else "the page does not show the $3.00 minimum")
             builds = sorted(set(re.findall(r">([^<>]{1,80}Setup\.exe)<", body)))
             alien = [b for b in builds
                      if label.lower() not in b.lower()
