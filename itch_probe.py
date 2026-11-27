@@ -92,11 +92,12 @@ class Fields(HTMLParser):
 
 def request(url: str, cookie: str = "", data: dict | None = None,
             extra: dict | None = None):
+    """``cookie`` is the whole Cookie header, e.g. ``itchio_token=abc``."""
     body = None
     headers = {"User-Agent": UA,
                "Accept": "text/html,application/xhtml+xml"}
     if cookie:
-        headers["Cookie"] = f"itchio_token={cookie}"
+        headers["Cookie"] = cookie
     if data is not None:
         body = urllib.parse.urlencode(data).encode()
         headers["Content-Type"] = "application/x-www-form-urlencoded"
@@ -217,7 +218,55 @@ def try_login() -> str:
         log(f"    page says: {err.group(3).strip()}")
     if token:
         log("    got a fresh itchio_token session")
-    return token
+    return f"itchio_token={token}" if token else ""
+
+
+def api_login() -> str:
+    """Log in the way the itch.io desktop app does, and test the cookie.
+
+    The web form at itch.io/login sits behind a Cloudflare challenge, so a
+    plain client never sees it. api.itch.io is the API host the desktop app
+    talks to, and it answers with a session cookie plus an API key. Whether
+    that cookie is the same one the web forms accept is exactly what this
+    checks rather than assumes.
+    """
+    user, pw = env("ITCH_LOGIN"), env("ITCH_PASSWORD")
+    if not user or not pw:
+        log("ITCH_LOGIN / ITCH_PASSWORD not set; cannot try api.itch.io/login")
+        return ""
+    status, landed, _, body = request(
+        "https://api.itch.io/login",
+        data={"username": user, "password": pw, "source": "desktop"})
+    log(f"--- api.itch.io/login -> HTTP {status} landed on {landed}")
+    try:
+        d = json.loads(body)
+    except (ValueError, TypeError):
+        log(f"    not JSON: {body[:160]}")
+        return ""
+    if d.get("totp_needed"):
+        log("    this account needs a TOTP code for API login, so an "
+            "unattended run cannot mint a session this way")
+        return ""
+    if not d.get("success"):
+        log(f"    refused: {str(d.get('errors'))[:160]}")
+        return ""
+    log(f"    success; keys returned: {', '.join(sorted(d))}")
+    cookies = d.get("cookie") or {}
+    log(f"    cookie names: {', '.join(sorted(cookies)) or '(none)'}")
+    key = ((d.get("key") or {}).get("key") or "")
+    log(f"    api key returned: {'yes, ' + str(len(key)) + ' chars' if key else 'no'}")
+    for name, value in cookies.items():
+        header = f"{name}={value}"
+        status, landed, _, body = request(
+            "https://itch.io/settings/mine/new/game", cookie=header)
+        ok = status == 200 and "/login" not in landed \
+            and "cf-turnstile" not in body.lower() \
+            and re.search(r"<form", body, re.I) is not None
+        log(f"    cookie {name!r} on the create form: "
+            f"HTTP {status} {'WORKS' if ok else 'does not work'}")
+        if ok:
+            return header
+    return ""
 
 
 def main() -> int:
@@ -225,13 +274,17 @@ def main() -> int:
     log(f"stored session cookie: {'present' if cookie else 'absent'}")
     if cookie:
         status, landed, _, body = request(
-            "https://itch.io/settings/mine/new/game", cookie=cookie)
+            "https://itch.io/settings/mine/new/game",
+            cookie=f"itchio_token={cookie}")
         if status == 200 and "/login" not in landed and "search" not in body[:4000]:
             log("the stored session still works")
+            cookie = f"itchio_token={cookie}"
         else:
             log(f"the stored session is dead (HTTP {status} on {landed}); "
                 "trying to log in fresh")
             cookie = ""
+    if not cookie:
+        cookie = api_login()
     if not cookie:
         cookie = try_login()
     if not cookie:
