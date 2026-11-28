@@ -43,6 +43,9 @@ if not SITE.exists():
     sys.exit(1)
 
 html = SITE.read_text(encoding="utf-8")
+# The visual rules moved into the shared stylesheet when the storefront was
+# rebuilt, so the CSS checks below read that file as well as the page.
+css = (SITE.parent / "store.css").read_text(encoding="utf-8")
 
 # ------------------------------------------------------- groupProducts
 gp = re.search(r"function groupProducts\(list\)\{(.*?)\}\s*\n", html, re.S)
@@ -168,13 +171,13 @@ check("and they are rendered",
       "optDiffs" in html and "class=\"diff\"" in html,
       "the differences are computed and then thrown away")
 check("the style for them exists",
-      ".optDiffs{" in html and ".diff{" in html)
+      ".optDiffs{" in css and ".diff{" in css)
 
 # --------------------------------------------------------------- countdown
 check("the countdown element exists", 'id="countdown"' in html)
 check("it is hidden until there is something to count",
-      re.search(r"\.countdown\{display:none", html) is not None)
-check("it is shown by a class", ".countdown.on{display:flex}" in html)
+      re.search(r"\.countdown\{display:none", css) is not None)
+check("it is shown by a class", ".countdown.on{display:flex}" in css)
 check("it reads the generated file", 'fetch("update.json"' in html)
 check("a missing file leaves it hidden", ".catch(()=>{})" in html)
 check("it refuses to show outside the window",

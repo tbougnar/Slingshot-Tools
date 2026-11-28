@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Product — Slingshot Tools</title>
+  <meta name="description" content="A small, focused Windows app from Slingshot Tools. Buy once, keep it forever.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="favicon.png">
+  <link rel="stylesheet" href="store.css">
+</head>
+<body>
+  <header class="site-head">
+    <div class="wrap nav">
+      <a class="brand" href="./" aria-label="Slingshot Tools home">
+        <img src="logo.png" alt=""><span>Slingshot <b>Tools</b></span>
+      </a>
+      <nav class="nav-links" aria-label="Main">
+        <a href="./#apps">Store</a><a href="./#votes">Votes</a><a href="./#events">Events</a>
+      </nav>
+      <div class="spacer"></div>
+      <button class="btn icon-btn" id="themeBtn" aria-label="Toggle light and dark mode">◐</button>
+      <button class="cart-btn" type="button" data-cart-open>Cart <span data-cart-count>0</span></button>
+    </div>
+  </header>
+
+  <main class="wrap product-page" id="page">
+    <div class="notfound" id="loading">Loading product...</div>
+  </main>
+
+  <footer class="site-foot">
+    <div class="wrap">
+      <p><strong>Slingshot Tools</strong> — small apps that just work.</p>
+      <p>Paid once, yours forever. Works offline. Your data stays on your device.</p>
+    </div>
+  </footer>
+
+  <script src="store.js"></script>
+  <script>
+    const S=window.SlingshotStore;
+    const THEME_KEY="slingshot-theme"; const btn=document.getElementById("themeBtn"); const root=document.documentElement;
+    function paint(t){root.dataset.theme=t; btn.textContent=t==="dark"?"◐":"☀";}
+    let saved=null; try{saved=localStorage.getItem(THEME_KEY);}catch(e){}
+    if(!saved)saved=window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";
+    paint(saved); btn.onclick=()=>{const next=root.dataset.theme==="dark"?"light":"dark"; paint(next); try{localStorage.setItem(THEME_KEY,next);}catch(e){}};
+    S.init();
+
+    const page=document.getElementById("page");
+    const wanted=new URLSearchParams(location.search).get("slug")||"";
+
+    function render(item){
+      const a=item.lead;
+      const title=S.titleOf(item);
+      const price="$"+S.priceOf(item).toFixed(2);
+      const buy=S.buyUrl(item);
+      const esc=S.esc;
+      const thumb=(mode,label)=>'<button class="thumb'+(mode==="dark"?" on":"")+'" type="button" data-shot="'+mode+'" aria-label="'+esc(label)+'">'+S.shot(item,mode)+'</button>';
+      page.innerHTML=
+        '<nav class="crumbs" aria-label="Breadcrumb"><a href="./">Store</a><span>/</span><span>'+esc(title)+'</span></nav>'+
+        '<div class="product-layout">'+
+          '<div><div class="gallery-main" id="galleryMain">'+S.shot(item,"dark")+'</div>'+
+          '<div class="thumbs">'+thumb("dark","Main view")+thumb("light","Light view")+thumb("detail","Detail view")+'</div></div>'+
+          '<div class="buy-panel">'+
+            '<span class="label">'+esc(a.tag||"tool")+' · Windows · paid app</span>'+
+            '<h1>'+esc(title)+'</h1>'+
+            '<div class="buy-price">'+price+'</div>'+
+            '<div class="buy-buttons">'+
+              '<button class="btn primary" type="button" data-add="'+esc(S.slugOf(item))+'">Add to cart</button>'+
+              (buy?'<a class="btn" href="'+esc(buy)+'">Buy now on itch.io</a>':'')+
+            '</div>'+
+            '<p class="buy-note">One payment, no subscription. The download lives on this product&rsquo;s own itch.io page.</p>'+
+            '<p class="product-desc">'+esc(a.blurb||"")+'</p>'+
+            '<div class="details">'+
+              '<div><span>Platform</span><span>Windows</span></div>'+
+              '<div><span>Connection</span><span>Works offline</span></div>'+
+              '<div><span>Account</span><span>Not required</span></div>'+
+              '<div><span>License</span><span>One-time purchase</span></div>'+
+              '<div><span>Delivery</span><span>Instant download</span></div>'+
+            '</div>'+
+          '</div>'+
+        '</div>';
+      page.querySelectorAll("[data-shot]").forEach(function(b){
+        b.addEventListener("click",function(){
+          page.querySelectorAll("[data-shot]").forEach(x=>x.classList.remove("on"));
+          b.classList.add("on");
+          document.getElementById("galleryMain").innerHTML=S.shot(item,b.getAttribute("data-shot"));
+        });
+      });
+      document.title=title+" — Slingshot Tools";
+    }
+
+    fetch("apps.json",{cache:"no-store"}).then(r=>r.json()).then(d=>{
+      const all=Array.isArray(d)?d:(d.apps||[]);
+      S.setCatalog(all);
+      const item=S.family(all).filter(p=>S.slugOf(p)===wanted)[0];
+      if(item){render(item);}
+      else{
+        page.innerHTML='<div class="notfound"><span class="label">404</span><h1>No tool here</h1>'+
+          '<p class="muted">That product is not in the catalog.</p>'+
+          '<p><a class="btn primary" href="./">Back to the tools</a></p></div>';
+        document.title="No tool here — Slingshot Tools";
+      }
+    }).catch(()=>{
+      page.innerHTML='<div class="notfound"><h1>The catalog did not load</h1>'+
+        '<p class="muted">Try again in a moment, or <a href="./">browse the store</a>.</p></div>';
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Your cart — Slingshot Tools</title>
+  <meta name="description" content="Your Slingshot Tools cart. Payment is handled on each product's own itch.io page.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="favicon.png">
+  <link rel="stylesheet" href="store.css">
+</head>
+<body>
+  <header class="site-head">
+    <div class="wrap nav">
+      <a class="brand" href="./" aria-label="Slingshot Tools home">
+        <img src="logo.png" alt=""><span>Slingshot <b>Tools</b></span>
+      </a>
+      <nav class="nav-links" aria-label="Main">
+        <a href="./#apps">Store</a><a href="./#votes">Votes</a><a href="./#events">Events</a>
+      </nav>
+      <div class="spacer"></div>
+      <button class="btn icon-btn" id="themeBtn" aria-label="Toggle light and dark mode">◐</button>
+      <button class="cart-btn" type="button" data-cart-open>Cart <span data-cart-count>0</span></button>
+    </div>
+  </header>
+
+  <main class="cart-page" id="page">
+    <span class="label">Checkout</span>
+    <h1>Your cart</h1>
+    <div id="cartLines"></div>
+  </main>
+
+  <footer class="site-foot">
+    <div class="wrap">
+      <p><strong>Slingshot Tools</strong> — small apps that just work.</p>
+      <p>Paid once, yours forever. Works offline. Your data stays on your device.</p>
+    </div>
+  </footer>
+
+  <script src="store.js"></script>
+  <script>
+    const S=window.SlingshotStore;
+    const THEME_KEY="slingshot-theme"; const btn=document.getElementById("themeBtn"); const root=document.documentElement;
+    function paint(t){root.dataset.theme=t; btn.textContent=t==="dark"?"◐":"☀";}
+    let saved=null; try{saved=localStorage.getItem(THEME_KEY);}catch(e){}
+    if(!saved)saved=window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";
+    paint(saved); btn.onclick=()=>{const next=root.dataset.theme==="dark"?"light":"dark"; paint(next); try{localStorage.setItem(THEME_KEY,next);}catch(e){}};
+    S.init();
+
+    const lines=document.getElementById("cartLines");
+    function render(catalog){
+      const all=S.family(catalog);
+      const chosen=S.cart().map(id=>all.filter(p=>S.slugOf(p)===id)[0]).filter(Boolean);
+      if(!chosen.length){
+        lines.innerHTML='<div class="empty" style="margin-top:40px"><strong>Nothing in the cart yet.</strong><br>'+
+          '<a href="./" style="border-bottom:1px solid var(--line)">Browse the tools</a></div>';
+        return;
+      }
+      const total=chosen.reduce((sum,p)=>sum+S.priceOf(p),0);
+      lines.innerHTML=chosen.map(function(p){
+        const buy=S.buyUrl(p);
+        return '<div class="cart-line" data-slug="'+S.esc(S.slugOf(p))+'">'+
+          '<a class="cart-thumb" href="'+S.esc(S.productUrl(p))+'">'+S.shot(p,"dark")+'</a>'+
+          '<div><div class="cart-line-title"><a href="'+S.esc(S.productUrl(p))+'">'+S.esc(S.titleOf(p))+'</a></div>'+
+          '<div class="cart-line-sub">'+S.esc(p.lead.tag||"tool")+' · Windows · one-time</div>'+
+          '<button class="cart-remove" type="button" data-remove="'+S.esc(S.slugOf(p))+'">Remove</button></div>'+
+          '<div class="cart-line-price">$'+S.priceOf(p).toFixed(2)+'</div>'+
+          (buy?'<a class="cart-buy" href="'+S.esc(buy)+'">Pay for this one on itch.io &rarr;</a>':
+              '<div class="cart-buy muted">Not on sale yet</div>')+
+          '</div>';
+      }).join('')+
+        '<div class="cart-summary"><span class="label">Total</span><strong>$'+total.toFixed(2)+'</strong></div>'+
+        '<p class="cart-disclaimer">There is no single mixed checkout: each app is sold on its own itch.io page. '+
+        'Use the link beside each item to pay, and it will keep your download in your itch.io account.</p>'+
+        '<p style="margin-top:26px"><a class="btn" href="./">&larr; Keep browsing</a></p>';
+    }
+
+    document.addEventListener("click",function(e){
+      if(e.target.closest && e.target.closest("[data-remove]")){
+        setTimeout(function(){render(LAST);},0);
+      }
+    });
+    let LAST=[];
+    fetch("apps.json",{cache:"no-store"}).then(r=>r.json()).then(d=>{
+      LAST=Array.isArray(d)?d:(d.apps||[]);
+      S.setCatalog(LAST); render(LAST);
+    }).catch(()=>{lines.innerHTML='<div class="empty">The catalog did not load.</div>';});
+    document.addEventListener("slingshot-cart",function(){render(LAST);});
+  </script>
+</body>
+</html>

@@ -3,185 +3,91 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Slingshot Tools — tiny apps for everyday use</title>
-  <meta name="description" content="Slingshot Tools makes small, fast, paid apps that solve everyday problems.">
+  <title>Slingshot Tools — small software, made properly</title>
+  <meta name="description" content="Slingshot Tools makes small, fast, paid apps that solve everyday problems. Buy once, keep it, work offline.">
   <link rel="icon" href="favicon.png">
   <link rel="apple-touch-icon" href="icon-512.png">
-  <style>
-    :root{
-      --red:#C1272D; --red-dark:#8E1B20; --red-ink:#E23B41;
-      --bg:#14100F; --bg-2:#1C1615; --card:#221B1A; --line:#332826;
-      --fg:#F6EFEC; --muted:#B9A8A4; --shadow:0 10px 30px rgba(0,0,0,.45);
-    }
-    html[data-theme="light"]{
-      --bg:#FBF7F6; --bg-2:#FFFFFF; --card:#FFFFFF; --line:#EADEDC;
-      --fg:#1B1211; --muted:#6B5B58; --shadow:0 10px 26px rgba(140,30,36,.10);
-    }
-    *{box-sizing:border-box}
-    body{
-      margin:0; background:var(--bg); color:var(--fg);
-      font:16px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Inter,sans-serif;
-      -webkit-font-smoothing:antialiased;
-    }
-    a{color:inherit}
-    .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
-    header{position:sticky;top:0;z-index:20;backdrop-filter:blur(12px) saturate(120%);
-      background:color-mix(in srgb,var(--bg) 85%,transparent);border-bottom:1px solid var(--line);
-      animation:fadeDown .8s ease-out;}
-    .bar{display:flex;align-items:center;gap:14px;padding:14px 0}
-    .brand{display:flex;align-items:center;gap:12px;text-decoration:none;font-weight:800;letter-spacing:-.02em}
-    .brand img{width:38px;height:38px;border-radius:11px;display:block;object-fit:contain}
-    .brand span b{color:var(--red-ink)}
-    .spacer{flex:1}
-    .btn{border:1px solid var(--line);background:var(--card);color:var(--fg);
-      padding:9px 15px;border-radius:11px;font:inherit;font-size:14px;cursor:pointer;
-      text-decoration:none;display:inline-flex;align-items:center;gap:8px;transition:.15s}
-    .btn:hover{border-color:var(--red-ink);transform:translateY(-1px)}
-    .btn.primary{background:linear-gradient(180deg,var(--red-ink),var(--red));color:#fff;border-color:transparent}
-    .hero{padding:72px 0 44px;text-align:center}
-    .hero img{width:104px;height:104px;border-radius:26px;box-shadow:var(--shadow);object-fit:contain;
-      animation:float 6s ease-in-out infinite;}
-    h1{font-size:clamp(34px,6vw,58px);line-height:1.05;margin:22px 0 12px;letter-spacing:-.035em}
-    h1 b{color:var(--red-ink)}
-    .sub{color:var(--muted);font-size:clamp(16px,2.2vw,19px);max-width:60ch;margin:0 auto}
-    .cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:28px}
-    .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));padding:22px 0 60px}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;
-      display:flex;flex-direction:column;gap:10px;transition:.18s;position:relative;overflow:hidden}
-    .card:before{content:"";position:absolute;inset:0 auto auto 0;width:100%;height:3px;
-      background:linear-gradient(90deg,var(--red-ink),transparent)}
-    .card:hover{transform:translateY(-3px);box-shadow:var(--shadow);border-color:var(--red-ink)}
-    .card h3{margin:0;font-size:18px;letter-spacing:-.02em}
-    .card p{margin:0;color:var(--muted);font-size:14.5px;flex:1}
-    .tags{display:flex;flex-wrap:wrap;gap:6px}
-    .tag{font-size:11.5px;padding:3px 9px;border-radius:999px;background:var(--bg-2);
-      border:1px solid var(--line);color:var(--muted)}
-    .row{display:flex;gap:9px;align-items:center;margin-top:4px}
-    .pill{font-size:11.5px;padding:3px 9px;border-radius:999px;background:var(--red);
-      color:#fff;font-weight:700;letter-spacing:.02em}
-    .pill.basic{background:var(--bg-2);color:var(--red-ink);border:1px solid var(--red-ink)}
-    .card.full{border-color:var(--red-ink)}
-    .price{margin-right:auto;font-weight:800;font-size:17px;letter-spacing:-.02em}
-    footer{border-top:1px solid var(--line);padding:30px 0 60px;color:var(--muted);font-size:14px}
-    .dlg{position:fixed;inset:0;background:rgba(0,0,0,.66);display:none;backdrop-filter:blur(4px);
-      align-items:center;justify-content:center;padding:20px;z-index:60}
-    .dlg.open{display:flex}
-    .dlgBox{background:var(--card);border:1px solid var(--line);border-radius:20px;max-width:760px;
-      width:100%;padding:26px;position:relative;box-shadow:var(--shadow)}
-    .dlgX{position:absolute;top:12px;right:14px;background:none;border:0;color:var(--muted);
-      font-size:28px;cursor:pointer;line-height:1}
-    .dlgBox h3{margin:0 0 6px;font-size:22px}
-    .dlgBlurb{color:var(--muted);margin:0 0 18px}
-    .dlgSoon{color:var(--muted);font-size:13.5px;margin:0 0 16px;padding:11px 13px;border-radius:9px;background:var(--bg-2);border:1px solid var(--line)}
-    .dlgOpts{display:grid;gap:12px;grid-template-columns:1fr 1fr}
-    @media(max-width:640px){.dlgOpts{grid-template-columns:1fr}}
-    .opt{text-align:left;background:var(--bg-2);border:1px solid var(--line);border-radius:14px;
-      padding:16px;cursor:pointer;display:flex;flex-direction:column;gap:6px;color:var(--fg);
-      font:inherit;transition:.15s}
-    .opt:hover{transform:translateY(-2px);border-color:var(--red-ink)}
-    .opt.full{border-color:var(--red-ink);background:color-mix(in srgb,var(--red) 8%,var(--bg-2))}
-    .optTier{font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
-      color:var(--red-ink)}
-    .optTitle{font-weight:700;font-size:16px}
-    .optBlurb{color:var(--muted);font-size:13.5px;line-height:1.45}
-    .optDiffs{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
-    .diff{font-size:12px;padding:3px 9px;border-radius:999px;background:color-mix(in srgb,var(--red) 12%,transparent);color:var(--red-ink);border:1px solid color-mix(in srgb,var(--red) 35%,transparent);white-space:nowrap}
-    .optPrice{font-size:20px;font-weight:800;letter-spacing:-.02em;margin-top:2px}
-    .optCta{font-size:13px;color:var(--red-ink);font-weight:700}
-    .empty{grid-column:1/-1;text-align:center;padding:70px 20px;color:var(--muted);
-      border:1px dashed var(--line);border-radius:18px}
-    /* release countdown. Hidden by default and only shown when update.json
-       says there is something real to count down to, so a stale file cannot
-       leave a banner on the page saying an update shipped weeks ago. */
-    .countdown{display:none;margin:0 auto 4px;padding:11px 18px;border-radius:14px;
-      border:1px solid var(--red-ink);background:color-mix(in srgb,var(--red) 10%,var(--card));
-      align-items:center;gap:12px;justify-content:center;flex-wrap:wrap;text-align:center}
-    .countdown.on{display:flex}
-    .countdown b{color:var(--red-ink);letter-spacing:-.01em}
-    .cdPill{font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
-      color:var(--red-ink);border:1px solid var(--red-ink);border-radius:999px;padding:3px 9px}
-    .cdNum{font-variant-numeric:tabular-nums}
-    @keyframes fadeDown{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
-    @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
-  </style>
+  <link rel="stylesheet" href="store.css">
 </head>
 <body>
-  <header>
-    <div class="wrap bar">
-      <a class="brand" href="./">
-        <img src="logo.png" alt="Slingshot Tools logo">
+  <header class="site-head">
+    <div class="wrap nav">
+      <a class="brand" href="./" aria-label="Slingshot Tools home">
+        <img src="logo.png" alt="">
         <span>Slingshot <b>Tools</b></span>
       </a>
+      <nav class="nav-links" aria-label="Main">
+        <a href="#apps">Store</a>
+        <a href="#votes">Votes</a>
+        <a href="#events">Events</a>
+      </nav>
       <div class="spacer"></div>
-      <a class="btn" href="#votes">Votes</a>
-      <a class="btn" href="events.html">Events</a>
-      <a class="btn" href="#apps">Browse for apps</a>
-      <button class="btn" id="themeBtn" aria-label="Toggle light and dark mode">Light mode</button>
+      <button class="btn icon-btn" id="themeBtn" aria-label="Toggle light and dark mode">◐</button>
+      <button class="cart-btn" type="button" data-cart-open>
+        Cart <span data-cart-count>0</span>
+      </button>
     </div>
   </header>
-  <main class="wrap">
-    <!-- The countdown lives here, right under the header, and is filled in
-         from update.json. No HTML is generated for it, so the page stays a
-         protected file and only the small JSON beside it is rewritten. -->
-    <div class="countdown" id="countdown" role="status" aria-live="polite"></div>
+
+  <main>
     <section class="hero">
-      <img src="logo.png" alt="">
-      <h1>Tiny apps for <b>everyday</b> problems</h1>
-      <p class="sub">Small, fast, paid tools that solve real annoyances. One focused app at a time — a password manager, a unit converter, and a habit tracker. Pay once, keep it forever.</p>
-      <div class="cta">
-        <a class="btn" href="#apps">Browse for apps</a>
+      <div class="wrap">
+        <span class="label">Slingshot Tools · small software, made properly</span>
+        <h1>Small tools.<br><em>Done right.</em></h1>
+        <p class="sub">Focused Windows apps for the annoying little jobs. One price, no account, no subscription, and nothing leaves your machine.</p>
+        <div class="cta">
+          <a class="btn primary" href="#apps">Browse the tools</a>
+          <a class="btn" href="#votes">Vote on what's next</a>
+        </div>
       </div>
     </section>
-    <section class="votes" id="votes">
-      <div class="votes-header">
-        <h2>Votes</h2>
-        <p>Vote for what gets built next. Results sync with Discord.</p>
-      </div>
-      <div id="votesContent" class="votes-content">
-        <div class="empty">Loading votes...</div>
-      </div>
-    </section>
-    <section class="events" id="events">
-      <div class="events-header">
-        <h2>Events</h2>
-        <p>Upcoming events and updates.</p>
-      </div>
-      <div id="eventsContent" class="events-content">
-        <div class="empty">No events scheduled.</div>
-      </div>
-    </section>
-    <section class="grid" id="apps"></section>
-    <noscript>
-      <div class="empty">
-        <strong>The catalog needs JavaScript to load.</strong><br>
-        Every tool is also listed on the store, each on its own page:<br>
-        <a href="https://slingshot-tools.itch.io">slingshot-tools.itch.io</a><br>
-        The source and releases are on
-        <a href="https://github.com/tbougnar/Slingshot-Tools">GitHub</a>.
-      </div>
-    </noscript>
+
+    <div class="wrap">
+      <!-- Filled from update.json only while a release is genuinely coming. -->
+      <div class="countdown" id="countdown" role="status" aria-live="polite"></div>
+
+      <section class="section" id="votes">
+        <div class="section-head"><h2>Votes</h2><p>What gets built next. Results sync with Discord.</p></div>
+        <div id="votesContent" class="votes-content"><div class="empty">Loading votes...</div></div>
+      </section>
+
+      <section class="section" id="events">
+        <div class="section-head"><h2>Events</h2><p>Updates and releases.</p></div>
+        <div id="eventsContent" class="events-content"><div class="empty">No events scheduled.</div></div>
+      </section>
+
+      <section class="section" id="apps" style="border-bottom:0">
+        <div class="section-head"><h2>The tools</h2><p>Every app has its own page and its own store listing.</p></div>
+        <div class="products" id="appsGrid"></div>
+        <noscript>
+          <div class="empty">
+            <strong>The catalog needs JavaScript to load.</strong><br>
+            Every tool is also listed on the store, each on its own page:<br>
+            <a href="https://slingshot-tools.itch.io">slingshot-tools.itch.io</a><br>
+            The source and releases are on
+            <a href="https://github.com/tbougnar/Slingshot-Tools">GitHub</a>.
+          </div>
+        </noscript>
+      </section>
+    </div>
   </main>
+
   <div class="dlg" id="dlg" onclick="if(event.target.id==='dlg')closeDialog()"
-       role="dialog" aria-modal="true" aria-labelledby="dlgTitle"
-       aria-hidden="true">
+       role="dialog" aria-modal="true" aria-labelledby="dlgTitle" aria-hidden="true">
     <div class="dlgBox" role="document">
       <button class="dlgX" onclick="closeDialog()" aria-label="Close">&times;</button>
       <h3 id="dlgTitle"></h3>
       <p id="dlgBlurb" class="dlgBlurb"></p>
-      <p id="dlgSoon" class="dlgSoon" style="display:none">
-        This tool is not on sale yet. We will announce it in Discord
-        when it launches.
-      </p>
       <div id="dlgOpts" class="dlgOpts"></div>
     </div>
   </div>
-  <footer>
+
+  <footer class="site-foot">
     <div class="wrap">
       <p><strong>Slingshot Tools</strong> — small apps that just work.</p>
       <p>Paid once, yours forever. Works offline. Your data stays on your device.</p>
     </div>
-  
-        <!-- slingshot-links:start -->
+    <!-- slingshot-links:start -->
   <style>.site-links {
   display: flex; flex-wrap: wrap; gap: 10px;
   justify-content: center; align-items: center; margin: 28px 0 0;
@@ -212,13 +118,17 @@
   <a href="https://github.com/tbougnar/Slingshot-Tools" rel="noopener" target="_blank" title="GitHub"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 8l-4 4 4 4m6-8l4 4-4 4m-3-10l-2 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>GitHub</span></a>
 </nav>
   <!-- slingshot-links:end --></footer>
+
+  <script src="store.js"></script>
   <script>
     const THEME_KEY="slingshot-theme"; const btn=document.getElementById("themeBtn"); const root=document.documentElement;
-    function paint(t){root.dataset.theme=t; btn.textContent=t==="dark"?"Light mode":"Dark mode";}
+    function paint(t){root.dataset.theme=t; btn.textContent=t==="dark"?"◐":"☀";}
     let saved=null; try{saved=localStorage.getItem(THEME_KEY);}catch(e){}
     if(!saved)saved=window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";
     paint(saved); btn.onclick=()=>{const next=root.dataset.theme==="dark"?"light":"dark"; paint(next); try{localStorage.setItem(THEME_KEY,next);}catch(e){}};
-    const appsEl=document.getElementById("apps"), filtersEl=document.getElementById("filters");
+
+    SlingshotStore.init();
+    const appsEl=document.getElementById("appsGrid"), filtersEl=document.getElementById("filters");
     const CHECKOUT="./checkout.html"; let APPS=[], active="all", VIEW=[];
     function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
     // Paid-only catalogue: a product exists on the site only when its paid
@@ -226,7 +136,10 @@
     // unpublished paid tools on the home page as "Free", which gave away
     // what is sold on the store and broke the single-product rule.
     function groupProducts(list){const byBase={}; list.forEach(a=>{const k=a.base_slug||a.slug; (byBase[k]=byBase[k]||[]).push(a);}); return Object.values(byBase).map(pair=>{const full=pair.find(x=>x.tier!=="basic")||null; const paidLive=!!(full&&full.published!==false&&full.itch_url); if(!paidLive)return null; return{full:full,basic:null,lead:full,onSale:true,key:(full.base_slug||full.slug),diffs:full.differences||[]};}).filter(Boolean);}
-    function render(){const products=groupProducts(APPS); const list=active==="all"?products:products.filter(p=>(p.lead.tag||"")==active); if(!list.length){appsEl.innerHTML='<div class="empty"><strong>Nothing here yet.</strong><br>New tools land here soon.</div>'; return;} appsEl.innerHTML=list.map((item,idx)=>{const f=item.lead; const price='$'+Number(f.price||0).toFixed(2); return '<article class="card full"><span class="pill basic">Paid app</span><h3>'+esc(f.title.replace(/\s*\(basic\)\s*$/i,''))+'</h3><p>'+esc(f.blurb)+'</p><div class="tags">'+(f.tags||[]).slice(0,4).map(t=>'<span class="tag">'+esc(t)+'</span>').join('')+'</div><div class="row"><span class="price">'+price+'</span><button class="btn primary" onclick="openDialogByIndex('+idx+')">See options</button></div></article>';}).join(''); VIEW=list;}
+    // Cards now lead to the product's own page. The image, the title and the
+    // price are one link; Add to cart and Quick view sit outside it so they
+    // remain real buttons rather than links pretending to be buttons.
+    function render(){const products=groupProducts(APPS); const list=active==="all"?products:products.filter(p=>(p.lead.tag||"")===active); if(!list.length){appsEl.innerHTML='<div class="empty"><strong>Nothing here yet.</strong><br>New tools land here soon.</div>'; return;} appsEl.innerHTML=list.map((item,idx)=>{const f=item.lead; const price='$'+Number(f.price||0).toFixed(2); const href=SlingshotStore.productUrl(item); const slug=SlingshotStore.slugOf(item); const shown=String(f.title||'').replace(/\s*\(basic\)\s*$/i,''); return '<article class="product-card"><a class="pc-link" href="'+esc(href)+'"><span class="shot">'+SlingshotStore.shot(item,'dark')+'</span><div class="pc-meta"><div><h3 class="pc-title">'+esc(shown)+'</h3><p class="pc-sub">'+esc(f.blurb)+'</p></div><span class="pc-price">'+price+'</span></div><div class="tag-row">'+(f.tags||[]).slice(0,3).map(t=>'<span class="tag">'+esc(t)+'</span>').join('')+'</div></a><div class="pc-actions"><button class="pc-add" type="button" data-add="'+esc(slug)+'">Add to cart</button><button class="pc-quick" type="button" onclick="openDialogByIndex('+idx+')">Quick view</button></div></article>';}).join(''); VIEW=list;}
     // Cards pass an index, not their own JSON. Serialising the product into
     // the onclick attribute put double quotes inside a double-quoted attribute,
     // which ended the attribute early and left every "See options" button
@@ -239,9 +152,9 @@
     // checkout.html only forwards to itch.io, so no payment detail touches this site
     // Every listed product has a live paid edition. The old basic option
     // offered a free download of software that is sold on the store.
-    if(item.full){const live=item.full.itch_url||''; opts.push({tier:'full',title:item.full.title,blurb:item.full.blurb,diffs:item.diffs||[],price:'$'+Number(item.full.price||0).toFixed(2),href:live||CHECKOUT+'?slug='+encodeURIComponent(item.key)+'&price='+Number(item.full.price||0).toFixed(2)+'&title='+encodeURIComponent(item.full.title)+'&itch='+encodeURIComponent(live)});}
+    if(item.full){const live=item.full.itch_url||''; opts.push({tier:'full',title:item.full.title,blurb:item.full.blurb,diffs:item.diffs||[],price:'$'+Number(item.full.price||0).toFixed(2),href:SlingshotStore.productUrl(item)});}
     const lead=item.lead||item.full; const shown=String(lead.title||'').replace(/\s*\(basic\)\s*$/i,''); document.getElementById('dlgTitle').textContent=shown; document.getElementById('dlgBlurb').textContent=lead.blurb||'';
-const soon=document.getElementById('dlgSoon'); if(soon)soon.style.display='none'; document.getElementById('dlgOpts').innerHTML=opts.map(o=>'<button class="opt '+o.tier+'" onclick="location.href=\''+esc(o.href)+'\'"><span class="optTier">Paid app</span><span class="optTitle">'+esc(o.title)+'</span><span class="optBlurb">'+esc(o.blurb||'')+'</span><span class="optPrice">'+esc(o.price)+'</span>'+(o.diffs&&o.diffs.length?'<span class="optDiffs">'+o.diffs.map(function(d){return '<span class="diff">'+esc(d)+'</span>';}).join('')+'</span>':'')+'<span class="optCta">Get it on itch.io</span></button>').join('');
+    document.getElementById('dlgOpts').innerHTML=opts.map(o=>'<button class="opt '+o.tier+'" onclick="location.href=\''+esc(o.href)+'\'"><span class="optTier">Paid app</span><span class="optTitle">'+esc(o.title)+'</span><span class="optBlurb">'+esc(o.blurb||'')+'</span><span class="optPrice">'+esc(o.price)+'</span>'+(o.diffs&&o.diffs.length?'<span class="optDiffs">'+o.diffs.map(function(d){return '<span class="diff">'+esc(d)+'</span>';}).join('')+'</span>':'')+'<span class="optCta">View product &amp; screenshot</span></button>').join('');
     // A dialog that only responds to the mouse is unreachable by keyboard.
     // Remember what opened it so focus can go back there, move focus inside,
     // and keep Tab inside while it is open.
@@ -257,7 +170,7 @@ const soon=document.getElementById('dlgSoon'); if(soon)soon.style.display='none'
       if(e.shiftKey&&document.activeElement===first){e.preventDefault(); last.focus();}
       else if(!e.shiftKey&&document.activeElement===last){e.preventDefault(); first.focus();}
     });
-    fetch("apps.json",{cache:"no-store"}).then(r=>r.json()).then(d=>{APPS=Array.isArray(d)?d:(d.apps||[]); render();}).catch(()=>{appsEl.innerHTML='<div class="empty"><strong>Slingshot Tools</strong><br>The catalog loads on first build.</div>';});
+    fetch("apps.json",{cache:"no-store"}).then(r=>r.json()).then(d=>{APPS=Array.isArray(d)?d:(d.apps||[]); SlingshotStore.setCatalog(APPS); render();}).catch(()=>{appsEl.innerHTML='<div class="empty"><strong>Slingshot Tools</strong><br>The catalog loads on first build.</div>';});
 
     // Votes and Events
     (function(){
