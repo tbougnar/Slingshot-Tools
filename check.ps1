@@ -20,8 +20,9 @@
 #   DISCORD_GUILD_ID      right-click the server name, Copy Server ID
 #   ITCH_USER             your itch.io subdomain, lowercase
 #   ITCH_API_KEY          https://itch.io/settings/user, Developer API Keys
-#   ITCH_SESSION_COOKIE   itch.io, F12, Console, document.cookie,
-#                         the itchio_token= part only
+#   ITCH_SESSION_COOKIE   itch.io, F12, Application > Cookies > https://itch.io,
+#                         copy the VALUE of itchio_token only. It is HttpOnly,
+#                         so the Console's document.cookie can never show it.
 #   YOUTUBE_*             https://console.cloud.google.com/apis/credentials
 #   DISCORD_WEBHOOK_URL   server settings, Integrations, Webhooks
 

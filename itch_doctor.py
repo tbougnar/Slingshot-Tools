@@ -231,7 +231,7 @@ def main() -> int:
         _out()
         _out("Do this once, by hand, in your own browser:")
         _out("  create an empty project at")
-        _out("    https://itch.io/settings/mine/new/game")
+        _out("    https://itch.io/game/new")
         _out("  then point the catalog at it:")
         _out("    python set_itch_url.py <slug> https://slingshot-tools.itch.io/<project>")
         _out()

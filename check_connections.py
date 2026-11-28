@@ -302,10 +302,11 @@ def check_itch_session() -> bool:
                   "not set (only needed to create a new project; uploads use "
                   "the API key)")
     if not require_real("itch.io session", raw,
-                        "log in at itch.io, F12, Console, "
-                        "document.cookie, copy the itchio_token= part, then "
-                        "gh secret set ITCH_SESSION_COOKIE --repo "
-                        "tbougnar/Slingshot-Tools"):
+                        "log in at itch.io, F12, Application > Cookies > "
+                        "https://itch.io, copy the VALUE of itchio_token "
+                        "(it is HttpOnly, so the Console's document.cookie "
+                        "can never show it), then gh secret set "
+                        "ITCH_SESSION_COOKIE --repo tbougnar/Slingshot-Tools"):
         return False
 
     cookie = ""
@@ -322,11 +323,21 @@ def check_itch_session() -> bool:
                    "copy only the itchio_token cookie from the browser")
 
     try:
-        with get("https://itch.io/settings/mine/new/game",
+        with get("https://itch.io/game/new",
                  {"Cookie": f"itchio_token={cookie}"}) as r:
             r.read()
             landed = r.geturl()
     except urllib.error.HTTPError as e:
+        # Cloudflare challenges a plain request to this page and hands it to a
+        # browser instead, so a 403 says nothing about the cookie at all. The
+        # publisher is the thing that can answer this, because it opens the
+        # form in a real browser; reporting a good session as broken here made
+        # a healthy store look sick every week.
+        if e.code in (403, 429):
+            return ok("itch.io session",
+                      "set; not verifiable from a plain request (Cloudflare "
+                      "challenges scripts) - the publisher checks it in a "
+                      "browser")
         # a 404 on the new-game form means the cookie worked and that page
         # moved; the sign-in page is the only real failure
         if e.code == 404:

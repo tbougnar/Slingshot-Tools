@@ -42,6 +42,11 @@ PAID = ROOT / "paid"
 API = "https://api.itch.io"
 TIMEOUT = 60
 
+# Where a project is created. The old address, /settings/mine/new/game,
+# answers 404 - the page moved - and that 404 was read for months as "the
+# session expired", which sent everyone looking in the wrong place.
+CREATE_URL = "https://itch.io/game/new"
+
 # set once, as a GitHub secret; the value comes from itch.io/settings/user
 SESSION = os.environ.get("ITCH_SESSION_COOKIE", "").strip()
 KEY = os.environ.get("ITCH_API_KEY", "").strip()
@@ -613,17 +618,78 @@ def working_session() -> str:
     return fresh
 
 
-def check_session(cookie: str = "") -> bool:
-    """Is the cookie still good?
+def _form_state(cookie: str) -> bool | None:
+    """Open the create form with this cookie. True, False, or None = unknown.
 
-    Asked before anything is attempted, because an expired session otherwise
-    fails much later and much less clearly.
+    True  the form is there, so the session works
+    False the page sent us to /login, so the session is dead
+    None  no browser could be started, or neither appeared, so this says
+          nothing about the cookie
+    """
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        return None
+    try:
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch()
+            ctx = browser.new_context()
+            ctx.add_cookies([{"name": "itchio_token", "value": cookie,
+                              "domain": ".itch.io", "path": "/"}])
+            page = ctx.new_page()
+            try:
+                page.goto(CREATE_URL, wait_until="domcontentloaded",
+                          timeout=TIMEOUT * 1000)
+            except Exception as e:  # noqa: BLE001
+                log(f"could not open the create form: {str(e)[:80]}")
+                browser.close()
+                return None
+            found = refused = False
+            # Cloudflare's JS challenge clears itself in a few seconds in a
+            # browser it accepts, so this waits rather than judging the first
+            # paint - which is how a working page was once called a challenge.
+            for _ in range(40):
+                if "/login" in page.url:
+                    refused = True
+                    break
+                if page.query_selector("input[name='game[title]']"):
+                    found = True
+                    break
+                page.wait_for_timeout(500)
+            browser.close()
+            if found:
+                return True
+            if refused:
+                return False
+            return None
+    except Exception as e:  # noqa: BLE001
+        log(f"could not start a browser to check the session: {str(e)[:80]}")
+        return None
+
+
+def check_session(cookie: str = "") -> bool:
+    """Is the cookie still good? Asked by opening the form it has to open.
+
+    A plain GET cannot answer this any more. itch.io sits behind Cloudflare,
+    which hands a script a challenge and a browser the page, so urllib
+    reported "refused" for a perfectly good session. Because a refused cookie
+    is meant to trigger a fresh login, that meant a valid session caused a
+    login attempt instead - and the login is behind a captcha, so the whole
+    publish stopped while everything was actually fine.
     """
     cookie = cookie or session_cookie()
     if not cookie:
         return False
+    state = _form_state(cookie)
+    if state is not None:
+        if not state:
+            log("the create form redirected to the login page, so the "
+                "session cookie has expired")
+        return state
+    # No browser on this machine. A plain request is all that is left, and it
+    # is the unreliable answer this function exists to avoid.
     req = urllib.request.Request(
-        "https://itch.io/settings/mine/new/game",
+        CREATE_URL,
         headers={"Cookie": f"itchio_token={cookie}",
                  "User-Agent": "slingshot-tools"})
     try:
@@ -638,18 +704,31 @@ def check_session(cookie: str = "") -> bool:
 
 
 def create_project(title: str, slug: str, price: float,
-                   icon: Path | None = None, session: str = "") -> str:
+                   icon: Path | None = None, session: str = "",
+                   blurb: str = "", description: str = "") -> str:
     """Create the project page in a real browser, and return its URL.
 
-    itch.io offers no API for this, and butler refuses it outright, so the only
-    way is to drive the page a person would use.
+    itch.io has no API for this - the serverside reference is all reads - and
+    butler says outright that it will not create one, so the only way is to
+    submit the form a person submits.
 
-    The session is passed in rather than read here, because the caller may have
-    just minted it by logging in. Reading the stored cookie from inside this
-    function is what let an expired cookie reach the browser and produce a
-    redirect to the login page instead of a clear message.
+    Every selector below was read off the live form rather than guessed. The
+    first version of this function asked for input[name='title'],
+    input[name='url'] and input[name='price'], none of which exist: the real
+    names are nested under game[], and the price is not on the page at all
+    until the paid button in the pricing widget is pressed, which swaps
+    game[suggested_price] out for game[min_price]. It filled nothing and
+    clicked blindly, and it never once created anything.
+
+    The session is passed in rather than read here, because the caller may
+    have just minted it by logging in. Reading the stored cookie from inside
+    this function is what let an expired cookie reach the browser and produce
+    a redirect to the login page instead of a clear message.
     """
     cookie = session or session_cookie()
+    if not cookie:
+        log("no session cookie, so the project cannot be created")
+        return ""
     try:
         from playwright.sync_api import sync_playwright
     except ImportError:
@@ -665,49 +744,100 @@ def create_project(title: str, slug: str, price: float,
             "domain": ".itch.io", "path": "/",
         }])
         page = ctx.new_page()
-        page.goto("https://itch.io/settings/mine/new/game",
-                  wait_until="domcontentloaded", timeout=TIMEOUT * 1000)
+        try:
+            page.goto(CREATE_URL, wait_until="domcontentloaded",
+                      timeout=TIMEOUT * 1000)
+        except Exception as e:  # noqa: BLE001
+            log(f"could not open the create form: {str(e)[:120]}")
+            browser.close()
+            return ""
 
-        if "/login" in page.url or "itch.io/login" in page.url:
+        # The form only appears once the session is accepted, and a refused
+        # one lands on /login, so both are waited for rather than assumed.
+        refused = False
+        for _ in range(40):
+            if "/login" in page.url or "itch.io/login" in page.url:
+                refused = True
+                break
+            if page.query_selector("input[name='game[title]']"):
+                break
+            page.wait_for_timeout(500)
+        if refused:
             log("the session cookie was refused; it has expired or was "
                 "invalidated by logging out")
             browser.close()
             return ""
+        if not page.query_selector("input[name='game[title]']"):
+            log(f"the create form did not appear (landed on {page.url})")
+            browser.close()
+            return ""
 
-        page.fill("input[name='title']", title)
-        # the url slug is the last field; setting it avoids itch inventing one
-        slug_field = page.query_selector("input[name='url']")
-        if slug_field:
-            slug_field.fill(slug)
+        try:
+            page.fill("input[name='game[title]']", title)
+            # the slug is set rather than left for itch to invent, because the
+            # butler target and every stored URL are derived from it
+            page.fill("input[name='game[slug]']", slug)
+            if blurb:
+                page.fill("input[name='game[short_text]']", str(blurb)[:140])
+            if description:
+                page.fill("textarea[name='game[description]']",
+                          str(description)[:4000])
 
-        # kind of project: Downloadable is what a .exe needs
-        for selector in ("select[name='classification']",):
-            el = page.query_selector(selector)
-            if el:
+            # These are tools, not games. selectize owns this dropdown, so the
+            # underlying <select> only ever carries the current value and
+            # filling it would change nothing visible or submitted.
+            page.eval_on_selector(
+                "select[name='game[user_classification]']",
+                "s => s && s.selectize ? s.selectize.setValue('tool') : null")
+
+            # Paid: the price is not on the form until this button is pressed.
+            # Pressing it removes game[suggested_price] from the document and
+            # replaces it with a single text field named game[min_price].
+            page.click("button.payment_mode_paid")
+            page.wait_for_selector("input[name='game[min_price]']",
+                                   timeout=10000)
+            page.fill("input[name='game[min_price]']", f"${price:.2f}")
+
+            # Released, and honest about being generated.
+            page.check("input[name='game[published]'][value='published']",
+                       force=True)
+            page.check(
+                "input[name='ai_disclosure[ai_generated]'][value='yes']",
+                force=True)
+
+            if icon and icon.exists():
                 try:
-                    el.select_option("downloadable")
-                except Exception:  # noqa: BLE001
-                    pass
+                    page.set_input_files("input[type='file']", str(icon))
+                except Exception as e:  # noqa: BLE001
+                    log(f"cover image was not uploaded: {str(e)[:80]}")
 
-        # price, in cents
-        price_field = page.query_selector("input[name='price']")
-        if price_field:
-            price_field.fill(str(int(round(price * 100))))
+            page.click("button.save_btn")
+            page.wait_for_load_state("domcontentloaded",
+                                     timeout=TIMEOUT * 1000)
+        except Exception as e:  # noqa: BLE001
+            log(f"the create form could not be filled: {str(e)[:200]}")
+            browser.close()
+            return ""
 
-        if icon and icon.exists():
-            try:
-                page.set_input_files("input[type='file']", str(icon))
-            except Exception as e:  # noqa: BLE001
-                log(f"cover image was not uploaded: {str(e)[:80]}")
-
-        page.click("button[type='submit'], input[type='submit']")
-        page.wait_for_load_state("domcontentloaded", timeout=TIMEOUT * 1000)
         created = page.url
+        # If itch refused the submission it stays on the form and shows why;
+        # reading that here is the difference between "created" and silence.
+        complaint = ""
+        if created.rstrip("/") == CREATE_URL.rstrip("/"):
+            try:
+                complaint = page.eval_on_selector_all(
+                    ".error, .errors, .notice, [class*=error]",
+                    "els => els.map(e => e.textContent.trim())"
+                    ".filter(t => t).slice(0, 3).join(' | ')")
+            except Exception:  # noqa: BLE001
+                complaint = ""
         browser.close()
 
-    if "/settings/mine/new" in created:
-        log("the project was not created; the page did not accept it")
+    if created.rstrip("/") == CREATE_URL.rstrip("/") or "/login" in created:
+        log("the project was not created; the page did not accept it"
+            + (f": {complaint[:200]}" if complaint else ""))
         return ""
+    log(f"created {created}")
     return created
 
 
@@ -1001,7 +1131,7 @@ def publish(slug: str, title: str, price: float, version: str = "") -> bool:
             log("   itch.io has no API for creating a project, and its web")
             log("   login is behind a bot challenge that this will not work")
             log("   around. Create one project for THIS product by hand:")
-            log("     https://itch.io/settings/mine/new/game")
+            log("     https://itch.io/game/new")
             log("   set classification Downloadable and minimum price "
                 f"${price:.2f}, make it public, then record it:")
             log("     python set_itch_url.py <slug> "

@@ -126,12 +126,17 @@ def lint(html: str) -> list[str]:
             f"real design system, not {MIN_CSS_CHARS} bytes of duct tape")
 
     # A heading that fills the window is the single most recognisable thing
-    # about the app that was rejected, so it is checked directly rather than
-    # left to the reviewer's taste.
-    if re.search(r"<h1[^>]*>[^<]{0,80}</h1>", low) and \
-            re.search(r"(padding\s*:\s*[3-9]\dpx|padding\s*:\s*\d{3,}px)", css):
-        problems.append("the title sits in a huge padded block: a heading "
-                        "should be a line of type, not a banner")
+    # about the app that was rejected. Only the heading's own rule is read:
+    # an earlier version matched any padding anywhere, so a card with 40px of
+    # breathing room was reported as a banner.
+    for m in re.finditer(r"([^{}]*\bh1\b[^{}]*)\{([^{}]*)\}", css):
+        pad = re.search(r"padding(?:-block)?\s*:\s*(\d+(?:\.\d+)?)px",
+                        m.group(2))
+        if pad and float(pad.group(1)) >= 30:
+            problems.append(
+                f"the title sits in a {pad.group(1)}px padded block: a "
+                "heading should be a line of type, not a banner")
+        break
     return problems
 
 

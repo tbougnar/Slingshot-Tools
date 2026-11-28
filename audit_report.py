@@ -348,7 +348,7 @@ def main() -> int:
               "hand, once:")
         print()
         print("```")
-        print("https://itch.io/settings/mine/new/game")
+        print("https://itch.io/game/new")
         print("```")
         print()
         print("then points the catalogue at it:")
